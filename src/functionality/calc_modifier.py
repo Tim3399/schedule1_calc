@@ -35,6 +35,7 @@ def _calculate_modificator(
 
     total_modificator: float = 0.0
     active_effects: Dict[str, float] = {}
+    
 
     # Add product effects if a product is provided
     if product_name:
@@ -43,11 +44,14 @@ def _calculate_modificator(
             logger.error(f"Product '{product_name}' not found!")
             raise ValueError(f"Product '{product_name}' not found!")
         for effect in product.effects:
+            logger.debug(f"Adding product effect: {effect}")
             active_effects[effect] = effect_modificators.get(effect, 0.0)
 
 
     # Process substances
     for name in substance_names:
+        replace_effects: List[str] = []
+        
         substance = substance_map.get(name)
         if not substance:
             logger.error(f"Substance '{name}' not found!")
@@ -56,11 +60,17 @@ def _calculate_modificator(
         # Apply side effect replacements
         for effect, replacement in substance.side_effect_replacements.items():
             if effect in active_effects:
+                logger.debug(f"Replacing effect '{effect}' with '{replacement}'")
                 active_effects.pop(effect)
-                active_effects[replacement] = effect_modificators.get(replacement, 0.0)
+                replace_effects.append(replacement)
+
+        for effect in replace_effects:
+            logger.debug(f"Adding replaced effect: {effect}")
+            active_effects[effect] = effect_modificators.get(effect, 0.0)  
 
         # Apply resulting effect
         resulting_effect = substance.resulting_effect
+        logger.debug(f"Adding resulting effect: {resulting_effect}")
         active_effects[resulting_effect] = effect_modificators.get(resulting_effect, 0.0)
 
 
@@ -206,32 +216,14 @@ def get_best_mix(
 
 if __name__ == "__main__":
 
-    combination_size = 5
+    combination_size = 2
     product_name = "green_crack" # Example: Use product name ("og_kush"...)
     max_level = 51  # Example: Use level name or int (6 or "hoodium IV")
 
     # Find all combinations
-    combinations_data, best_modifier_entry, best_profit_entry = get_best_mix(
-        combination_size, product_name, max_level
-    )
+    #combinations_data, best_modifier_entry, best_profit_entry = get_best_mix(combination_size, product_name, max_level)
+
+    a,b = (_calculate_modificator(['gasoline', 'cuke', 'battery', 'viagra', 'mega_bean'], product_name))
+    print(b)
 
     print(f"Best Combinations for {product_name} at level {max_level} with up to {combination_size} products:")
-
-    # Output the best modifier combination
-    print("Best Modifier:")
-    print(f"Combination: {best_modifier_entry.substances}")
-    print(f"  Effects: {best_modifier_entry.effects}")
-    print(f"  Modifier: {best_modifier_entry.modifier:.2f}")
-    print(f"  Sell Price: ${best_modifier_entry.sell_price:.2f}")
-    print(f"  Substance Cost: ${best_modifier_entry.substance_cost:.2f}")
-    print(f"  Profit: ${(best_modifier_entry.sell_price - best_modifier_entry.substance_cost):.2f}")
-
-
-    # Output the best profit combination
-    print("Best Profit:")
-    print(f"Combination: {best_profit_entry.substances}")
-    print(f"  Effects: {best_profit_entry.effects}")
-    print(f"  Modifier: {best_profit_entry.modifier:.2f}")
-    print(f"  Sell Price: ${best_profit_entry.sell_price:.2f}")
-    print(f"  Substance Cost: ${best_profit_entry.substance_cost:.2f}")
-    print(f"  Profit: ${(best_profit_entry.sell_price - best_profit_entry.substance_cost):.2f}")
