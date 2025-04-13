@@ -3,6 +3,9 @@ import os
 from decimal import Decimal
 from typing import Dict, List, Union, Tuple
 from itertools import product as itertool_product
+import time 
+from functools import wraps
+import json
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
@@ -12,6 +15,30 @@ logger.info("Starting the calculation process...")
 
 from src.lookup.lookup import substances, effects, products, level_name_to_int
 from src.util.models import CombinationResult
+
+def timing(func):
+    """
+    A decorator to measure the execution time of a function.
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        logger.info(f"Function '{func.__name__}' executed in {elapsed_time:.4f} seconds.")
+        return result
+    return wrapper
+
+def decimal_default(obj):
+    """
+    Custom JSON serializer for objects not serializable by default.
+    Converts Decimal objects to float.
+    """
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
+
 
 
 
@@ -44,7 +71,6 @@ def _calculate_modificator(
             logger.error(f"Product '{product_name}' not found!")
             raise ValueError(f"Product '{product_name}' not found!")
         for effect in product.effects:
-            logger.debug(f"Adding product effect: {effect}")
             active_effects[effect] = effect_modificators.get(effect, 0.0)
 
 
@@ -60,17 +86,14 @@ def _calculate_modificator(
         # Apply side effect replacements
         for effect, replacement in substance.side_effect_replacements.items():
             if effect in active_effects:
-                logger.debug(f"Replacing effect '{effect}' with '{replacement}'")
                 active_effects.pop(effect)
                 replace_effects.append(replacement)
 
         for effect in replace_effects:
-            logger.debug(f"Adding replaced effect: {effect}")
             active_effects[effect] = effect_modificators.get(effect, 0.0)  
 
         # Apply resulting effect
         resulting_effect = substance.resulting_effect
-        logger.debug(f"Adding resulting effect: {resulting_effect}")
         active_effects[resulting_effect] = effect_modificators.get(resulting_effect, 0.0)
 
 
@@ -88,7 +111,7 @@ def _calculate_price(product_name: str, total_effect_multiplier: float) -> Decim
     
     return Decimal(float(product.base_sell_price) * (1 + total_effect_multiplier))
 
-
+@timing
 def _find_best_combinations(
     combination_size: int, 
     product_name: str, 
@@ -187,7 +210,7 @@ def _find_best_combinations(
 
     return combinations_data, best_modifier_entry, best_profit_entry
 
-
+@timing
 def get_best_mix(
     combination_size: int, 
     product_name: str, 
@@ -212,6 +235,7 @@ def get_best_mix(
 
     return _find_best_combinations(combination_size, product_name, max_level)
 
+
 def _print_result(combination: CombinationResult, message: str = None) -> None:
     """
     Print the result of a combination.
@@ -235,12 +259,24 @@ def _print_result(combination: CombinationResult, message: str = None) -> None:
 
 if __name__ == "__main__":
 
-    combination_size = 4
+    combination_size = 5
     product_name = "green_crack" # Example: Use product name ("og_kush"...)
     max_level = 51  # Example: Use level name or int (6 or "hoodium IV")
 
     # Find all combinations
     combinations_data, best_modifier_entry, best_profit_entry = get_best_mix(combination_size, product_name, max_level)
+
+    # Speichere die Ergebnisse in einer JSON-Datei
+    output_file = f"combinations_{product_name}_{combination_size}.json"
+
+    with open(output_file, "w") as file:
+        json.dump(
+            {key: combination_result.__dict__ for key, combination_result in combinations_data.items()},
+            file,
+            indent=4,
+            default=decimal_default  # Verwende die benutzerdefinierte Serialisierungsfunktion
+        )
+    logger.info(f"Combinations data saved to {output_file}")
 
     print(f"Best Combinations for {product_name} at level {max_level} with up to {combination_size} products:")
     _print_result(best_modifier_entry, "Best Modifier Combination:")
