@@ -20,7 +20,7 @@ def setup_logging():
     file_handler = RotatingFileHandler(
         log_filepath, maxBytes=1_000_000_000_000, backupCount=10
     )
-    file_handler.setLevel(logging.DEBUG)
+    file_handler.setLevel(logging.INFO)
     file_formatter = logging.Formatter(
         "%(asctime)s - %(levelname)s - %(message)s"
     )

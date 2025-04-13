@@ -51,7 +51,7 @@ def _calculate_modificator(
     # Process substances
     for name in substance_names:
         replace_effects: List[str] = []
-        
+
         substance = substance_map.get(name)
         if not substance:
             logger.error(f"Substance '{name}' not found!")
@@ -210,20 +210,38 @@ def get_best_mix(
     if isinstance(max_level, str):
         max_level = max_level.lower().replace(" ", "_")
 
-    
     return _find_best_combinations(combination_size, product_name, max_level)
+
+def _print_result(combination: CombinationResult, message: str = None) -> None:
+    """
+    Print the result of a combination.
+
+    Args:
+        result (CombinationResult): The result to print.
+        message (str, optional): Optional message to print before the result.
+    """
+    if message:
+        print("=" * len(message))
+        print(message)
+        print("=" * len(message))
+    print(f"Effects: {', '.join(combination.effects)}")
+    print(f"Substances: {', '.join(combination.substances)}")
+    print(f"Modifier: {combination.modifier:.2f}")
+    print(f"Sell Price: {combination.sell_price:.2f}$")
+    print(f"Substance Cost: {combination.substance_cost:.2f}$")
+    print(f"Profit: {combination.sell_price - combination.substance_cost:.2f}$")
+    print("-" * 40)
 
 
 if __name__ == "__main__":
 
-    combination_size = 2
+    combination_size = 4
     product_name = "green_crack" # Example: Use product name ("og_kush"...)
     max_level = 51  # Example: Use level name or int (6 or "hoodium IV")
 
     # Find all combinations
-    #combinations_data, best_modifier_entry, best_profit_entry = get_best_mix(combination_size, product_name, max_level)
-
-    a,b = (_calculate_modificator(['gasoline', 'cuke', 'battery', 'viagra', 'mega_bean'], product_name))
-    print(b)
+    combinations_data, best_modifier_entry, best_profit_entry = get_best_mix(combination_size, product_name, max_level)
 
     print(f"Best Combinations for {product_name} at level {max_level} with up to {combination_size} products:")
+    _print_result(best_modifier_entry, "Best Modifier Combination:")
+    _print_result(best_profit_entry, "Best Profit Combination:")
