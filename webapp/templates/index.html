@@ -9,7 +9,7 @@
 <body>
     <div class="container">
         <h1>Best Mix Calculator</h1>
-        <form id="mixForm" method="POST" action="/">
+        <form id="best-mix-form" method="POST" action="/">
             <label for="level">Level:</label>
             <select id="level" name="level" required>
                 {% for level_name, level_id in level_name_to_int.items() %}
@@ -18,10 +18,10 @@
             </select>
         
             <label for="combination_size">Combination Size:</label>
-            <input type="number" id="combination_size" name="combination_size" required>
+            <input type="number" id="combination-size" name="combination_size" required>
         
             <label for="product_name">Product Name:</label>
-            <select id="product_name" name="product_name" required>
+            <select id="product-name" name="product_name" required>
                 {% for product in products %}
                     <option value="{{ product.name }}">{{ product.name }}</option>
                 {% endfor %}
@@ -31,17 +31,17 @@
         </form>
 
         <div id="result">
-            {% if result %}
+            {% if best_modifier %}
                 <h2>Best Combination</h2>
-                <p>Effects: {{ result.effects | join(', ') }}</p>
-                <p>Substances: {{ result.substances | join(', ') }}</p>
-                <p>Modifier: {{ result.modifier }}</p>
-                <p>Sell Price: {{ result.sell_price }}$</p>
-                <p>Substance Cost: {{ result.substance_cost }}$</p>
-                <p>Profit: {{ result.sell_price - result.substance_cost }}$</p>
+                <p>Effects: {{ best_modifier.effects | join(', ') }}</p>
+                <p>Substances: {{ best_modifier.substances | join(', ') }}</p>
+                <p>Modifier: {{ best_modifier.modifier }}</p>
+                <p>Sell Price: {{ best_modifier.sell_price }}$</p>
+                <p>Substance Cost: {{ best_modifier.substance_cost }}$</p>
+                <p>Profit: {{ best_modifier.sell_price - best_modifier.substance_cost }}$</p>
             {% endif %}
         </div>
     </div>
-    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>
