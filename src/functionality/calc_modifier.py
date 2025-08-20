@@ -5,7 +5,7 @@ from typing import Dict, List, Union, Tuple
 from itertools import product as itertool_product
 import time 
 from functools import wraps
-import json
+
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
@@ -15,6 +15,9 @@ logger.info("Starting the calculation process...")
 
 from src.lookup.lookup import substances, effects, products, level_name_to_int
 from src.util.models import CombinationResult
+from src.datenbank.initialize_db import initialize_database
+from src.datenbank.populate_db import populate_database, store_all_combinations_normalized
+from src.datenbank.get_db_data import get_best_recipe_filtered
 
 def timing(func):
     """
@@ -116,7 +119,7 @@ def _find_best_combinations(
     combination_size: int, 
     product_name: str, 
     max_level: Union[int, str]
-) -> Dict[str, CombinationResult]:
+) -> Tuple[Dict[int, Dict[str, CombinationResult]], CombinationResult, CombinationResult]:
     """
     Find all combinations of substances and calculate their total effect multiplier, price, and profit.
 
@@ -155,6 +158,7 @@ def _find_best_combinations(
         raise ValueError(f"Product '{product_name}' not found!")
 
     combinations_data = {}
+    all_combinations_by_size = {}
     best_modifier_entry = None
     best_profit_entry = None
     highest_modifier = float("-inf")
@@ -181,7 +185,7 @@ def _find_best_combinations(
             profit = sell_price - substance_cost
 
             # Create a unique key for the combination
-            combination_key = "_".join(sorted(combination))
+            combination_key = "_".join(combination)
 
             # Store the result in the dictionary
             combination_result = CombinationResult(
@@ -192,6 +196,7 @@ def _find_best_combinations(
                 effects=list(active_effects.keys()),
             )
             combinations_data[combination_key] = combination_result
+            
 
             # Update the best modifier entry
             if current_multiplier > highest_modifier:
@@ -208,7 +213,8 @@ def _find_best_combinations(
                 f"Sell Price: {sell_price:.2f}, Cost: {substance_cost:.2f}, Profit: {profit:.2f}"
             )
 
-    return combinations_data, best_modifier_entry, best_profit_entry
+        all_combinations_by_size[size] = combinations_data
+    return all_combinations_by_size, best_modifier_entry, best_profit_entry
 
 @timing
 def get_best_mix(
@@ -256,28 +262,19 @@ def _print_result(combination: CombinationResult, message: str = None) -> None:
     print(f"Profit: {combination.sell_price - combination.substance_cost:.2f}$")
     print("-" * 40)
 
+def generate_db_entrys(
+    combination_size: int, 
+    product_name: str, 
+    max_level: Union[int, str]
+) -> None:
+
+    all_combinations_by_size, best_modifier_entry, best_profit_entry = get_best_mix(combination_size, product_name, max_level)
+    for size, combinations_data in all_combinations_by_size.items():
+        store_all_combinations_normalized("combinations.db", product_name, size, combinations_data)
+    
 
 if __name__ == "__main__":
 
-    combination_size = 5
-    product_name = "green_crack" # Example: Use product name ("og_kush"...)
-    max_level = 51  # Example: Use level name or int (6 or "hoodium IV")
-
-    # Find all combinations
-    combinations_data, best_modifier_entry, best_profit_entry = get_best_mix(combination_size, product_name, max_level)
-
-    # Speichere die Ergebnisse in einer JSON-Datei
-    output_file = f"combinations_{product_name}_{combination_size}.json"
-
-    with open(output_file, "w") as file:
-        json.dump(
-            {key: combination_result.__dict__ for key, combination_result in combinations_data.items()},
-            file,
-            indent=4,
-            default=decimal_default  # Verwende die benutzerdefinierte Serialisierungsfunktion
-        )
-    logger.info(f"Combinations data saved to {output_file}")
-
-    print(f"Best Combinations for {product_name} at level {max_level} with up to {combination_size} products:")
-    _print_result(best_modifier_entry, "Best Modifier Combination:")
-    _print_result(best_profit_entry, "Best Profit Combination:")
+    combination_size = 4
+    product_name = "cocaine" # Example: Use product name ("og_kush"...)
+    max_level = "max"  # Example: Use level name or int (6 or "hoodium IV")

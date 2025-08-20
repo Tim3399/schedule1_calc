@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Best Mix Calculator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Best Mix Calculator</h1>
+        <form id="mixForm" method="POST" action="/">
+            <label for="level">Level:</label>
+            <select id="level" name="level" required>
+                {% for level_name, level_id in level_name_to_int.items() %}
+                    <option value="{{ level_name }}">{{ level_name }}</option>
+                {% endfor %}
+            </select>
+        
+            <label for="combination_size">Combination Size:</label>
+            <input type="number" id="combination_size" name="combination_size" required>
+        
+            <label for="product_name">Product Name:</label>
+            <select id="product_name" name="product_name" required>
+                {% for product in products %}
+                    <option value="{{ product.name }}">{{ product.name }}</option>
+                {% endfor %}
+            </select>
+        
+            <button type="submit">Get Best Mix</button>
+        </form>
+
+        <div id="result">
+            {% if result %}
+                <h2>Best Combination</h2>
+                <p>Effects: {{ result.effects | join(', ') }}</p>
+                <p>Substances: {{ result.substances | join(', ') }}</p>
+                <p>Modifier: {{ result.modifier }}</p>
+                <p>Sell Price: {{ result.sell_price }}$</p>
+                <p>Substance Cost: {{ result.substance_cost }}$</p>
+                <p>Profit: {{ result.sell_price - result.substance_cost }}$</p>
+            {% endif %}
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+</body>
+</html>
