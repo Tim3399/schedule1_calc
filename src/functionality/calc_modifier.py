@@ -157,7 +157,6 @@ def _find_best_combinations(
     if not product:
         raise ValueError(f"Product '{product_name}' not found!")
 
-    combinations_data = {}
     all_combinations_by_size = {}
     best_modifier_entry = None
     best_profit_entry = None
@@ -167,6 +166,7 @@ def _find_best_combinations(
 
     for size in range(combination_size, 0, -1):
         logger.info(f"Calculating combinations of size {size}...")
+        combinations_data = {}
 
         # Test all combinations of the given size
         for combination in itertool_product(filtered_substances, repeat=size):
