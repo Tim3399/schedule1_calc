@@ -22,6 +22,7 @@ class Product:
     buy_price: Decimal
     level: int
     effects: List[str] = None
+    quality: int = -1
 
 @dataclass
 class Substance:

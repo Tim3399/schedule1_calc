@@ -57,6 +57,15 @@ level_name_to_int = {
     "max": 51,
 }
 
+quality_name_to_int = {
+    "n_a": -1,
+    "trash": 0,
+    "poor": 1,
+    "standard": 2,
+    "premium": 3,
+    "heavenly": 4,
+}
+
 level_int_to_name = {v: k for k, v in level_name_to_int.items()}
 
 effects: List[Effect] = [
@@ -105,6 +114,7 @@ products: List[Product] = [
         buy_price=Decimal("30.00"),
         level=level_name_to_int["street_rat_i"],
         effects=["calming"],
+        quality=quality_name_to_int["n_a"],
     ),
     Product(
         name="sour_diesel",
@@ -112,6 +122,7 @@ products: List[Product] = [
         buy_price=Decimal("35.00"),
         level=level_name_to_int["street_rat_iv"],
         effects=["refreshing"],
+        quality=quality_name_to_int["n_a"],
     ),
     Product(
         name="green_crack",
@@ -119,6 +130,7 @@ products: List[Product] = [
         buy_price=Decimal("40.00"),
         level=level_name_to_int["hoodium_ii"],
         effects=["energizing"],
+        quality=quality_name_to_int["n_a"],
     ),
     Product(
         name="granddaddy_purple",
@@ -126,6 +138,7 @@ products: List[Product] = [
         buy_price=Decimal("45.00"),
         level=level_name_to_int["hoodium_iv"],
         effects=["sedating"],
+        quality=quality_name_to_int["n_a"],
     ),
     # meth
     Product(
@@ -134,6 +147,7 @@ products: List[Product] = [
         buy_price=Decimal("60.00"),
         level=level_name_to_int["hoodium_i"],
         effects=[],
+        quality=quality_name_to_int["poor"],
     ),
     Product(
         name="pseudo",
@@ -141,6 +155,7 @@ products: List[Product] = [
         buy_price=Decimal("80.00"),
         level=level_name_to_int["hustler_iii"],
         effects=[],
+        quality=quality_name_to_int["standard"],
     ),
     Product(
         name="high_quality_pesudo",
@@ -148,6 +163,7 @@ products: List[Product] = [
         buy_price=Decimal("110.00"),
         level=level_name_to_int["bagman_v"],
         effects=[],
+        quality=quality_name_to_int["premium"],
     ),
     # cocaine
     Product(
@@ -156,6 +172,7 @@ products: List[Product] = [
         buy_price=Decimal("0.00"),
         level=level_name_to_int["hustler_ii"],
         effects=[],
+        quality=quality_name_to_int["n_a"],
     ),
 ]
 

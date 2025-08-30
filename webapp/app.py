@@ -4,7 +4,7 @@ import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 from functionality.calc_modifier import get_best_mix
 from src.lookup.lookup import level_name_to_int, products
-from src.logging_config import setup_logging
+from functionality.logging.logging_config import setup_logging
 
 logger = setup_logging()
 

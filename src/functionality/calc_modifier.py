@@ -9,7 +9,7 @@ from functools import wraps
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from src.logging_config import setup_logging
+from functionality.logging.logging_config import setup_logging
 logger = setup_logging()
 logger.info("Starting the calculation process...")
 
@@ -241,8 +241,107 @@ def get_best_mix(
 
     return _find_best_combinations(combination_size, product_name, max_level)
 
+@timing
+def find_min_substances_for_effect(
+    product_name: str,
+    desired_effects: Union[str, List[str]],
+    not_desired_effects: Union[str, List[str]],
+    max_level: Union[int, str],
+    max_search_size: int = 6,
+    max_results: int = 10,
+    combination_search_limit: int = 200_000
+) -> Tuple[int, List[CombinationResult]]:
+    """
+    Find the minimum number of substances (combined with the given product)
+    required to activate all `desired_effects`.
 
-def _print_result(combination: CombinationResult, message: str = None) -> None:
+    Returns:
+        Tuple[int, List[CombinationResult]]: (found_size, list_of_CombinationResult).
+        If nothing is found, returns (0, []).
+    """
+    product_name = product_name.lower().replace(" ", "_")
+
+    # support list or comma-separated string for (not)desired effects
+    if isinstance(desired_effects, str):
+        desired_list = [e.strip().lower().replace(" ", "_") for e in desired_effects.split(",") if e.strip()]
+    else:
+        desired_list = [e.strip().lower().replace(" ", "_") for e in desired_effects]
+
+    if not_desired_effects is None:
+        not_desired_list: List[str] = []
+    elif isinstance(not_desired_effects, str):
+        not_desired_list = [e.strip().lower().replace(" ", "_") for e in not_desired_effects.split(",") if e.strip()]
+    else:
+        not_desired_list = [e.strip().lower().replace(" ", "_") for e in not_desired_effects]
+
+    if not desired_list:
+        raise ValueError("No desired effects provided.")
+
+    # Handle max_level same way as in _find_best_combinations
+    if isinstance(max_level, str):
+        max_level = level_name_to_int.get(max_level)
+        if max_level is None:
+            raise ValueError(f"Invalid level name: {max_level}")
+
+    # Build quick lookup maps for substances and filter by level
+    substance_map = {substance.name: substance for substance in substances}
+    filtered_substances = [s.name for s in substances if s.level <= max_level]
+
+    if not filtered_substances:
+        raise ValueError("Keine Substanzen für das gegebene Level verfügbar.")
+
+    # Validate product
+    product_map = {product.name: product for product in products}
+    product = product_map.get(product_name)
+    if not product:
+        raise ValueError(f"Product '{product_name}' not found!")
+
+    # Search for the smallest combination size that yields the desired effects
+    for size in range(1, min(max_search_size, len(filtered_substances)) + 1):
+        estimated_count = len(filtered_substances) ** size
+        if estimated_count > combination_search_limit:
+            logger.warning(
+                f"Search for size={size} would check {estimated_count} combinations; "
+                "skipping this size due to limit."
+            )
+            continue
+
+        found_results: List[CombinationResult] = []
+        # iterate over all ordered combinations with repetition
+        for comb in itertool_product(filtered_substances, repeat=size):
+            current_multiplier, active_effects = _calculate_modificator(list(comb), product_name)
+            # normalize active effect names for comparison
+            active_keys_normalized = {e.lower().replace(" ", "_") for e in active_effects.keys()}
+
+            # check that all desired effects are present
+            desired_ok = set(desired_list).issubset(active_keys_normalized)
+            # check that no not-desired effect is present
+            not_desired_ok = not set(not_desired_list).intersection(active_keys_normalized)
+
+            if desired_ok and not_desired_ok:
+                sell_price = _calculate_price(product_name, current_multiplier)
+                substance_cost = sum(substance_map[s].price for s in comb)
+                comb_result = CombinationResult(
+                    sell_price=sell_price,
+                    substance_cost=substance_cost,
+                    modifier=current_multiplier,
+                    substances=list(comb),
+                    effects=list(active_effects.keys()),
+                )
+                found_results.append(comb_result)
+                if len(found_results) >= max_results:
+                    break
+
+        if found_results:
+            logger.info(f"Found {len(found_results)} combinations with minimal size {size}.")
+            return size, found_results
+
+    # nothing found
+    logger.info(f"No results found for '{', '.join(desired_list)}' with Product '{product_name}'.")
+    return 0, []
+
+
+def print_result(combination: CombinationResult, message: str = None) -> None:
     """
     Print the result of a combination.
 
@@ -272,9 +371,3 @@ def generate_db_entrys(
     for size, combinations_data in all_combinations_by_size.items():
         store_all_combinations_normalized("combinations.db", product_name, size, combinations_data)
     
-
-if __name__ == "__main__":
-
-    combination_size = 4
-    product_name = "cocaine" # Example: Use product name ("og_kush"...)
-    max_level = "max"  # Example: Use level name or int (6 or "hoodium IV")
