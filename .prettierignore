@@ -1,0 +1,13 @@
+**/node_modules/
+**/.venv*/
+**/venv/
+**/dist/
+**/build/
+**/coverage/
+**/__pycache__/
+**/.pytest_cache/
+**/.ruff_cache/
+**/logs/
+.git/
+# Vendored baseline and templates; preserve the copied source bytes.
+docs/standards/

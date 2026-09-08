@@ -1,0 +1,3 @@
+# Keep text files deterministic across Windows, macOS and Linux.
+# Git detects binary files; do not normalize their contents.
+* text=auto eol=lf

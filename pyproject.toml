@@ -1,0 +1,9 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = ["*.md", "node_modules", ".venv*", "venv", "build", "dist", "logs"]
+
+[tool.ruff.format]
+indent-style = "space"
+quote-style = "double"
+line-ending = "lf"

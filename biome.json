@@ -1,0 +1,37 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "root": true,
+  "files": {
+    "includes": [
+      "**",
+      "!!**/node_modules",
+      "!!**/.venv*",
+      "!!**/venv",
+      "!!**/dist",
+      "!!**/build",
+      "!!**/coverage",
+      "!!**/__pycache__",
+      "!!**/logs",
+      "!!docs/standards",
+      "!!**/package-lock.json"
+    ],
+    "ignoreUnknown": true
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100,
+    "lineEnding": "lf",
+    "includes": ["**/*.js", "**/*.mjs", "**/*.cjs", "**/*.json", "**/*.jsonc", "**/*.css"]
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always",
+      "trailingCommas": "all",
+      "arrowParentheses": "always"
+    }
+  },
+  "css": { "formatter": { "enabled": true, "quoteStyle": "double" } }
+}

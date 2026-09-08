@@ -1,0 +1,14 @@
+**/node_modules/
+**/dist/
+**/build/
+**/coverage/
+**/.venv*/
+**/venv/
+**/target/
+**/runtime/
+**/models/
+**/test-results/
+**/playwright-report/
+**/.pytest_cache/
+**/.ruff_cache/
+**/__pycache__/
