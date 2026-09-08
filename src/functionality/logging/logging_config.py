@@ -3,6 +3,7 @@ import os
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
 
+
 def setup_logging():
     # Log-Verzeichnis
     log_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "logs"))
@@ -17,13 +18,9 @@ def setup_logging():
     logger.setLevel(logging.DEBUG)
 
     # Rotating File Handler (max. 10 Dateien, jede max. 1 MB)
-    file_handler = RotatingFileHandler(
-        log_filepath, maxBytes=1_000_000_000_000, backupCount=10
-    )
+    file_handler = RotatingFileHandler(log_filepath, maxBytes=1_000_000_000_000, backupCount=10)
     file_handler.setLevel(logging.INFO)
-    file_formatter = logging.Formatter(
-        "%(asctime)s - %(levelname)s - %(message)s"
-    )
+    file_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     file_handler.setFormatter(file_formatter)
 
     # Stream Handler (für Konsole)

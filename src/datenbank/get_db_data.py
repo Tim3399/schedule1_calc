@@ -1,4 +1,6 @@
-def get_best_recipe_filtered(product_name: str, max_level: int, combination_size: int, db_path="combinations.db"):
+def get_best_recipe_filtered(
+    product_name: str, max_level: int, combination_size: int, db_path="combinations.db"
+):
     """
     Führt eine Abfrage in der Datenbank durch, um das beste Rezept (höchster Profit)
     für das angegebene Produkt zu ermitteln, das nur Substanzen bis zu 'max_level' benutzt
@@ -42,13 +44,16 @@ def get_best_recipe_filtered(product_name: str, max_level: int, combination_size
     combination_id, modifier, sell_price, substance_cost, profit = best_combination
 
     # Hole die zugehörigen Substanzen
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT s.name
         FROM calculated_combination_substances cs
         JOIN substances s ON s.substance_id = cs.substance_id
         WHERE cs.combination_id = ?
         ORDER BY cs.position
-    """, (combination_id,))
+    """,
+        (combination_id,),
+    )
     substances = [r[0] for r in cursor.fetchall()]
 
     conn.close()
@@ -59,5 +64,5 @@ def get_best_recipe_filtered(product_name: str, max_level: int, combination_size
         "sell_price": sell_price,
         "substance_cost": substance_cost,
         "profit": profit,
-        "substances": substances
+        "substances": substances,
     }

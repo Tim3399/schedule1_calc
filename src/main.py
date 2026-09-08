@@ -7,6 +7,7 @@ from functionality.calc_modifier import (
     print_result,
 )
 
+
 def main(
     product: str,
     desired: str,
@@ -54,10 +55,13 @@ def main(
     else:
         print("No best profit-combination found.")
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run calc_modifier quick checks.")
     parser.add_argument("--product", default="cocaine")
-    parser.add_argument("--desired", default="seizure_inducing", help="CSV or single desired effect(s)")
+    parser.add_argument(
+        "--desired", default="seizure_inducing", help="CSV or single desired effect(s)"
+    )
     parser.add_argument("--not_desired", default=None, help="CSV or single not-desired effect(s)")
     parser.add_argument("--max_level", default="max", help="Level name or int")
     parser.add_argument("--max_search_size", type=int, default=4)

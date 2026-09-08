@@ -246,7 +246,7 @@ substances: List[Substance] = [
     ),
     Substance(
         name="energy_drink",
-        price = Decimal("6.00"),
+        price=Decimal("6.00"),
         level=level_name_to_int["peddler_i"],
         resulting_effect="athletic",
         side_effect_replacements={

@@ -3,13 +3,14 @@ import os
 from decimal import Decimal
 from typing import Dict, List, Union, Tuple
 from itertools import product as itertool_product
-import time 
+import time
 from functools import wraps
 
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from functionality.logging.logging_config import setup_logging
+
 logger = setup_logging()
 logger.info("Starting the calculation process...")
 
@@ -19,10 +20,12 @@ from src.datenbank.initialize_db import initialize_database
 from src.datenbank.populate_db import populate_database, store_all_combinations_normalized
 from src.datenbank.get_db_data import get_best_recipe_filtered
 
+
 def timing(func):
     """
     A decorator to measure the execution time of a function.
     """
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         start_time = time.time()
@@ -31,7 +34,9 @@ def timing(func):
         elapsed_time = end_time - start_time
         logger.info(f"Function '{func.__name__}' executed in {elapsed_time:.4f} seconds.")
         return result
+
     return wrapper
+
 
 def decimal_default(obj):
     """
@@ -43,11 +48,8 @@ def decimal_default(obj):
     raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
 
 
-
-
 def _calculate_modificator(
-    substance_names: List[str], 
-    product_name: str = None
+    substance_names: List[str], product_name: str = None
 ) -> Tuple[float, Dict[str, float]]:
     """
     Calculate the total price modifier and returns the modifier and the active effects.
@@ -65,7 +67,6 @@ def _calculate_modificator(
 
     total_modificator: float = 0.0
     active_effects: Dict[str, float] = {}
-    
 
     # Add product effects if a product is provided
     if product_name:
@@ -76,7 +77,6 @@ def _calculate_modificator(
         for effect in product.effects:
             active_effects[effect] = effect_modificators.get(effect, 0.0)
 
-
     # Process substances
     for name in substance_names:
         replace_effects: List[str] = []
@@ -85,7 +85,7 @@ def _calculate_modificator(
         if not substance:
             logger.error(f"Substance '{name}' not found!")
             raise ValueError(f"Substance '{name}' not found!")
-        
+
         # Apply side effect replacements
         for effect, replacement in substance.side_effect_replacements.items():
             if effect in active_effects:
@@ -93,12 +93,11 @@ def _calculate_modificator(
                 replace_effects.append(replacement)
 
         for effect in replace_effects:
-            active_effects[effect] = effect_modificators.get(effect, 0.0)  
+            active_effects[effect] = effect_modificators.get(effect, 0.0)
 
         # Apply resulting effect
         resulting_effect = substance.resulting_effect
         active_effects[resulting_effect] = effect_modificators.get(resulting_effect, 0.0)
-
 
     total_modificator = sum(active_effects.values())
     return total_modificator, active_effects
@@ -108,17 +107,16 @@ def _calculate_price(product_name: str, total_effect_multiplier: float) -> Decim
     """Calculate the final price based on the product's base price and total effect multiplier."""
     product_map = {product.name: product for product in products}
     product = product_map.get(product_name)
-    
+
     if not product:
         raise ValueError(f"Product '{product_name}' not found!")
-    
+
     return Decimal(float(product.base_sell_price) * (1 + total_effect_multiplier))
+
 
 @timing
 def _find_best_combinations(
-    combination_size: int, 
-    product_name: str, 
-    max_level: Union[int, str]
+    combination_size: int, product_name: str, max_level: Union[int, str]
 ) -> Tuple[Dict[int, Dict[str, CombinationResult]], CombinationResult, CombinationResult]:
     """
     Find all combinations of substances and calculate their total effect multiplier, price, and profit.
@@ -139,7 +137,6 @@ def _find_best_combinations(
         if max_level is None:
             raise ValueError(f"Invalid level name: {max_level}")
 
-
     # Create a map of substances for quick lookup
     substance_map = {substance.name: substance for substance in substances}
 
@@ -149,7 +146,9 @@ def _find_best_combinations(
     ]
 
     if combination_size > len(filtered_substances):
-        raise ValueError("Not enough substances available for the given combination size and level.")
+        raise ValueError(
+            "Not enough substances available for the given combination size and level."
+        )
 
     # Create a map of products for quick lookup
     product_map = {product.name: product for product in products}
@@ -163,7 +162,6 @@ def _find_best_combinations(
     highest_modifier = float("-inf")
     highest_profit = Decimal("-inf")
 
-
     for size in range(combination_size, 0, -1):
         logger.info(f"Calculating combinations of size {size}...")
         combinations_data = {}
@@ -171,15 +169,14 @@ def _find_best_combinations(
         # Test all combinations of the given size
         for combination in itertool_product(filtered_substances, repeat=size):
             # Calculate the modifier for the current combination
-            current_multiplier, active_effects = _calculate_modificator(list(combination), product_name)
+            current_multiplier, active_effects = _calculate_modificator(
+                list(combination), product_name
+            )
 
             sell_price = _calculate_price(product_name, current_multiplier)
 
-
             # Calculate the manufacturing cost
-            substance_cost = sum(
-                substance_map[substance].price for substance in combination
-            )
+            substance_cost = sum(substance_map[substance].price for substance in combination)
 
             # Calculate the profit
             profit = sell_price - substance_cost
@@ -196,7 +193,6 @@ def _find_best_combinations(
                 effects=list(active_effects.keys()),
             )
             combinations_data[combination_key] = combination_result
-            
 
             # Update the best modifier entry
             if current_multiplier > highest_modifier:
@@ -216,12 +212,11 @@ def _find_best_combinations(
         all_combinations_by_size[size] = combinations_data
     return all_combinations_by_size, best_modifier_entry, best_profit_entry
 
+
 @timing
 def get_best_mix(
-    combination_size: int, 
-    product_name: str, 
-    max_level: Union[int, str]
-) -> Tuple[CombinationResult, CombinationResult, Dict[str,CombinationResult]]:
+    combination_size: int, product_name: str, max_level: Union[int, str]
+) -> Tuple[CombinationResult, CombinationResult, Dict[str, CombinationResult]]:
     """
     Get the best mix of substances for a given product and level.
 
@@ -241,6 +236,7 @@ def get_best_mix(
 
     return _find_best_combinations(combination_size, product_name, max_level)
 
+
 @timing
 def find_min_substances_for_effect(
     product_name: str,
@@ -249,7 +245,7 @@ def find_min_substances_for_effect(
     max_level: Union[int, str],
     max_search_size: int = 6,
     max_results: int = 10,
-    combination_search_limit: int = 200_000
+    combination_search_limit: int = 200_000,
 ) -> Tuple[int, List[CombinationResult]]:
     """
     Find the minimum number of substances (combined with the given product)
@@ -263,14 +259,18 @@ def find_min_substances_for_effect(
 
     # support list or comma-separated string for (not)desired effects
     if isinstance(desired_effects, str):
-        desired_list = [e.strip().lower().replace(" ", "_") for e in desired_effects.split(",") if e.strip()]
+        desired_list = [
+            e.strip().lower().replace(" ", "_") for e in desired_effects.split(",") if e.strip()
+        ]
     else:
         desired_list = [e.strip().lower().replace(" ", "_") for e in desired_effects]
 
     if not_desired_effects is None:
         not_desired_list: List[str] = []
     elif isinstance(not_desired_effects, str):
-        not_desired_list = [e.strip().lower().replace(" ", "_") for e in not_desired_effects.split(",") if e.strip()]
+        not_desired_list = [
+            e.strip().lower().replace(" ", "_") for e in not_desired_effects.split(",") if e.strip()
+        ]
     else:
         not_desired_list = [e.strip().lower().replace(" ", "_") for e in not_desired_effects]
 
@@ -361,13 +361,13 @@ def print_result(combination: CombinationResult, message: str = None) -> None:
     print(f"Profit: {combination.sell_price - combination.substance_cost:.2f}$")
     print("-" * 40)
 
+
 def generate_db_entrys(
-    combination_size: int, 
-    product_name: str, 
-    max_level: Union[int, str]
+    combination_size: int, product_name: str, max_level: Union[int, str]
 ) -> None:
 
-    all_combinations_by_size, best_modifier_entry, best_profit_entry = get_best_mix(combination_size, product_name, max_level)
+    all_combinations_by_size, best_modifier_entry, best_profit_entry = get_best_mix(
+        combination_size, product_name, max_level
+    )
     for size, combinations_data in all_combinations_by_size.items():
         store_all_combinations_normalized("combinations.db", product_name, size, combinations_data)
-    

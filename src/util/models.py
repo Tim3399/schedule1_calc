@@ -2,6 +2,7 @@ from decimal import Decimal
 from dataclasses import dataclass
 from typing import List, Dict
 
+
 @dataclass
 class CombinationResult:
     sell_price: Decimal
@@ -10,10 +11,12 @@ class CombinationResult:
     substances: List[str]
     effects: List[str]
 
+
 @dataclass
 class Effect:
     name: str
     modificator: float
+
 
 @dataclass
 class Product:
@@ -24,10 +27,11 @@ class Product:
     effects: List[str] = None
     quality: int = -1
 
+
 @dataclass
 class Substance:
     name: str
-    price: Decimal 
+    price: Decimal
     level: int
     resulting_effect: str
     side_effect_replacements: Dict[str, str]

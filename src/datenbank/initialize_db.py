@@ -1,5 +1,6 @@
 import sqlite3
 
+
 def initialize_database(db_path="combinations.db"):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -109,6 +110,7 @@ def initialize_database(db_path="combinations.db"):
     conn.commit()
     conn.close()
     print(f"Database initialized at: {db_path}")
+
 
 # Run the function
 if __name__ == "__main__":
