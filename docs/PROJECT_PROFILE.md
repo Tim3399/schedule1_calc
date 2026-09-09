@@ -56,6 +56,8 @@ Generierte Dateien, `node_modules`, virtuelle Umgebungen, Caches, Builds und Log
 
 `check` ist weder ein Testlauf noch ein Linter-/Typechecker-Lauf oder Release-Gate. Isolierte npm-Skripte `format:web`, `check:format:web`, `format:docs` und `check:format:docs` prüfen nur ihren Teilbereich. Die Python-Sammelbefehle sind für den gesamten Bestand maßgeblich. `.github/workflows/check.yml` installiert die Pins und führt `check` sowie `test` getrennt aus; eine vorhandene Konfiguration ist kein Nachweis eines bereits ausgeführten Remote-CI-Laufs.
 
+CI installiert Python aus `.python-version` mit der auf einen Commit gepinnten Action `astral-sh/setup-uv` und uv **0.12.8**; der uv-Pin steht im Workflow und gilt nur für CI. Die Action erstellt und aktiviert `.venv`, sodass alle folgenden `python`-Befehle den gewählten Interpreter verwenden. `uv pip install -r requirements-dev.txt` installiert die gepinnten Python-Pakete in diese Umgebung. Damit ist Python **3.12.14** auch unter Windows verfügbar, wo `actions/setup-python` diese Sicherheitsversion nicht bereitstellt.
+
 ## Lokaler Start
 
 | Dienst                 | Bindung / Standard | Override                      | Bereitschaft                                              |
