@@ -1,6 +1,6 @@
 # Projektregeln
 
-Lies vor Änderungen an Formatierung, Start-, Prüf- oder Versionstooling `docs/PROJECT_PROFILE.md` und die dort verlinkte Baseline in `docs/standards/README.md`. Das Projektprofil beschreibt die tatsächlichen Befehle und Ausnahmen dieser Flask-Anwendung; maßgeblich sind die projektspezifischen Pfade und Befehle.
+Lies vor Änderungen an Formatierung, Start-, Prüf-, Versionstooling oder CI/CD `docs/PROJECT_PROFILE.md` und die dort verlinkte Baseline in `docs/standards/README.md`. Das Projektprofil beschreibt die tatsächlichen Befehle und Ausnahmen dieser Flask-Anwendung; maßgeblich sind die projektspezifischen Pfade und Befehle. Für Pipeline- und Release-Änderungen außerdem `docs/CI_CD_PROFILE.md` lesen.
 
 - Bewahre fremde und nicht zum Auftrag gehörende Änderungen. Halte mechanische Formatierung und Fachänderungen im Review getrennt.
 - Verwende die gewählte Projektumgebung: Windows `.venv\Scripts\python.exe`, POSIX `.venv/bin/python`. Verlasse dich nicht auf einen ungeprüften Python im PATH.

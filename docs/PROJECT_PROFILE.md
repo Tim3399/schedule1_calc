@@ -6,14 +6,29 @@
 | --------------------- | ------------------------------------------------------------------------------------- |
 | Produkt               | schedule1_calc, Flask-Anwendung für das Spiel Schedule I                              |
 | Kickoff skill         | `project-start` **1.1.0**, reapplied on **2026-09-10**                                |
-| Baseline              | Cross-project engineering standard **1.0.0**, adopted on **08.09.2026**               |
+| Baseline              | Cross-project engineering standard **1.0.0**, übernommen am **08.09.2026**            |
 | Verbindliche Baseline | [Lokale Kopie](standards/README.md), Vorlagen und Herkunft in `docs/standards/`       |
 | Status                | **Teilweise übernommen**; implementierte Befehle und offene Anforderungen siehe unten |
 | Aktive Profile        | Python, Web (JavaScript/JSON/CSS), Dokumentation (Markdown/YAML/HTML)                 |
 | Entwicklerplattform   | Windows/PowerShell lokal geprüft; Ubuntu 24.04 und Windows 2025 in CI konfiguriert    |
-| Produkt-Build         | Kein kompiliertes Frontend, keine eigene Release-Pipeline                             |
+| Produkt-Build         | Quell-ZIP und Linux/amd64-Container; siehe CI/CD-Profil                               |
 
 Die Baseline regelt das Entwicklungstooling. Fachlogik und Spieldaten wurden dabei nur formatiert und reviewt. Die [Codebefunde](reviews/2026-09-08-code-review.md) und der [Wiki-Abgleich](reviews/2026-09-08-wiki-audit.md) bleiben eigenständige Arbeit. Die lokale Standardskopie ist ein datierter Arbeitsstand; die genaue Herkunft steht in [SOURCE.md](standards/SOURCE.md).
+
+## Bereichsstand der CI/CD-Aktualisierung
+
+`project-start` **1.3.0** aktualisiert hier ausschließlich CI/CD und dessen notwendige
+Test-/Paketierungswerkzeuge. Die bisherige Baseline und historische Prüfergebnisse
+bleiben erhalten. Die genaue Delivery-Konfiguration und verbleibende Verifikation
+stehen im [CI/CD-Profil](CI_CD_PROFILE.md).
+
+| Bereich                     | Bisher übernommen                  | Ziel  | Stand                                                                   |
+| --------------------------- | ---------------------------------- | ----- | ----------------------------------------------------------------------- |
+| Agent-Regeln / Formatierung | 1.0.0                              | 1.0.0 | Beibehalten; Profilverweis um CI/CD ergänzt                             |
+| Bisherige Sprachprofile     | 1.0.0                              | 1.0.0 | Runtimes und Entwicklungspins beibehalten                               |
+| Container-Sprachprofil      | Unbekannt / bisher nicht vorhanden | 1.3.0 | Neu, eigener Produktions-Lock; Validierung siehe CI/CD-Profil           |
+| Tooling                     | 1.0.0, teilweise                   | 1.3.0 | Nur Testentdeckung und Delivery-Helfer aktualisiert                     |
+| CI/CD                       | Unbekannt / noch nicht bewertet    | 1.3.0 | Teilweise; CI/Artefakte geprüft, Branch-Schutz aktiv, Publikation offen |
 
 ## Formatierung und Toolchains
 
@@ -38,22 +53,22 @@ Generierte Dateien, `node_modules`, virtuelle Umgebungen, Caches, Builds und Log
 
 `PY` steht für `.venv\Scripts\python.exe` unter Windows beziehungsweise `.venv/bin/python` unter POSIX. Kommandos werden im Repository ausgeführt. Python ist der Befehlsverteiler; npm verwaltet Webformatierer. Dies entspricht projektspezifisch der npm-Oberfläche aus der Baseline.
 
-| Aufgabe                         | Befehl                                                | Umfang                                                 |
-| ------------------------------- | ----------------------------------------------------- | ------------------------------------------------------ |
-| App-Pakete installieren         | `PY -m pip install -r requirements.txt`               | App ohne Formatierer                                   |
-| Entwicklung installieren        | `PY -m pip install -r requirements-dev.txt`, `npm ci` | Gepinnte Pakete                                        |
-| Doctor                          | `PY tools/project.py doctor`                          | Exakte Runtimes, Pakete, Versionen                     |
-| Vollständiger Start             | `PY tools/project.py start`                           | Frontend und API gemeinsam                             |
-| Entwicklung                     | `PY tools/project.py dev`                             | Startalias; kein Hot Reload                            |
-| Formatieren                     | `PY tools/project.py format`                          | Ruff/Biome/Prettier; schreibt                          |
-| Format prüfen                   | `PY tools/project.py check-format`                    | Dieselben Bereiche; schreibt nicht                     |
-| Statische Checks                | `PY tools/project.py check`                           | Doctor, Formatchecks, Python-Syntax mittels AST        |
-| Tests                           | `PY tools/project.py test`                            | `unittest discover -s tests -v`; getrennt von `check`  |
-| Version prüfen                  | `PY tools/project.py check-version`                   | VERSION/Manifest/Lock stimmen überein                  |
-| Version vorbereiten             | `PY tools/project.py set-version patch`               | Auch minor, major oder höhere stabile Version          |
-| Produktions-Build               | Nicht vorhanden                                       | Flask liefert gepflegte Quellen direkt aus             |
-| Ende-zu-Ende-Suite              | Offen                                                 | Keine vollständige Browser-/Fachsuite                  |
-| Release-Preflight / Publikation | Nicht eingerichtet                                    | Vor einer ersten Veröffentlichung festlegen und testen |
+| Aufgabe                         | Befehl                                                | Umfang                                                                          |
+| ------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------- |
+| App-Pakete installieren         | `PY -m pip install -r requirements.txt`               | App ohne Formatierer                                                            |
+| Entwicklung installieren        | `PY -m pip install -r requirements-dev.txt`, `npm ci` | Gepinnte Pakete                                                                 |
+| Doctor                          | `PY tools/project.py doctor`                          | Exakte Runtimes, Pakete, Versionen                                              |
+| Vollständiger Start             | `PY tools/project.py start`                           | Frontend und API gemeinsam                                                      |
+| Entwicklung                     | `PY tools/project.py dev`                             | Startalias; kein Hot Reload                                                     |
+| Formatieren                     | `PY tools/project.py format`                          | Ruff/Biome/Prettier; schreibt                                                   |
+| Format prüfen                   | `PY tools/project.py check-format`                    | Dieselben Bereiche; schreibt nicht                                              |
+| Statische Checks                | `PY tools/project.py check`                           | Doctor, Formatchecks, Python-Syntax mittels AST                                 |
+| Tests                           | `PY tools/project.py test`                            | Einmalige unittest-Entdeckung; leere Suite ist ein Fehler; getrennt von `check` |
+| Version prüfen                  | `PY tools/project.py check-version`                   | VERSION/Manifest/Lock stimmen überein                                           |
+| Version vorbereiten             | `PY tools/project.py set-version patch`               | Auch minor, major oder höhere stabile Version                                   |
+| Produktions-Build               | `PY tools/release.py build`, `docker build`           | Quell-ZIP und Linux/amd64-Image; genaue Aufrufe im CI/CD-Workflow               |
+| Ende-zu-Ende-Suite              | Offen                                                 | Keine vollständige Browser-/Fachsuite                                           |
+| Release-Preflight / Publikation | `PY tools/release.py`, `PY tools/publish_release.py`  | Tag-/Quell-/Artefaktvertrag; Aufruf und Grenzen im CI/CD-Profil                 |
 
 `check` ist weder ein Testlauf noch ein Linter-/Typechecker-Lauf oder Release-Gate. Isolierte npm-Skripte `format:web`, `check:format:web`, `format:docs` und `check:format:docs` prüfen nur ihren Teilbereich. Die Python-Sammelbefehle sind für den gesamten Bestand maßgeblich. `.github/workflows/check.yml` installiert die Pins und führt `check` sowie `test` getrennt aus; eine vorhandene Konfiguration ist kein Nachweis eines bereits ausgeführten Remote-CI-Laufs.
 
@@ -85,21 +100,21 @@ Maßgeblich ist Root-`VERSION`. Kopien sind `package.json.version`, `package-loc
 
 Der Updater prüft alle Kopien vor dem Schreiben, verlangt einen sauberen Arbeitsbaum, verwirft gleiche/niedrigere Versionen und prüft vorhandene lokale Tags. Er bereitet die drei Dateien vor und versucht bei Schreibfehlern, Originale wiederherzustellen; Wiederherstellungsfehler werden gemeldet. Danach Diff reviewen, formatieren und `check`/`test` ausführen. Der Befehl erzeugt keine Commits, Tags, Pushes oder Veröffentlichungen.
 
-Es gibt keine Frontend-Bundles oder getrackten Buildausgaben. Der Server liest die Version beim Start. Buildzeit-Metadaten, Artefaktdigests, veröffentlichte Versionsprüfung und Veröffentlichung bereits geprüfter Artefakte sind vor Einführung einer Produktionsverteilung umzusetzen. Aktuell existiert kein automatischer Veröffentlichungstrigger; ein Versionsupdate ist keine Release-Freigabe.
+Es gibt keine Frontend-Bundles oder getrackten Buildausgaben. Der Server liest die Version beim Start. Die neue CI/CD-Konfiguration baut ein Quellpaket und ein Container-Image, prüft ihre Identität und veröffentlicht sie bei einem passenden Versions-Tag ohne erneuten Build. Der genaue Umfang, die Ausnahmen und der Verifikationsstand stehen im [CI/CD-Profil](CI_CD_PROFILE.md). Ein lokales Versionsupdate erzeugt weiterhin keinen Tag und löst keine Veröffentlichung aus.
 
 ## Ausnahmen und offene Anforderungen
 
-| Baseline-Anforderung                      | Tatsächlicher Stand                                   | Grund / erneute Prüfung                                                         |
-| ----------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------- |
-| npm als Befehlsoberfläche                 | Python-Äquivalente                                    | App primär Python; kein Node zum bloßen Start                                   |
-| Frontend-dev mit Hot Reload               | Gemeinsamer Flask-Start ohne Reload                   | Kein eigener Buildserver; bei Reloader-Einführung Identität/Stopp erneut prüfen |
-| Produktions-Build/Bundle-Metadaten        | Aktuell nicht anwendbar                               | Vor Einführung erzeugter Frontend-Dateien neu bewerten                          |
-| Release-Gates, Remote-/Registry-Versionen | Nicht eingerichtet                                    | Vor erster Veröffentlichung implementieren                                      |
-| Lint/Typprüfung                           | Nicht eingerichtet; Syntax und Format vorhanden       | Bestehende Codebefunde separat abarbeiten                                       |
-| Vollständige E2E-/Fachtests               | Offen                                                 | Werkzeugtests decken das Spielmodell und UI nicht vollständig ab                |
-| Parallele Starts im selben Checkout       | Port konfigurierbar, Daten nicht vollständig isoliert | Getrennte Checkouts/Exportpfade; später konfigurierbare Datenpfade              |
-| Python-Artefaktreproduzierbarkeit         | Exakte Paketversionen, keine Artefakthashes           | Vor Release Hash-/Plattform-Lock festlegen                                      |
-| Weitere Python-Versionen                  | Start akzeptiert >=3.12; 3.12.14 geprüft              | Erst nach Laufzeit-/CI-Prüfung als getestet bezeichnen                          |
+| Baseline-Anforderung                      | Tatsächlicher Stand                                              | Grund / erneute Prüfung                                                         |
+| ----------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| npm als Befehlsoberfläche                 | Python-Äquivalente                                               | App primär Python; kein Node zum bloßen Start                                   |
+| Frontend-dev mit Hot Reload               | Gemeinsamer Flask-Start ohne Reload                              | Kein eigener Buildserver; bei Reloader-Einführung Identität/Stopp erneut prüfen |
+| Produktions-Build/Bundle-Metadaten        | Quell-ZIP und Container mit Manifest; kein Frontend-Bundle       | Artefaktvertrag und Grenzen im CI/CD-Profil                                     |
+| Release-Gates, Remote-/Registry-Versionen | Implementiert, tatsächliche Publikation noch nicht ausgeführt    | Siehe CI/CD-Profil und konkrete Laufnachweise                                   |
+| Lint/Typprüfung                           | Nicht eingerichtet; Syntax und Format vorhanden                  | Bestehende Codebefunde separat abarbeiten                                       |
+| Vollständige E2E-/Fachtests               | Offen                                                            | Werkzeugtests decken das Spielmodell und UI nicht vollständig ab                |
+| Parallele Starts im selben Checkout       | Port konfigurierbar, Daten nicht vollständig isoliert            | Getrennte Checkouts/Exportpfade; später konfigurierbare Datenpfade              |
+| Python-Artefaktreproduzierbarkeit         | Container: exakte Wheels mit Hashes; Entwicklung: bisherige Pins | Produktions-Lock getrennt von Entwicklungspflichten                             |
+| Weitere Python-Versionen                  | Start akzeptiert >=3.12; 3.12.14 geprüft                         | Erst nach Laufzeit-/CI-Prüfung als getestet bezeichnen                          |
 
 ## Agent workflow
 

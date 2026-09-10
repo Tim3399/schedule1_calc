@@ -4,6 +4,8 @@
 
 A local ingredient combination calculator for the game **Schedule I**. For a selected product, the Flask web interface displays both the combination with the highest effect modifier and the one with the highest profit, including their ingredients, effects, selling prices and ingredient costs. The current project version is recorded in [VERSION](VERSION).
 
+Shared formatting, local startup and versioning rules are adapted to this Flask application. Commands, exceptions and verification limits are documented in the [project profile (German)](docs/PROJECT_PROFILE.md); the versioned baseline is in [docs/standards](docs/standards/README.md).
+
 The application uses the game data stored in the repository at [src/lookup/lookup.py](src/lookup/lookup.py). The web interface does not require a database; SQLite is available for optional data exports.
 
 ## Quick start
@@ -94,11 +96,15 @@ Alternatively, set `SCHEDULE1_PORT`; `--port` takes precedence. Use separate por
 
 Ruff handles Python, Biome handles JavaScript/JSON/CSS, and Prettier handles Markdown/YAML/HTML. Shared rules: UTF-8, LF, a line width of 100 and two-space indentation; Python uses four spaces. Details and exclusions are in the [project profile (German)](docs/PROJECT_PROFILE.md).
 
-## Continuous Integration
+## CI and releases
 
-The GitHub Actions workflow [Project checks](.github/workflows/check.yml) runs on pushes and pull requests using **Ubuntu 24.04** and **Windows 2025**. It installs the pinned tools and runs `check` and `test` separately.
+The [CI workflow](.github/workflows/check.yml) runs on pushes, pull requests, manual requests and reusable calls. It checks formatting, pins and a non-empty test suite on **Ubuntu 24.04** and **Windows 2025**. It also builds a source ZIP and a Linux/amd64 container and tests the application against both packages. The stable aggregate check is named **Project checks**. `main` requires this check and an up-to-date branch, including for administrators; force pushes and deletion of `main` are disabled.
 
-Verified on **2026-09-09**: both platforms passed for version **1.0.3**, commit [`f618c15`](https://github.com/Tim3399/schedule1_calc/commit/f618c151e42bdc93b8a01e0292347fbe31b49f19) ([CI run](https://github.com/Tim3399/schedule1_calc/actions/runs/34382331671)). See [GitHub Actions](https://github.com/Tim3399/schedule1_calc/actions/workflows/check.yml) for current results. The workflow does not publish a release or perform a deployment.
+Historical evidence from **2026-09-09**: the earlier platform checks passed for version **1.0.3**, commit [`f618c15`](https://github.com/Tim3399/schedule1_calc/commit/f618c151e42bdc93b8a01e0292347fbe31b49f19) ([CI run](https://github.com/Tim3399/schedule1_calc/actions/runs/34382331671)). Evidence for the expanded pipeline from **2026-09-10**: [CI run 34475505106](https://github.com/Tim3399/schedule1_calc/actions/runs/34475505106) passed for commit `92c8a8d11ba8036c36e0318e9850073ba105a030` with 42 tests on each platform, both package smoke tests and the aggregate gate. See [GitHub Actions](https://github.com/Tim3399/schedule1_calc/actions/workflows/check.yml) for current results.
+
+A canonical `vMAJOR.MINOR.PATCH` tag on a commit from `main` triggers the same complete checks after the version is validated. The [release workflow](.github/workflows/release.yml) can then publish the already verified source package and manifest through GitHub Releases and the same container image as `ghcr.io/tim3399/schedule1_calc:vVERSION`. Manifests and checksums bind the commit, version, build run and artifacts. The version command still creates no tag. The existing CI evidence does not establish that a production release or deployment has completed.
+
+The supported deliverables, permissions, recovery process and current evidence are recorded in the [CI/CD profile](docs/CI_CD_PROFILE.md).
 
 ## Changing the version
 
@@ -109,7 +115,7 @@ Verified on **2026-09-09**: both platforms passed for version **1.0.3**, commit 
 .\.venv\Scripts\python.exe tools\project.py set-version patch
 ```
 
-Instead of `patch`, use `minor`, `major` or a higher explicit version such as `1.1.0`. Then review the diff, format the files and run `check`/`test`. The command does not create a commit, tag or release, and does not push. Release checks that have not yet been implemented are listed in the project profile.
+Instead of `patch`, use `minor`, `major` or a higher explicit version such as `1.1.0`. Then review the diff, format the files and run `check`/`test`. The command does not create a commit, tag or release, and does not push. The tagged source-package and container-release process is documented in the [CI/CD profile](docs/CI_CD_PROFILE.md).
 
 ## Optional: create a lookup database
 

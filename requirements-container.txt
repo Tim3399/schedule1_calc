@@ -1,0 +1,3 @@
+# Direct production dependencies. The Docker build installs requirements-release.lock.
+Flask==3.1.2
+waitress==3.0.2

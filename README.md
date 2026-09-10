@@ -4,6 +4,8 @@
 
 Ein lokaler Rechner für Zutatenkombinationen im Spiel **Schedule I**. Die Flask-Weboberfläche zeigt für ein gewähltes Produkt die Kombination mit dem höchsten Effektzuschlag und die mit dem höchsten Gewinn an, jeweils mit Zutaten, Effekten, Verkaufspreis und Zutatenkosten. Die aktuelle Projektversion steht in [VERSION](VERSION).
 
+Gemeinsame Regeln für Formatierung, lokale Starts und Versionierung sind an diese Flask-Anwendung angepasst. Befehle, Ausnahmen und Prüfgrenzen stehen im [Projektprofil](docs/PROJECT_PROFILE.md), die versionierte Vorlage unter [docs/standards](docs/standards/README.md).
+
 Die Anwendung rechnet mit den im Repository hinterlegten Spieldaten aus [src/lookup/lookup.py](src/lookup/lookup.py). Eine Datenbank ist für die Weboberfläche nicht erforderlich; SQLite ist für optionale Datenexporte vorhanden.
 
 ## Schnellstart
@@ -94,11 +96,15 @@ Alternativ ist `SCHEDULE1_PORT` möglich; `--port` hat Vorrang. Für parallele C
 
 Python gehört Ruff, JavaScript/JSON/CSS Biome, Markdown/YAML/HTML Prettier. Gemeinsame Regeln: UTF-8, LF, Breite 100, zwei Leerzeichen; Python vier Leerzeichen. Weitere Details und Ausschlüsse stehen im [Projektprofil](docs/PROJECT_PROFILE.md).
 
-## Continuous Integration
+## CI und Releases
 
-Der GitHub-Actions-Workflow [Project checks](.github/workflows/check.yml) läuft bei Pushes und Pull Requests unter **Ubuntu 24.04** und **Windows 2025**. Er installiert die gepinnten Werkzeuge und führt `check` sowie `test` getrennt aus.
+Die [CI](.github/workflows/check.yml) läuft bei Pushes, Pull Requests, manuellen Aufrufen und als wiederverwendbarer Workflow. Sie prüft Formatierung, Pins und eine nicht leere Testsuite unter **Ubuntu 24.04** und **Windows 2025**. Zusätzlich baut sie ein Quell-ZIP und einen Linux/amd64-Container und prüft die Anwendung gegen beide Pakete. Der stabile Gesamtcheck heißt **Project checks**. `main` verlangt diesen Check und einen aktuellen Branch auch für Administratoren; Force-Pushes und das Löschen von `main` sind deaktiviert.
 
-Geprüfter Stand vom **09.09.2026**: Für Version **1.0.3**, Commit [`f618c15`](https://github.com/Tim3399/schedule1_calc/commit/f618c151e42bdc93b8a01e0292347fbe31b49f19), waren beide Plattformen erfolgreich ([CI-Lauf](https://github.com/Tim3399/schedule1_calc/actions/runs/34382331671)). Aktuelle Ergebnisse findest du in [GitHub Actions](https://github.com/Tim3399/schedule1_calc/actions/workflows/check.yml). Der Workflow veröffentlicht kein Release und führt kein Deployment aus.
+Historischer Nachweis vom **09.09.2026**: Für Version **1.0.3**, Commit [`f618c15`](https://github.com/Tim3399/schedule1_calc/commit/f618c151e42bdc93b8a01e0292347fbe31b49f19), waren die damaligen Plattformprüfungen erfolgreich ([CI-Lauf](https://github.com/Tim3399/schedule1_calc/actions/runs/34382331671)). Nachweis des erweiterten Stands vom **10.09.2026**: [CI-Lauf 34475505106](https://github.com/Tim3399/schedule1_calc/actions/runs/34475505106) bestand für Commit `92c8a8d11ba8036c36e0318e9850073ba105a030` mit jeweils 42 Tests auf beiden Plattformen, beiden Paket-Smokes und dem Gesamtcheck. Aktuelle Ergebnisse stehen in [GitHub Actions](https://github.com/Tim3399/schedule1_calc/actions/workflows/check.yml).
+
+Ein kanonischer Tag `vMAJOR.MINOR.PATCH` auf einem Commit aus `main` löst nach Versionsabgleich dieselben vollständigen Prüfungen aus. Danach kann die [Release-Pipeline](.github/workflows/release.yml) das bereits geprüfte Quellpaket samt Manifest über GitHub Releases und dasselbe Container-Image unter `ghcr.io/tim3399/schedule1_calc:vVERSION` veröffentlichen. Manifeste und Prüfsummen verbinden Commit, Version, Build-Lauf und Artefakte. Der Versionsbefehl selbst legt weiterhin keinen Tag an. Ein Produktions-Release oder Deployment ist durch die vorhandenen CI-Nachweise noch nicht belegt.
+
+Unterstützter Lieferumfang, Berechtigungen, Wiederherstellung und tatsächlicher Prüfstand stehen im [CI/CD-Profil](docs/CI_CD_PROFILE.md).
 
 ## Version ändern
 
@@ -109,7 +115,7 @@ Geprüfter Stand vom **09.09.2026**: Für Version **1.0.3**, Commit [`f618c15`](
 .\.venv\Scripts\python.exe tools\project.py set-version patch
 ```
 
-Statt `patch` sind `minor`, `major` oder eine höhere explizite Version wie `1.1.0` möglich. Danach Diff prüfen, formatieren und `check`/`test` ausführen. Der Befehl erstellt keinen Commit, Tag oder Release und pusht nichts. Noch nicht eingerichtete Veröffentlichungsprüfungen stehen im Projektprofil.
+Statt `patch` sind `minor`, `major` oder eine höhere explizite Version wie `1.1.0` möglich. Danach Diff prüfen, formatieren und `check`/`test` ausführen. Der Befehl erstellt keinen Commit, Tag oder Release und pusht nichts. Der Ablauf für getaggte Quellpaket- und Container-Releases steht im [CI/CD-Profil](docs/CI_CD_PROFILE.md).
 
 ## Optional: Lookup-Datenbank anlegen
 

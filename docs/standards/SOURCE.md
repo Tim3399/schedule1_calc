@@ -32,3 +32,16 @@ adoption; Git records the current derivative.
 | `templates/formatting/biome.template.json` | `03d9edc4ced7864b48bb36e5f1a8ebb63eb61ae06a2f0a149d5cb37b285df0ca` |
 | `templates/formatting/README.md`           | `8a897f7b7a40dc43c50a94543a186ec0e762168d00f4d4533719feee64e27b1d` |
 | `templates/PROJECT_PROFILE.md`             | `5d95577132dcc66f0c21e3be49351157299f415df9a5e07f85a88156dc273c93` |
+
+## Scoped CI/CD baseline 1.3.0
+
+The separately scoped [CI/CD baseline](cicd/1.3.0.md) was adopted on **2026-09-10** and first
+versioned in this repository by commit `92c8a8d11ba8036c36e0318e9850073ba105a030`.
+
+| Repository path | Adopted SHA-256                                                   |
+| --------------- | ---------------------------------------------------------------- |
+| `cicd/1.3.0.md` | `7c3b0f0f1b27e8e6763593512606e44cf4928db870bb0d5beacbb6832ad5483a` |
+
+That repository commit identifies the adopted CI/CD snapshot bytes. No separate upstream
+revision for the shared contract is recorded here. Project-specific choices and verification
+evidence belong in [the CI/CD profile](../CI_CD_PROFILE.md).
