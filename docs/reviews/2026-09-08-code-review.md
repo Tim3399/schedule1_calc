@@ -4,7 +4,7 @@ Ausgangspunkt ist Commit `8639d74`. Geprüft wurde die vorhandene Fachlogik von 
 
 Die ursprünglichen wesentlichen Probleme waren eine unbeschränkte Vollsuche im HTTP-Request, ein im Frontend verborgenes profitableres Ergebnis, falsche Erfolgsmeldungen für ungültige Eingaben sowie Such- und Datenbankpfade, die vorhandene Lösungen beziehungsweise aktualisierte Stammdaten nicht korrekt berücksichtigen.
 
-**Nachtrag vom 10.09.2026:** F01 (P1), F02/F03/F04/F05/F06 (P2) und F07/F12 (P3) sind im lokalen Arbeitsstand behoben. Die übrigen vier Befunde F08–F11 bleiben offen. Die folgenden ursprünglichen Nachweise beschreiben den Stand vom 08.09.2026; Änderungen sind beim jeweiligen Befund vermerkt. Der Wiki-Abgleich wurde durch diesen Patch nicht verändert.
+**Nachtrag vom 10.09.2026:** F01 (P1), F02/F03/F04/F05/F06/F08 (P2) und F07/F12 (P3) sind im lokalen Arbeitsstand behoben. Die übrigen drei Befunde F09–F11 bleiben offen. Die folgenden ursprünglichen Nachweise beschreiben den Stand vom 08.09.2026; Änderungen sind beim jeweiligen Befund vermerkt. Der Wiki-Abgleich wurde durch diesen Patch nicht verändert.
 
 ## Vorgehen und Aussagegrenzen
 
@@ -150,6 +150,10 @@ Auch bei Rundung der Verkaufspreise auf ganze Dollar bleibt das zweite Rezept um
 **Mögliche Korrektur:** Falls ein ausführbares DB-Script gewünscht ist, einen konsistenten Modulaufruf mit tatsächlichem `__main__`-Einstieg und DB-Pfad anbieten. Andernfalls beim nun dokumentierten Funktionsaufruf bleiben. Der Flask-Start und `src/main.py` wurden nicht als betroffen bewertet: deren vorhandene Pfadergänzung erreicht den Repository-Root korrekt.
 
 ### F08 · P2 · Erneutes Befüllen übernimmt geänderte Lookup-Werte nicht
+
+**Status am 10.09.2026: behoben.** `populate_database` synchronisiert die Lookup-Stammdaten einschließlich geänderter Werte und entfallener Beziehungen und Einträge. IDs weiterhin vorhandener Effekte, Zutaten und Produkte bleiben stabil. Bei einer tatsächlichen Änderung werden gespeicherte Rezeptberechnungen mit ihren Zutaten-/Effektzuordnungen innerhalb derselben Transaktion entfernt; bei identischem Datenstand bleiben sie erhalten. Die Befüllung berechnet keine Ersatzrezepte. Fremdschlüssel werden geprüft, ungültige Lookup-Verweise führen zum Fehler, und ein Fehler rollt die Synchronisierung zurück. Der Alias `max` für Level 51 erzeugt keine dauernde Änderung gegenüber `kingpin_i+`. Die folgenden Angaben dokumentieren den ursprünglichen Befund.
+
+**Nachprüfung:** Sechs Regressionstests in `tests/test_database_sync.py` prüfen echte temporäre SQLite-Datenbanken: unveränderte Befüllung samt Rezepten und IDs, geänderte Felder sowie neue/entfallene Entitäten und Beziehungen, reine Beziehungsänderungen, vertauschte Levelzuordnungen, ungültige Lookup-Verweise und einen per Trigger ausgelösten Fehler nach begonnenen Änderungen. Der Fehlerfall erhält auch beide Rezept-Zuordnungstabellen und gibt die Verbindung frei. Die fünf CLI-Tests bleiben erfolgreich. Im abschließenden Lauf von `tools/project.py test` bestanden alle 84 Tests, einschließlich der zuvor fehlschlagenden parallelen Such-Experimente. Der Sammelcheck bestand Ruff und Biome, meldete aber noch eine Prettier-Abweichung im parallel erstellten Bericht `docs/reviews/2026-09-10-bounded-search-research.md`; diese wurde an dessen zuständigen Task zurückgegeben.
 
 **Stelle:** [populate_db.py](C:/Users/timra/git/schedule1_calc/src/datenbank/populate_db.py:40), `populate_database`, Zeilen 40–43; dieselbe `INSERT OR IGNORE`-Strategie wird auch für Effekte, Produkte und Beziehungen benutzt.
 
