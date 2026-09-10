@@ -4,7 +4,9 @@ Ausgangspunkt ist Commit `8639d74`. Geprüft wurde die vorhandene Fachlogik von 
 
 Die ursprünglichen wesentlichen Probleme waren eine unbeschränkte Vollsuche im HTTP-Request, ein im Frontend verborgenes profitableres Ergebnis, falsche Erfolgsmeldungen für ungültige Eingaben sowie Such- und Datenbankpfade, die vorhandene Lösungen beziehungsweise aktualisierte Stammdaten nicht korrekt berücksichtigen.
 
-**Nachtrag vom 10.09.2026:** F01 (P1), F02/F03/F04/F05/F06/F08 (P2) und F07/F12 (P3) sind im lokalen Arbeitsstand behoben. Die übrigen drei Befunde F09–F11 bleiben offen. Die folgenden ursprünglichen Nachweise beschreiben den Stand vom 08.09.2026; Änderungen sind beim jeweiligen Befund vermerkt. Der Wiki-Abgleich wurde durch diesen Patch nicht verändert.
+**Nachtrag vom 10.09.2026:** F01 (P1), F02/F03/F04/F05/F06/F08 (P2) und F07/F11/F12 (P3) sind im lokalen Arbeitsstand behoben. F09 ist teilweise behoben; dessen Ganzdollarrundung und F10 bleiben offen. Die folgenden ursprünglichen Nachweise beschreiben den Stand vom 08.09.2026; Änderungen sind beim jeweiligen Befund vermerkt. Der Wiki-Abgleich wurde durch diesen Patch nicht verändert.
+
+**Aktuelle Gesamtprüfung nach F11 und Integration der Suchmodi:** `tools/project.py check` bestand vollständig; `tools/project.py test` bestand alle **106 Tests**. `git diff --check` war ebenfalls erfolgreich. Die bei F07–F09 dokumentierten zwischenzeitlichen Formatierungs- und Integrationsfehler sind damit im gemeinsamen Arbeitsstand behoben. Dies ist ein lokaler Nachweis, kein neuer Remote-CI-Lauf und keine Verifikation der offenen Spielregeln.
 
 ## Vorgehen und Aussagegrenzen
 
@@ -187,6 +189,8 @@ Auch bei Rundung der Verkaufspreise auf ganze Dollar bleibt das zweite Rezept um
 
 ### F10 · P2 · Rezepte können mehr als acht aktive Effekte erhalten
 
+**Erneute Prüfung am 10.09.2026: weiterhin offen.** Auch die [S1API-Dokumentation zu Mischreaktionen](https://ifbars.github.io/S1API/api/S1API.Products.MixReactions.html) beschreibt ein Acht-Effekte-Limit für ihre Erweiterungen. Das ist ein technisches Community-Indiz, kein Nachweis der Vanilla-Implementierung einer festgelegten Spielversion. Die [offizielle Ankündigung zu v0.2.7](https://store.steampowered.com/news/app/3164500/view/524207770906394892?l=english) dokumentiert eine Überarbeitung des Mischalgorithmus, legt aber dessen genaue Kapazitätsprüfung nicht fest. Der bestehende Quellenkonflikt zur Reihenfolge bleibt ungelöst. Für eine definitive Korrektur fehlt ein Grenztest im Spiel oder ein nachvollziehbarer Vanilla-Codepfad mit zugeordneter Version; deshalb wurde die Effektlogik nicht geändert.
+
 **Stelle:** [calc_modifier.py](C:/Users/timra/git/schedule1_calc/src/functionality/calc_modifier.py:98), `_calculate_modificator`, Zeilen 98–100.
 
 **Nachweis mit aktuellen lokalen Daten:**
@@ -205,6 +209,10 @@ Die Funktion liefert neun Effekte und Modifikator 3,16: `spicy`, `sneaky`, `bald
 **Mögliche Korrektur:** Das verifizierte Effektlimit im Zustandsübergang berücksichtigen und mit einem Rezept an der Grenze prüfen. Die Reihenfolge einzelner Transformationsregeln bleibt gesondert zu verifizieren, da die untersuchten externen Quellen hierzu nicht durchgehend übereinstimmen.
 
 ### F11 · P3 · Die DB-Erzeugung verliert die Produktnormalisierung
+
+**Status am 10.09.2026: behoben.** `generate_db_entrys` normalisiert den Produktnamen am Eingang und reicht den kanonischen Wert an Berechnung und Speicherung weiter. Der optionale Parameter `db_path` ermöglicht einen eigenen Exportpfad; vorhandene Aufrufe verwenden weiterhin `combinations.db`. Die Speicherung meldet fehlende Produkte, Zutaten und Effekte ausdrücklich statt unvollständige Rezepte zu schreiben. Jeder Aufruf von `store_all_combinations_normalized` ist transaktional und schließt seine Verbindung auch nach Fehlern. Der Export mehrerer Rezeptlängen besteht weiterhin aus getrennten Speichertransaktionen; frühere erfolgreiche Längen werden durch einen späteren Fehler nicht zurückgerollt. Die folgenden Angaben dokumentieren den ursprünglichen Befund.
+
+**Nachprüfung:** Fünf Tests in `tests/test_database_export.py` verwenden echte temporäre SQLite-Datenbanken. Sie vergleichen den Export für `OG Kush` und `og_kush`, prüfen eigene Datenbankpfade, geordnete wiederholte Zutaten und vollständige Effektzuordnungen. Fehlende Referenzen erzeugen keine Teilrezepte; nach einem unbekannten Produkt kann die Datei unter Windows unmittelbar gelöscht werden. Ein Triggerfehler nach einem bereits vollständig eingefügten Rezept und weiteren Teilinserts rollt den gesamten neuen Speicheraufruf zurück, während vorher gespeicherte Daten erhalten bleiben. Alle fünf Tests sind im erfolgreichen 106-Test-Gesamtlauf enthalten.
 
 **Stelle:** [calc_modifier.py](C:/Users/timra/git/schedule1_calc/src/functionality/calc_modifier.py:369), `generate_db_entrys`, Zeilen 369–373; [populate_db.py](C:/Users/timra/git/schedule1_calc/src/datenbank/populate_db.py:99), Zeilen 99–100.
 

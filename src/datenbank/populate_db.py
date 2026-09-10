@@ -247,62 +247,75 @@ def store_all_combinations_normalized(
     combination_size: int,
     combinations: Dict[str, CombinationResult],
 ):
+    """Store one recipe batch atomically after validating every database reference."""
     conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
+    try:
+        conn.execute("PRAGMA foreign_keys = ON")
+        conn.execute("BEGIN IMMEDIATE")
+        cursor = conn.cursor()
 
-    # Lookup maps
-    cursor.execute("SELECT product_id FROM products WHERE name = ?", (product_name,))
-    product_id = cursor.fetchone()[0]
+        product_row = cursor.execute(
+            "SELECT product_id FROM products WHERE name = ?", (product_name,)
+        ).fetchone()
+        if product_row is None:
+            raise ValueError(f"Product '{product_name}' not found in database.")
+        product_id = product_row[0]
 
-    cursor.execute("SELECT name, substance_id FROM substances")
-    substance_map = dict(cursor.fetchall())
+        substance_map = dict(cursor.execute("SELECT name, substance_id FROM substances"))
+        effect_map = dict(cursor.execute("SELECT name, effect_id FROM effects"))
 
-    cursor.execute("SELECT name, effect_id FROM effects")
-    effect_map = dict(cursor.fetchall())
+        for result in combinations.values():
+            for substance_name in result.substances:
+                if substance_name not in substance_map:
+                    raise ValueError(f"Substance '{substance_name}' not found in database.")
+            for effect_name in result.effects:
+                if effect_name not in effect_map:
+                    raise ValueError(f"Effect '{effect_name}' not found in database.")
 
-    for result in combinations.values():
-        cursor.execute(
-            """
-            INSERT INTO calculated_combinations (
-                product_id, combination_size, modifier, sell_price, substance_cost
-            ) VALUES (?, ?, ?, ?, ?)
-        """,
-            (
-                product_id,
-                combination_size,
-                round(float(result.modifier), 2),
-                round(float(result.sell_price), 2),
-                round(float(result.substance_cost), 2),
-            ),
-        )
-        combination_id = cursor.lastrowid
+        for result in combinations.values():
+            cursor.execute(
+                """
+                INSERT INTO calculated_combinations (
+                    product_id, combination_size, modifier, sell_price, substance_cost
+                ) VALUES (?, ?, ?, ?, ?)
+            """,
+                (
+                    product_id,
+                    combination_size,
+                    round(float(result.modifier), 2),
+                    round(float(result.sell_price), 2),
+                    round(float(result.substance_cost), 2),
+                ),
+            )
+            combination_id = cursor.lastrowid
 
-        for idx, sub in enumerate(result.substances):
-            substance_id = substance_map.get(sub)
-            if substance_id:
+            for position, substance_name in enumerate(result.substances):
                 cursor.execute(
                     """
                     INSERT INTO calculated_combination_substances (
                         combination_id, substance_id, position
                     ) VALUES (?, ?, ?)
                 """,
-                    (combination_id, substance_id, idx),
+                    (combination_id, substance_map[substance_name], position),
                 )
 
-        for eff in result.effects:
-            effect_id = effect_map.get(eff)
-            if effect_id:
+            for effect_name in result.effects:
                 cursor.execute(
                     """
                     INSERT INTO calculated_combination_effects (
                         combination_id, effect_id
                     ) VALUES (?, ?)
                 """,
-                    (combination_id, effect_id),
+                    (combination_id, effect_map[effect_name]),
                 )
 
-    conn.commit()
-    conn.close()
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
     print(f"{len(combinations)} Kombinationen (normalisiert) gespeichert.")
 
 

@@ -532,11 +532,15 @@ def print_result(combination: CombinationResult, message: str = None) -> None:
 
 
 def generate_db_entrys(
-    combination_size: int, product_name: str, max_level: Union[int, str]
+    combination_size: int,
+    product_name: str,
+    max_level: Union[int, str],
+    db_path: str = "combinations.db",
 ) -> None:
-
-    all_combinations_by_size, best_modifier_entry, best_profit_entry = get_best_mix(
-        combination_size, product_name, max_level, collect_all_combinations=True
+    """Calculate all requested recipe sizes and export them to ``db_path``."""
+    normalized_product_name = product_name.strip().lower().replace(" ", "_")
+    all_combinations_by_size, _, _ = get_best_mix(
+        combination_size, normalized_product_name, max_level, collect_all_combinations=True
     )
     for size, combinations_data in all_combinations_by_size.items():
-        store_all_combinations_normalized("combinations.db", product_name, size, combinations_data)
+        store_all_combinations_normalized(db_path, normalized_product_name, size, combinations_data)
