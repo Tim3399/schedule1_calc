@@ -46,6 +46,21 @@ class CombinationSearchLimitExceeded(ValueError):
         self.limit = limit
 
 
+class MinimumSearchLimitExceeded(RuntimeError):
+    """Raised when a minimum search ends before every requested size is checked."""
+
+    def __init__(self, requested_size: int, searched_size: int, limit: int):
+        message = (
+            f"Minimum search is incomplete: requested through size {requested_size}, "
+            f"but completely checked only through size {searched_size} before reaching "
+            f"the search-work limit {limit:,}."
+        )
+        super().__init__(message)
+        self.requested_size = requested_size
+        self.searched_size = searched_size
+        self.limit = limit
+
+
 COMBINATION_SEARCH_LIMIT = 200_000
 
 
@@ -347,11 +362,15 @@ def find_min_substances_for_effect(
 ) -> Tuple[int, List[CombinationResult]]:
     """
     Find the minimum number of substances (combined with the given product)
-    required to activate all `desired_effects`.
+    required to activate all `desired_effects`, including zero when the base product matches.
 
     Returns:
         Tuple[int, List[CombinationResult]]: (found_size, list_of_CombinationResult).
-        If nothing is found, returns (0, []).
+        If nothing is found after every requested size is checked, returns (0, []).
+
+    Raises:
+        MinimumSearchLimitExceeded: If the search budget prevents checking every requested size
+            and no exact minimum was found in the completely searched sizes.
     """
     product_name = product_name.lower().replace(" ", "_")
 
@@ -385,14 +404,41 @@ def find_min_substances_for_effect(
     substance_map = {substance.name: substance for substance in substances}
     filtered_substances = [s.name for s in substances if s.level <= max_level]
 
-    if not filtered_substances:
-        raise ValueError("Keine Substanzen für das gegebene Level verfügbar.")
-
     # Validate product
     product_map = {product.name: product for product in products}
     product = product_map.get(product_name)
     if not product:
         raise ValueError(f"Product '{product_name}' not found!")
+
+    desired_set = set(desired_list)
+    not_desired_set = set(not_desired_list)
+
+    if max_search_size >= 0:
+        base_multiplier, base_effects = _calculate_modificator([], product_name)
+        base_effects_normalized = {
+            effect.lower().replace(" ", "_") for effect in base_effects.keys()
+        }
+        if desired_set.issubset(base_effects_normalized) and not not_desired_set.intersection(
+            base_effects_normalized
+        ):
+            base_result = CombinationResult(
+                sell_price=_calculate_price(product_name, base_multiplier),
+                substance_cost=Decimal("0"),
+                modifier=base_multiplier,
+                substances=[],
+                effects=list(base_effects.keys()),
+            )
+            logger.info("The base product already has all requested effects.")
+            return 0, [base_result]
+
+        if max_search_size == 0:
+            logger.info(
+                f"No results found for '{', '.join(desired_list)}' with Product '{product_name}'."
+            )
+            return 0, []
+
+    if not filtered_substances:
+        raise ValueError("Keine Substanzen für das gegebene Level verfügbar.")
 
     safe_search_size = _safe_search_size(len(filtered_substances), combination_search_limit)
     if max_search_size > safe_search_size:
@@ -411,9 +457,9 @@ def find_min_substances_for_effect(
             active_keys_normalized = {e.lower().replace(" ", "_") for e in active_effects.keys()}
 
             # check that all desired effects are present
-            desired_ok = set(desired_list).issubset(active_keys_normalized)
+            desired_ok = desired_set.issubset(active_keys_normalized)
             # check that no not-desired effect is present
-            not_desired_ok = not set(not_desired_list).intersection(active_keys_normalized)
+            not_desired_ok = not not_desired_set.intersection(active_keys_normalized)
 
             if desired_ok and not_desired_ok:
                 sell_price = _calculate_price(product_name, current_multiplier)
@@ -434,6 +480,13 @@ def find_min_substances_for_effect(
             return size, found_results
 
     # nothing found
+    if max_search_size > safe_search_size:
+        raise MinimumSearchLimitExceeded(
+            requested_size=max_search_size,
+            searched_size=safe_search_size,
+            limit=combination_search_limit,
+        )
+
     logger.info(f"No results found for '{', '.join(desired_list)}' with Product '{product_name}'.")
     return 0, []
 

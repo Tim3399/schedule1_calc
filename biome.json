@@ -13,6 +13,7 @@
       "!!**/__pycache__",
       "!!**/logs",
       "!!docs/standards",
+      "!!docs/reviews/data/**/*.json",
       "!!**/package-lock.json"
     ],
     "ignoreUnknown": true

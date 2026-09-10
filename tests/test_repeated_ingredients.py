@@ -101,7 +101,7 @@ class RepeatedIngredientTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "No substances"):
                 calc_modifier.get_best_mix(1, "og_kush", "max")
             with self.assertRaisesRegex(ValueError, "Substanzen"):
-                calc_modifier.find_min_substances_for_effect("og_kush", "calming", [], "max")
+                calc_modifier.find_min_substances_for_effect("og_kush", "energizing", [], "max")
 
         product.assert_not_called()
 
@@ -134,30 +134,30 @@ class RepeatedIngredientTests(unittest.TestCase):
             product.assert_not_called()
 
             with mock.patch.object(calc_modifier, "itertool_product", return_value=()) as product:
-                result = calc_modifier.find_min_substances_for_effect(
-                    "og_kush",
-                    "calorie_dense",
-                    [],
-                    1,
-                    max_search_size=10**100,
-                    combination_search_limit=3,
-                )
+                with self.assertRaises(calc_modifier.MinimumSearchLimitExceeded):
+                    calc_modifier.find_min_substances_for_effect(
+                        "og_kush",
+                        "calorie_dense",
+                        [],
+                        1,
+                        max_search_size=10**100,
+                        combination_search_limit=3,
+                    )
 
-            self.assertEqual(result, (0, []))
             self.assertEqual(product.call_count, 2)
 
     def test_extreme_minimum_search_size_caps_before_enumeration(self):
         with mock.patch.object(calc_modifier, "itertool_product", return_value=()) as product:
-            result = calc_modifier.find_min_substances_for_effect(
-                "og_kush",
-                "calorie_dense",
-                [],
-                "street_rat_i",
-                max_search_size=10**100,
-                combination_search_limit=4,
-            )
+            with self.assertRaises(calc_modifier.MinimumSearchLimitExceeded):
+                calc_modifier.find_min_substances_for_effect(
+                    "og_kush",
+                    "calorie_dense",
+                    [],
+                    "street_rat_i",
+                    max_search_size=10**100,
+                    combination_search_limit=4,
+                )
 
-        self.assertEqual(result, (0, []))
         product.assert_called_once()
 
 

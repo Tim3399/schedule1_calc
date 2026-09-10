@@ -4,7 +4,7 @@ Ausgangspunkt ist Commit `8639d74`. Geprüft wurde die vorhandene Fachlogik von 
 
 Die ursprünglichen wesentlichen Probleme waren eine unbeschränkte Vollsuche im HTTP-Request, ein im Frontend verborgenes profitableres Ergebnis, falsche Erfolgsmeldungen für ungültige Eingaben sowie Such- und Datenbankpfade, die vorhandene Lösungen beziehungsweise aktualisierte Stammdaten nicht korrekt berücksichtigen.
 
-**Nachtrag vom 10.09.2026:** F01 (P1), F02/F03/F04 (P2) und F12 (P3) sind im lokalen Arbeitsstand behoben. Die übrigen sieben Befunde bleiben offen beziehungsweise teilweise bearbeitet. Die folgenden ursprünglichen Nachweise beschreiben den Stand vom 08.09.2026; Änderungen sind beim jeweiligen Befund vermerkt. Der Wiki-Abgleich wurde durch diesen Patch nicht verändert.
+**Nachtrag vom 10.09.2026:** F01 (P1), F02/F03/F04/F05/F06 (P2) und F12 (P3) sind im lokalen Arbeitsstand behoben. Die übrigen fünf Befunde bleiben offen beziehungsweise teilweise bearbeitet. Die folgenden ursprünglichen Nachweise beschreiben den Stand vom 08.09.2026; Änderungen sind beim jeweiligen Befund vermerkt. Der Wiki-Abgleich wurde durch diesen Patch nicht verändert.
 
 ## Vorgehen und Aussagegrenzen
 
@@ -87,7 +87,7 @@ Auch bei Rundung der Verkaufspreise auf ganze Dollar bleibt das zweite Rezept um
 
 **Status am 10.09.2026: behoben.** Die Best-Mix-Suche, die Minimumsuche und die gemeinsame Webvalidierung begrenzen Rezeptlängen nicht mehr durch die Anzahl unterschiedlicher Zutaten. Wiederholungen bleiben geordnet; die Suche berücksichtigt weiterhin alle kürzeren Rezeptlängen. Die maximal berechenbare Länge wird vor der Enumeration aus dem Budget bestimmt, ohne eine Potenz mit einem beliebig großen Exponenten auszurechnen. Der Schutz gilt auch für die Minimumsuche. Die folgende Beschreibung dokumentiert den ursprünglichen Befund.
 
-**Budgetgrenzen:** Bei mindestens zwei verfügbaren Zutaten gilt unverändert das Kombinationslimit je Rezeptlänge. Für genau eine Zutat begrenzt dasselbe Budget stattdessen die Summe der verarbeiteten Zutaten über alle Rezeptlängen (`1 + 2 + ... + n`); damit bleibt auch dieser Sonderfall endlich. Eine leere Zutatenmenge wird vor der Enumeration abgewiesen. Diese Schutzregeln ändern keine Spieldaten.
+**Budgetgrenzen:** Bei mindestens zwei verfügbaren Zutaten gilt unverändert das Kombinationslimit je Rezeptlänge. Für genau eine Zutat begrenzt dasselbe Budget stattdessen die Summe der verarbeiteten Zutaten über alle Rezeptlängen (`1 + 2 + ... + n`); damit bleibt auch dieser Sonderfall endlich. Eine leere Zutatenmenge wird vor der Enumeration abgewiesen, wenn die Suche Zusätze erfordert; ein bereits passendes Basisprodukt wird seit F06 ohne Zusätze zurückgegeben. Diese Schutzregeln ändern keine Spieldaten.
 
 **Nachprüfung:** `tests/test_repeated_ingredients.py` prüft echte Berechnungen einschließlich der vollständigen Sammlung aller 1.024 Fünf-Schritt-Folgen auf Level eins, beide HTTP-Routen und das bekannte Minimalrezept. Weitere Fälle sichern leere und einzelne Zutaten sowie extrem große Größenangaben ohne proportional lange Vorprüfung ab.
 
@@ -103,7 +103,9 @@ Auch bei Rundung der Verkaufspreise auf ganze Dollar bleibt das zweite Rezept um
 
 ### F05 · P2 · Eine aus Budgetgründen ausgelassene Suche wird als erfolglose vollständige Suche ausgegeben
 
-**Weiterhin offen nach F04:** Die Minimumsuche begrenzt ihre Schleife jetzt vorab auf budgetkonforme Längen. Ein erfolgloser, aber unvollständiger Suchlauf liefert weiterhin `(0, [])`; das Ergebnis unterscheidet ein Budgetende noch nicht von einem vollständigen Negativnachweis.
+**Status am 10.09.2026: behoben.** Wenn nach Prüfung aller budgetkonformen Längen kein Rezept gefunden wurde, aber angeforderte größere Längen ungeprüft bleiben, wirft die Minimumsuche `MinimumSearchLimitExceeded`. Die Ausnahme enthält `requested_size`, `searched_size` und `limit`; bei einem Budget unterhalb der ersten Rezeptlänge ist `searched_size` gleich `0`. Ein bereits innerhalb des Budgets gefundenes Minimum wird wie bisher zurückgegeben. Nur eine vollständig erfolglose Suche innerhalb des angeforderten Bereichs liefert `(0, [])`. Die CLI zeigt den unvollständigen Suchlauf ausdrücklich mit angeforderter und geprüfter Höchstlänge an und setzt anschließend die unabhängige Best-Mix-Berechnung fort. Die folgenden Angaben dokumentieren den ursprünglichen Befund.
+
+**Nachprüfung:** Der echte CLI-Aufruf für die sechs Zieleffekte aus F04 mit `--max_level max --max_search_size 6 --combination_size 1` meldet angeforderte Länge sechs, vollständig geprüfte Länge vier und das Budget 200.000. Anschließend werden beide Best-Mix-Gewinner ausgegeben. Die Regressionen in `tests/test_minimum_search_budget.py` sichern Budgetende, vollständigen Negativnachweis, frühen Treffer sowie die CLI-Ausgaben getrennt ab.
 
 **Stelle:** [calc_modifier.py](C:/Users/timra/git/schedule1_calc/src/functionality/calc_modifier.py:302), `find_min_substances_for_effect`, Zeilen 302–307 und 339–341.
 
@@ -116,6 +118,10 @@ Auch bei Rundung der Verkaufspreise auf ganze Dollar bleibt das zweite Rezept um
 **Mögliche Korrektur:** Einen expliziten Status wie `search_limit_reached` mit tatsächlich geprüfter maximaler Größe zurückgeben und anzeigen. Wenn ein exaktes Minimum zugesagt wird, darf ein unvollständig geprüfter Bereich nicht als vollständiger Negativnachweis gelten.
 
 ### F06 · P2 · Die Minimumsuche berücksichtigt ein bereits passendes Basisprodukt nicht
+
+**Status am 10.09.2026: behoben.** Die Minimumsuche prüft zuerst die tatsächlichen Effekte des Basisprodukts gegen gewünschte und ausgeschlossene Effekte. Ein Treffer liefert `(0, [CombinationResult])` mit leeren Zutaten, Zutatenkosten null und den bestehenden Preis-/Effektwerten des Basisprodukts. `(0, [])` bleibt ein vollständig erfolgloser Suchlauf. Die CLI unterscheidet beide Fälle über die Ergebnisliste und zeigt auch Null-Zutaten-Rezepte an. Die Prüfung funktioniert bei Höchstlänge null, ohne verfügbare Zusätze und ohne Budget für Zutatenkombinationen; negative Höchstlängen bleiben leere Suchbereiche. Die Best-Mix-Websuche verlangt weiterhin positive Rezeptgrößen. Die folgenden Angaben dokumentieren den ursprünglichen Befund.
+
+**Nachprüfung:** Der echte CLI-Aufruf mit `--product og_kush --desired calming --max_level street_rat_i --max_search_size 0 --combination_size 1` meldet Minimum null mit genau einem Rezept, Effekt `calming`, Modifikator 0,10, Verkaufspreis 38,50 und Zutatenkosten 0,00 nach dem bestehenden Rechenmodell. Die Tests in `tests/test_zero_ingredient_minimum.py` sichern die Abgrenzung zum leeren Ergebnis und die Berücksichtigung ausgeschlossener Effekte ab.
 
 **Stelle:** [calc_modifier.py](C:/Users/timra/git/schedule1_calc/src/functionality/calc_modifier.py:300), `find_min_substances_for_effect`, Beginn der Schleife bei eins.
 

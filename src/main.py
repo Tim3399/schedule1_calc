@@ -2,6 +2,7 @@ import argparse
 from typing import Optional
 
 from functionality.calc_modifier import (
+    MinimumSearchLimitExceeded,
     find_min_substances_for_effect,
     get_best_mix,
     print_result,
@@ -17,23 +18,34 @@ def main(
     combination_size: int,
 ):
     # call find_min_substances_for_effect (use keyword args to avoid positional mixups)
-    size, results = find_min_substances_for_effect(
-        product_name=product,
-        desired_effects=desired,
-        not_desired_effects=not_desired,
-        max_level=max_level,
-        max_search_size=max_search_size,
-        max_results=10,
-        combination_search_limit=200_000,
-    )
-
-    if size == 0:
-        print(f"No combination found for effect(s) '{desired}' with product '{product}'.")
+    try:
+        size, results = find_min_substances_for_effect(
+            product_name=product,
+            desired_effects=desired,
+            not_desired_effects=not_desired,
+            max_level=max_level,
+            max_search_size=max_search_size,
+            max_results=10,
+            combination_search_limit=200_000,
+        )
+    except MinimumSearchLimitExceeded as error:
+        print(
+            "Minimum search incomplete due to its budget: "
+            f"requested maximum size {error.requested_size}, "
+            f"completely checked through size {error.searched_size}, "
+            f"search-work limit {error.limit:,}."
+        )
     else:
-        print(f"Minimum number of substances: {size} — {len(results)} result(s)")
-        for idx, res in enumerate(results, start=1):
-            print(f"\nResult {idx}:")
-            print_result(res)
+        if not results:
+            print(
+                f"No combination found for effect(s) '{desired}' with product '{product}' "
+                f"within requested maximum size {max_search_size}."
+            )
+        else:
+            print(f"Minimum number of substances: {size} — {len(results)} result(s)")
+            for idx, res in enumerate(results, start=1):
+                print(f"\nResult {idx}:")
+                print_result(res)
 
     # call get_best_mix
     all_combinations, best_modifier, best_profit = get_best_mix(
