@@ -203,15 +203,34 @@ def _calculate_modificator(
     return total_modificator, active_effects
 
 
-def _calculate_price(product_name: str, total_effect_multiplier: float) -> Decimal:
-    """Calculate the final price based on the product's base price and total effect multiplier."""
+def _calculate_price(
+    product_name: str,
+    total_effect_multiplier: float,
+    active_effects: Dict[str, float] = None,
+) -> Decimal:
+    """Calculate an unrounded price using the most exact available effect values.
+
+    ``active_effects`` is preferred because each float value can be converted to Decimal before
+    addition. A caller that only has an already-summed float may retain that float's summation
+    residue. Whole-dollar game rounding is intentionally outside this helper until its tie rule is
+    verified.
+    """
     product_map = {product.name: product for product in products}
     product = product_map.get(product_name)
 
     if not product:
         raise ValueError(f"Product '{product_name}' not found!")
 
-    return Decimal(float(product.base_sell_price) * (1 + total_effect_multiplier))
+    if active_effects is not None:
+        effect_multiplier = sum(
+            (Decimal(str(value)) for value in active_effects.values()),
+            start=Decimal("0"),
+        )
+    else:
+        effect_multiplier = Decimal(str(total_effect_multiplier))
+
+    base_sell_price = Decimal(str(product.base_sell_price))
+    return base_sell_price * (Decimal("1") + effect_multiplier)
 
 
 @timing
@@ -277,7 +296,7 @@ def _find_best_combinations(
                 list(combination), product_name
             )
 
-            sell_price = _calculate_price(product_name, current_multiplier)
+            sell_price = _calculate_price(product_name, current_multiplier, active_effects)
 
             # Calculate the manufacturing cost
             substance_cost = sum(substance_map[substance].price for substance in combination)
@@ -422,7 +441,7 @@ def find_min_substances_for_effect(
             base_effects_normalized
         ):
             base_result = CombinationResult(
-                sell_price=_calculate_price(product_name, base_multiplier),
+                sell_price=_calculate_price(product_name, base_multiplier, base_effects),
                 substance_cost=Decimal("0"),
                 modifier=base_multiplier,
                 substances=[],
@@ -462,7 +481,7 @@ def find_min_substances_for_effect(
             not_desired_ok = not not_desired_set.intersection(active_keys_normalized)
 
             if desired_ok and not_desired_ok:
-                sell_price = _calculate_price(product_name, current_multiplier)
+                sell_price = _calculate_price(product_name, current_multiplier, active_effects)
                 substance_cost = sum(substance_map[s].price for s in comb)
                 comb_result = CombinationResult(
                     sell_price=sell_price,
