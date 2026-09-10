@@ -170,7 +170,7 @@ products: List[Product] = [
         name="cocaine",
         base_sell_price=Decimal("150.00"),
         buy_price=Decimal("0.00"),
-        level=level_name_to_int["hustler_ii"],
+        level=level_name_to_int["enforcer_i"],
         effects=[],
         quality=quality_name_to_int["n_a"],
     ),
@@ -377,7 +377,7 @@ substances: List[Substance] = [
     Substance(
         name="mega_bean",
         price=Decimal("7.00"),
-        level=level_name_to_int["hustler_ii"],
+        level=level_name_to_int["peddler_iii"],
         resulting_effect="foggy",
         side_effect_replacements={
             "athletic": "laxative",

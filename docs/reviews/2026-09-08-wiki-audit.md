@@ -2,7 +2,9 @@
 
 Die vorhandenen Preise und Effektzuschläge sind überwiegend konsistent mit den abrufbaren Referenzen. Belegt abweichend sind der Freischaltrang von Mega Bean und der Rang von Cocaine. Shrooms fehlen als Produktart. Mehrere Wiki-Seiten widersprechen einander; diese Konflikte rechtfertigen keine automatische Datenkorrektur.
 
-Dieser Bericht dokumentiert einen Review. Spielwerte, Datenbank und Berechnungslogik wurden dafür nicht geändert.
+Dieser Bericht dokumentiert den ursprünglichen Review. Spielwerte, Datenbank und Berechnungslogik wurden dafür am 08.09.2026 nicht geändert.
+
+**Nachtrag vom 10.09.2026:** Die beiden Rangabweichungen bei Mega Bean und Cocaine wurden nach erneuter Quellenprüfung korrigiert. Herkunft, Spielversionsgrenze, Auswirkungen und Regressionstests stehen im [separaten Änderungsnachweis](2026-09-10-rank-corrections.md). Die folgenden Vergleichstabellen dokumentieren weiterhin den ursprünglichen Stand vom 08.09.2026. Die übrigen Datenkonflikte bleiben offen.
 
 ## Gegenstand und Belastbarkeit
 
@@ -146,9 +148,9 @@ Auch die Effects-Matrix ist keine zuverlässige alleinige Transformationsquelle:
 
 ## Empfohlene nächste Schritte
 
-1. Die belegten Rangabweichungen von Mega Bean und Cocaine als getrennte Datenkorrekturen vorbereiten; Produktrangfilter mitprüfen.
+1. **Erledigt am 10.09.2026:** Die Rangabweichungen von Mega Bean und Cocaine wurden als [getrennte Datenkorrektur](2026-09-10-rank-corrections.md) übernommen. Die Suche erzwingt weiterhin keinen Produktrang; diese bestehende Verhaltensgrenze wurde geprüft und dokumentiert.
 2. Eine unterstützte Spielversion festlegen und gezielte Spieltests für die vier Wikikonflikte sowie Effektkollisionen durchführen.
 3. Shrooms nach dieser Verifikation ergänzen; dabei den Umfang der Herstellkostenrechnung ausdrücklich definieren.
 4. Herkunft, Spielversion und letztes Prüfdatum bei künftigen Spieldatenänderungen dokumentieren. Die Anwendungsdatei `VERSION` ersetzt diese Herkunftsangabe nicht.
 
-Diese Punkte sind Review-Empfehlungen, keine in diesem Auftrag ausgeführten Datenänderungen.
+Die verbleibenden Punkte sind Review-Empfehlungen und noch nicht ausgeführte Datenänderungen.
