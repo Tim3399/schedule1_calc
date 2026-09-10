@@ -1,0 +1,1950 @@
+{
+  "created_utc": "2026-09-10T11:39:25.187606+00:00",
+  "python": "3.12.14",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "source_sha256": {
+    "src/lookup/lookup.py": "df8ab950ca1890f7c4df5b51f6f19cbaf05526b732585336f263f2aeb34c3bb5",
+    "src/functionality/calc_modifier.py": "3f3685506958b76a476f950fa8852812484fa1cbb195ea645b736d35a3f61e5a",
+    "src/util/models.py": "813f2e006c0aad847fd0a45fb08058518e2d8a8ce5eb33264f0fc848dd1cd40e",
+    "experiments/search_runtime.py": "966d9ebaec0ccb0a040ea58533d590be0db754cf4b882c7c73d26da408a1cdb6",
+    "experiments/search_reference.py": "a35d3989875cb967e203971e4f009dcaca86f5899b05e458fdff83001dba860e",
+    "tools/benchmark_search.py": "3f0e963299755fc0e5474ee1b5ed5f6bb3765701811d8807e63897259b4106c2",
+    "tools/evaluate_search.py": "528994dc6d9c259ae39fb8e6db0e6ad6b65acc21028caa2aaadf5d7bf4fa3214"
+  },
+  "memory_note": "Whole-process Windows peak working set/commit, including imports. private_bytes is current usage at measurement, not a peak. Supervisor samples private bytes every 50ms; reported peaks can exceed the stop threshold.",
+  "baseline_note": "Legacy exhaustive search, logging disabled and candidate budget raised to 20 million only inside the bounded child process.",
+  "cases": [
+    {
+      "case": {
+        "product": "og_kush",
+        "level": "max",
+        "size": 5,
+        "method": "reference"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "ok",
+          "seconds": 2.887640000000829,
+          "initial_memory": {
+            "peak_working_set_bytes": 33521664,
+            "peak_commit_bytes": 24576000,
+            "private_bytes": 22978560
+          },
+          "peak_working_set_bytes": 33521664,
+          "peak_commit_bytes": 24576000,
+          "private_bytes": 22978560,
+          "best_modifier": {
+            "recipe": [
+              "gasoline",
+              "cuke",
+              "horse_semen",
+              "battery",
+              "mega_bean"
+            ],
+            "effects": [
+              "long_faced",
+              "zombifying",
+              "bright_eyed",
+              "glowing",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.9,
+            "sell_price": "136.5",
+            "ingredient_cost": "31.00",
+            "profit": "105.50"
+          },
+          "best_profit": {
+            "recipe": [
+              "gasoline",
+              "cuke",
+              "battery",
+              "viagra",
+              "mega_bean"
+            ],
+            "effects": [
+              "zombifying",
+              "bright_eyed",
+              "tropic_thunder",
+              "glowing",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.84,
+            "sell_price": "134.400000000000005684341886080801486968994140625",
+            "ingredient_cost": "26.00",
+            "profit": "108.4000000000000056843418861"
+          },
+          "stats": {
+            "mode": "exact_streaming",
+            "available_substances": 16,
+            "max_size": 5,
+            "candidate_limit": 20000000,
+            "estimated_candidates": 1118480,
+            "evaluated_candidates": 1118480,
+            "candidates_by_depth": {
+              "1": 16,
+              "2": 256,
+              "3": 4096,
+              "4": 65536,
+              "5": 1048576
+            },
+            "peak_recipe_depth": 5
+          }
+        }
+      ],
+      "median_seconds": 2.887640000000829
+    },
+    {
+      "case": {
+        "product": "og_kush",
+        "level": "max",
+        "size": 6,
+        "method": "reference"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "ok",
+          "seconds": 54.50664779999897,
+          "initial_memory": {
+            "peak_working_set_bytes": 33705984,
+            "peak_commit_bytes": 24862720,
+            "private_bytes": 22888448
+          },
+          "peak_working_set_bytes": 33705984,
+          "peak_commit_bytes": 24862720,
+          "private_bytes": 22888448,
+          "best_modifier": {
+            "recipe": [
+              "gasoline",
+              "cuke",
+              "addy",
+              "battery",
+              "horse_semen",
+              "mega_bean"
+            ],
+            "effects": [
+              "zombifying",
+              "bright_eyed",
+              "electrifying",
+              "long_faced",
+              "glowing",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 3.4,
+            "sell_price": "154",
+            "ingredient_cost": "40.00",
+            "profit": "114.00"
+          },
+          "best_profit": {
+            "recipe": [
+              "cuke",
+              "gasoline",
+              "cuke",
+              "mouth_wash",
+              "viagra",
+              "mega_bean"
+            ],
+            "effects": [
+              "anti_gravity",
+              "balding",
+              "bright_eyed",
+              "tropic_thunder",
+              "glowing",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 3.1,
+            "sell_price": "143.5",
+            "ingredient_cost": "24.00",
+            "profit": "119.50"
+          },
+          "stats": {
+            "mode": "exact_streaming",
+            "available_substances": 16,
+            "max_size": 6,
+            "candidate_limit": 20000000,
+            "estimated_candidates": 17895696,
+            "evaluated_candidates": 17895696,
+            "candidates_by_depth": {
+              "1": 16,
+              "2": 256,
+              "3": 4096,
+              "4": 65536,
+              "5": 1048576,
+              "6": 16777216
+            },
+            "peak_recipe_depth": 6
+          }
+        }
+      ],
+      "median_seconds": 54.50664779999897
+    },
+    {
+      "case": {
+        "product": "sour_diesel",
+        "level": "max",
+        "size": 5,
+        "method": "reference"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "ok",
+          "seconds": 3.592423300000519,
+          "initial_memory": {
+            "peak_working_set_bytes": 33521664,
+            "peak_commit_bytes": 24502272,
+            "private_bytes": 22810624
+          },
+          "peak_working_set_bytes": 33521664,
+          "peak_commit_bytes": 24502272,
+          "private_bytes": 22810624,
+          "best_modifier": {
+            "recipe": [
+              "cuke",
+              "mega_bean",
+              "iodine",
+              "horse_semen",
+              "motor_oil"
+            ],
+            "effects": [
+              "cyclopean",
+              "jennerising",
+              "electrifying",
+              "long_faced",
+              "anti_gravity",
+              "slippery"
+            ],
+            "modifier": 2.88,
+            "sell_price": "135.799999999999982946974341757595539093017578125",
+            "ingredient_cost": "32.00",
+            "profit": "103.7999999999999829469743418"
+          },
+          "best_profit": {
+            "recipe": [
+              "cuke",
+              "viagra",
+              "mega_bean",
+              "iodine",
+              "motor_oil"
+            ],
+            "effects": [
+              "tropic_thunder",
+              "cyclopean",
+              "thought_provoking",
+              "jennerising",
+              "anti_gravity",
+              "slippery"
+            ],
+            "modifier": 2.7600000000000002,
+            "sell_price": "131.599999999999994315658113919198513031005859375",
+            "ingredient_cost": "27.00",
+            "profit": "104.5999999999999943156581139"
+          },
+          "stats": {
+            "mode": "exact_streaming",
+            "available_substances": 16,
+            "max_size": 5,
+            "candidate_limit": 20000000,
+            "estimated_candidates": 1118480,
+            "evaluated_candidates": 1118480,
+            "candidates_by_depth": {
+              "1": 16,
+              "2": 256,
+              "3": 4096,
+              "4": 65536,
+              "5": 1048576
+            },
+            "peak_recipe_depth": 5
+          }
+        }
+      ],
+      "median_seconds": 3.592423300000519
+    },
+    {
+      "case": {
+        "product": "sour_diesel",
+        "level": "max",
+        "size": 6,
+        "method": "reference"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "ok",
+          "seconds": 42.08693829999902,
+          "initial_memory": {
+            "peak_working_set_bytes": 33742848,
+            "peak_commit_bytes": 24797184,
+            "private_bytes": 22278144
+          },
+          "peak_working_set_bytes": 33742848,
+          "peak_commit_bytes": 24797184,
+          "private_bytes": 22278144,
+          "best_modifier": {
+            "recipe": [
+              "cuke",
+              "viagra",
+              "mega_bean",
+              "iodine",
+              "horse_semen",
+              "motor_oil"
+            ],
+            "effects": [
+              "tropic_thunder",
+              "cyclopean",
+              "jennerising",
+              "electrifying",
+              "long_faced",
+              "anti_gravity",
+              "slippery"
+            ],
+            "modifier": 3.3400000000000003,
+            "sell_price": "151.900000000000005684341886080801486968994140625",
+            "ingredient_cost": "36.00",
+            "profit": "115.9000000000000056843418861"
+          },
+          "best_profit": {
+            "recipe": [
+              "banana",
+              "cuke",
+              "horse_semen",
+              "mega_bean",
+              "iodine",
+              "motor_oil"
+            ],
+            "effects": [
+              "electrifying",
+              "long_faced",
+              "cyclopean",
+              "thought_provoking",
+              "jennerising",
+              "anti_gravity",
+              "slippery"
+            ],
+            "modifier": 3.3200000000000003,
+            "sell_price": "151.200000000000017053025658242404460906982421875",
+            "ingredient_cost": "34.00",
+            "profit": "117.2000000000000170530256582"
+          },
+          "stats": {
+            "mode": "exact_streaming",
+            "available_substances": 16,
+            "max_size": 6,
+            "candidate_limit": 20000000,
+            "estimated_candidates": 17895696,
+            "evaluated_candidates": 17895696,
+            "candidates_by_depth": {
+              "1": 16,
+              "2": 256,
+              "3": 4096,
+              "4": 65536,
+              "5": 1048576,
+              "6": 16777216
+            },
+            "peak_recipe_depth": 6
+          }
+        }
+      ],
+      "median_seconds": 42.08693829999902
+    },
+    {
+      "case": {
+        "product": "green_crack",
+        "level": "max",
+        "size": 5,
+        "method": "reference"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "ok",
+          "seconds": 2.9848970000002737,
+          "initial_memory": {
+            "peak_working_set_bytes": 33349632,
+            "peak_commit_bytes": 24227840,
+            "private_bytes": 22544384
+          },
+          "peak_working_set_bytes": 33349632,
+          "peak_commit_bytes": 24227840,
+          "private_bytes": 22544384,
+          "best_modifier": {
+            "recipe": [
+              "mega_bean",
+              "iodine",
+              "addy",
+              "horse_semen",
+              "motor_oil"
+            ],
+            "effects": [
+              "cyclopean",
+              "jennerising",
+              "electrifying",
+              "long_faced",
+              "anti_gravity",
+              "slippery"
+            ],
+            "modifier": 2.88,
+            "sell_price": "135.799999999999982946974341757595539093017578125",
+            "ingredient_cost": "39.00",
+            "profit": "96.79999999999998294697434176"
+          },
+          "best_profit": {
+            "recipe": [
+              "paracetamol",
+              "gasoline",
+              "cuke",
+              "battery",
+              "mega_bean"
+            ],
+            "effects": [
+              "tropic_thunder",
+              "zombifying",
+              "bright_eyed",
+              "glowing",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.84,
+            "sell_price": "134.400000000000005684341886080801486968994140625",
+            "ingredient_cost": "25.00",
+            "profit": "109.4000000000000056843418861"
+          },
+          "stats": {
+            "mode": "exact_streaming",
+            "available_substances": 16,
+            "max_size": 5,
+            "candidate_limit": 20000000,
+            "estimated_candidates": 1118480,
+            "evaluated_candidates": 1118480,
+            "candidates_by_depth": {
+              "1": 16,
+              "2": 256,
+              "3": 4096,
+              "4": 65536,
+              "5": 1048576
+            },
+            "peak_recipe_depth": 5
+          }
+        }
+      ],
+      "median_seconds": 2.9848970000002737
+    },
+    {
+      "case": {
+        "product": "green_crack",
+        "level": "max",
+        "size": 6,
+        "method": "reference"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "ok",
+          "seconds": 53.67661109999972,
+          "initial_memory": {
+            "peak_working_set_bytes": 33677312,
+            "peak_commit_bytes": 24514560,
+            "private_bytes": 22048768
+          },
+          "peak_working_set_bytes": 33677312,
+          "peak_commit_bytes": 24514560,
+          "private_bytes": 22048768,
+          "best_modifier": {
+            "recipe": [
+              "iodine",
+              "mega_bean",
+              "motor_oil",
+              "cuke",
+              "battery",
+              "mega_bean"
+            ],
+            "effects": [
+              "anti_gravity",
+              "glowing",
+              "zombifying",
+              "tropic_thunder",
+              "bright_eyed",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 3.38,
+            "sell_price": "153.299999999999982946974341757595539093017578125",
+            "ingredient_cost": "38.00",
+            "profit": "115.2999999999999829469743418"
+          },
+          "best_profit": {
+            "recipe": [
+              "paracetamol",
+              "mega_bean",
+              "motor_oil",
+              "cuke",
+              "battery",
+              "mega_bean"
+            ],
+            "effects": [
+              "anti_gravity",
+              "zombifying",
+              "tropic_thunder",
+              "bright_eyed",
+              "glowing",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 3.38,
+            "sell_price": "153.299999999999982946974341757595539093017578125",
+            "ingredient_cost": "33.00",
+            "profit": "120.2999999999999829469743418"
+          },
+          "stats": {
+            "mode": "exact_streaming",
+            "available_substances": 16,
+            "max_size": 6,
+            "candidate_limit": 20000000,
+            "estimated_candidates": 17895696,
+            "evaluated_candidates": 17895696,
+            "candidates_by_depth": {
+              "1": 16,
+              "2": 256,
+              "3": 4096,
+              "4": 65536,
+              "5": 1048576,
+              "6": 16777216
+            },
+            "peak_recipe_depth": 6
+          }
+        }
+      ],
+      "median_seconds": 53.67661109999972
+    },
+    {
+      "case": {
+        "product": "granddaddy_purple",
+        "level": "max",
+        "size": 5,
+        "method": "reference"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "ok",
+          "seconds": 2.3087634000003163,
+          "initial_memory": {
+            "peak_working_set_bytes": 33382400,
+            "peak_commit_bytes": 24707072,
+            "private_bytes": 22073344
+          },
+          "peak_working_set_bytes": 33382400,
+          "peak_commit_bytes": 24707072,
+          "private_bytes": 22073344,
+          "best_modifier": {
+            "recipe": [
+              "chili",
+              "energy_drink",
+              "addy",
+              "battery",
+              "horse_semen"
+            ],
+            "effects": [
+              "athletic",
+              "zombifying",
+              "tropic_thunder",
+              "bright_eyed",
+              "electrifying",
+              "long_faced"
+            ],
+            "modifier": 2.7800000000000002,
+            "sell_price": "132.30000000000001136868377216160297393798828125",
+            "ingredient_cost": "39.00",
+            "profit": "93.30000000000001136868377216"
+          },
+          "best_profit": {
+            "recipe": [
+              "banana",
+              "cuke",
+              "viagra",
+              "horse_semen",
+              "mega_bean"
+            ],
+            "effects": [
+              "sedating",
+              "tropic_thunder",
+              "electrifying",
+              "long_faced",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.66,
+            "sell_price": "128.099999999999994315658113919198513031005859375",
+            "ingredient_cost": "24.00",
+            "profit": "104.0999999999999943156581139"
+          },
+          "stats": {
+            "mode": "exact_streaming",
+            "available_substances": 16,
+            "max_size": 5,
+            "candidate_limit": 20000000,
+            "estimated_candidates": 1118480,
+            "evaluated_candidates": 1118480,
+            "candidates_by_depth": {
+              "1": 16,
+              "2": 256,
+              "3": 4096,
+              "4": 65536,
+              "5": 1048576
+            },
+            "peak_recipe_depth": 5
+          }
+        }
+      ],
+      "median_seconds": 2.3087634000003163
+    },
+    {
+      "case": {
+        "product": "granddaddy_purple",
+        "level": "max",
+        "size": 6,
+        "method": "reference"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "ok",
+          "seconds": 47.67141129999982,
+          "initial_memory": {
+            "peak_working_set_bytes": 33607680,
+            "peak_commit_bytes": 24485888,
+            "private_bytes": 22667264
+          },
+          "peak_working_set_bytes": 33607680,
+          "peak_commit_bytes": 24485888,
+          "private_bytes": 22667264,
+          "best_modifier": {
+            "recipe": [
+              "cuke",
+              "addy",
+              "horse_semen",
+              "mega_bean",
+              "iodine",
+              "motor_oil"
+            ],
+            "effects": [
+              "electrifying",
+              "long_faced",
+              "cyclopean",
+              "thought_provoking",
+              "jennerising",
+              "anti_gravity",
+              "slippery"
+            ],
+            "modifier": 3.3200000000000003,
+            "sell_price": "151.200000000000017053025658242404460906982421875",
+            "ingredient_cost": "41.00",
+            "profit": "110.2000000000000170530256582"
+          },
+          "best_profit": {
+            "recipe": [
+              "cuke",
+              "energy_drink",
+              "mega_bean",
+              "paracetamol",
+              "chili",
+              "mouth_wash"
+            ],
+            "effects": [
+              "cyclopean",
+              "tropic_thunder",
+              "long_faced",
+              "bright_eyed",
+              "spicy",
+              "anti_gravity",
+              "balding"
+            ],
+            "modifier": 3.16,
+            "sell_price": "145.599999999999994315658113919198513031005859375",
+            "ingredient_cost": "29.00",
+            "profit": "116.5999999999999943156581139"
+          },
+          "stats": {
+            "mode": "exact_streaming",
+            "available_substances": 16,
+            "max_size": 6,
+            "candidate_limit": 20000000,
+            "estimated_candidates": 17895696,
+            "evaluated_candidates": 17895696,
+            "candidates_by_depth": {
+              "1": 16,
+              "2": 256,
+              "3": 4096,
+              "4": 65536,
+              "5": 1048576,
+              "6": 16777216
+            },
+            "peak_recipe_depth": 6
+          }
+        }
+      ],
+      "median_seconds": 47.67141129999982
+    },
+    {
+      "case": {
+        "product": "low_quality_pesudo",
+        "level": "max",
+        "size": 5,
+        "method": "reference"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "ok",
+          "seconds": 2.3729849999999715,
+          "initial_memory": {
+            "peak_working_set_bytes": 33497088,
+            "peak_commit_bytes": 24567808,
+            "private_bytes": 24084480
+          },
+          "peak_working_set_bytes": 33497088,
+          "peak_commit_bytes": 24567808,
+          "private_bytes": 24084480,
+          "best_modifier": {
+            "recipe": [
+              "gasoline",
+              "cuke",
+              "horse_semen",
+              "battery",
+              "mega_bean"
+            ],
+            "effects": [
+              "long_faced",
+              "zombifying",
+              "bright_eyed",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.42,
+            "sell_price": "239.400000000000005684341886080801486968994140625",
+            "ingredient_cost": "31.00",
+            "profit": "208.4000000000000056843418861"
+          },
+          "best_profit": {
+            "recipe": [
+              "banana",
+              "cuke",
+              "viagra",
+              "horse_semen",
+              "mega_bean"
+            ],
+            "effects": [
+              "tropic_thunder",
+              "electrifying",
+              "long_faced",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.4,
+            "sell_price": "238",
+            "ingredient_cost": "24.00",
+            "profit": "214.00"
+          },
+          "stats": {
+            "mode": "exact_streaming",
+            "available_substances": 16,
+            "max_size": 5,
+            "candidate_limit": 20000000,
+            "estimated_candidates": 1118480,
+            "evaluated_candidates": 1118480,
+            "candidates_by_depth": {
+              "1": 16,
+              "2": 256,
+              "3": 4096,
+              "4": 65536,
+              "5": 1048576
+            },
+            "peak_recipe_depth": 5
+          }
+        }
+      ],
+      "median_seconds": 2.3729849999999715
+    },
+    {
+      "case": {
+        "product": "low_quality_pesudo",
+        "level": "max",
+        "size": 6,
+        "method": "reference"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "ok",
+          "seconds": 50.88841749999847,
+          "initial_memory": {
+            "peak_working_set_bytes": 33619968,
+            "peak_commit_bytes": 24535040,
+            "private_bytes": 22880256
+          },
+          "peak_working_set_bytes": 33619968,
+          "peak_commit_bytes": 24535040,
+          "private_bytes": 22880256,
+          "best_modifier": {
+            "recipe": [
+              "gasoline",
+              "cuke",
+              "addy",
+              "battery",
+              "horse_semen",
+              "mega_bean"
+            ],
+            "effects": [
+              "zombifying",
+              "bright_eyed",
+              "electrifying",
+              "long_faced",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.92,
+            "sell_price": "274.3999999999999772626324556767940521240234375",
+            "ingredient_cost": "40.00",
+            "profit": "234.3999999999999772626324557"
+          },
+          "best_profit": {
+            "recipe": [
+              "cuke",
+              "paracetamol",
+              "gasoline",
+              "cuke",
+              "battery",
+              "mega_bean"
+            ],
+            "effects": [
+              "tropic_thunder",
+              "zombifying",
+              "bright_eyed",
+              "glowing",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.84,
+            "sell_price": "268.80000000000001136868377216160297393798828125",
+            "ingredient_cost": "27.00",
+            "profit": "241.8000000000000113686837722"
+          },
+          "stats": {
+            "mode": "exact_streaming",
+            "available_substances": 16,
+            "max_size": 6,
+            "candidate_limit": 20000000,
+            "estimated_candidates": 17895696,
+            "evaluated_candidates": 17895696,
+            "candidates_by_depth": {
+              "1": 16,
+              "2": 256,
+              "3": 4096,
+              "4": 65536,
+              "5": 1048576,
+              "6": 16777216
+            },
+            "peak_recipe_depth": 6
+          }
+        }
+      ],
+      "median_seconds": 50.88841749999847
+    },
+    {
+      "case": {
+        "product": "pseudo",
+        "level": "max",
+        "size": 5,
+        "method": "reference"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "ok",
+          "seconds": 2.4727915000003122,
+          "initial_memory": {
+            "peak_working_set_bytes": 33304576,
+            "peak_commit_bytes": 24252416,
+            "private_bytes": 22491136
+          },
+          "peak_working_set_bytes": 33304576,
+          "peak_commit_bytes": 24252416,
+          "private_bytes": 22491136,
+          "best_modifier": {
+            "recipe": [
+              "gasoline",
+              "cuke",
+              "horse_semen",
+              "battery",
+              "mega_bean"
+            ],
+            "effects": [
+              "long_faced",
+              "zombifying",
+              "bright_eyed",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.42,
+            "sell_price": "239.400000000000005684341886080801486968994140625",
+            "ingredient_cost": "31.00",
+            "profit": "208.4000000000000056843418861"
+          },
+          "best_profit": {
+            "recipe": [
+              "banana",
+              "cuke",
+              "viagra",
+              "horse_semen",
+              "mega_bean"
+            ],
+            "effects": [
+              "tropic_thunder",
+              "electrifying",
+              "long_faced",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.4,
+            "sell_price": "238",
+            "ingredient_cost": "24.00",
+            "profit": "214.00"
+          },
+          "stats": {
+            "mode": "exact_streaming",
+            "available_substances": 16,
+            "max_size": 5,
+            "candidate_limit": 20000000,
+            "estimated_candidates": 1118480,
+            "evaluated_candidates": 1118480,
+            "candidates_by_depth": {
+              "1": 16,
+              "2": 256,
+              "3": 4096,
+              "4": 65536,
+              "5": 1048576
+            },
+            "peak_recipe_depth": 5
+          }
+        }
+      ],
+      "median_seconds": 2.4727915000003122
+    },
+    {
+      "case": {
+        "product": "pseudo",
+        "level": "max",
+        "size": 6,
+        "method": "reference"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "ok",
+          "seconds": 42.1454593999988,
+          "initial_memory": {
+            "peak_working_set_bytes": 33378304,
+            "peak_commit_bytes": 24805376,
+            "private_bytes": 23388160
+          },
+          "peak_working_set_bytes": 33378304,
+          "peak_commit_bytes": 24805376,
+          "private_bytes": 23388160,
+          "best_modifier": {
+            "recipe": [
+              "gasoline",
+              "cuke",
+              "addy",
+              "battery",
+              "horse_semen",
+              "mega_bean"
+            ],
+            "effects": [
+              "zombifying",
+              "bright_eyed",
+              "electrifying",
+              "long_faced",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.92,
+            "sell_price": "274.3999999999999772626324556767940521240234375",
+            "ingredient_cost": "40.00",
+            "profit": "234.3999999999999772626324557"
+          },
+          "best_profit": {
+            "recipe": [
+              "cuke",
+              "paracetamol",
+              "gasoline",
+              "cuke",
+              "battery",
+              "mega_bean"
+            ],
+            "effects": [
+              "tropic_thunder",
+              "zombifying",
+              "bright_eyed",
+              "glowing",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.84,
+            "sell_price": "268.80000000000001136868377216160297393798828125",
+            "ingredient_cost": "27.00",
+            "profit": "241.8000000000000113686837722"
+          },
+          "stats": {
+            "mode": "exact_streaming",
+            "available_substances": 16,
+            "max_size": 6,
+            "candidate_limit": 20000000,
+            "estimated_candidates": 17895696,
+            "evaluated_candidates": 17895696,
+            "candidates_by_depth": {
+              "1": 16,
+              "2": 256,
+              "3": 4096,
+              "4": 65536,
+              "5": 1048576,
+              "6": 16777216
+            },
+            "peak_recipe_depth": 6
+          }
+        }
+      ],
+      "median_seconds": 42.1454593999988
+    },
+    {
+      "case": {
+        "product": "high_quality_pesudo",
+        "level": "max",
+        "size": 5,
+        "method": "reference"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "ok",
+          "seconds": 3.643715799998972,
+          "initial_memory": {
+            "peak_working_set_bytes": 33443840,
+            "peak_commit_bytes": 24473600,
+            "private_bytes": 22261760
+          },
+          "peak_working_set_bytes": 33443840,
+          "peak_commit_bytes": 24473600,
+          "private_bytes": 22261760,
+          "best_modifier": {
+            "recipe": [
+              "gasoline",
+              "cuke",
+              "horse_semen",
+              "battery",
+              "mega_bean"
+            ],
+            "effects": [
+              "long_faced",
+              "zombifying",
+              "bright_eyed",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.42,
+            "sell_price": "239.400000000000005684341886080801486968994140625",
+            "ingredient_cost": "31.00",
+            "profit": "208.4000000000000056843418861"
+          },
+          "best_profit": {
+            "recipe": [
+              "banana",
+              "cuke",
+              "viagra",
+              "horse_semen",
+              "mega_bean"
+            ],
+            "effects": [
+              "tropic_thunder",
+              "electrifying",
+              "long_faced",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.4,
+            "sell_price": "238",
+            "ingredient_cost": "24.00",
+            "profit": "214.00"
+          },
+          "stats": {
+            "mode": "exact_streaming",
+            "available_substances": 16,
+            "max_size": 5,
+            "candidate_limit": 20000000,
+            "estimated_candidates": 1118480,
+            "evaluated_candidates": 1118480,
+            "candidates_by_depth": {
+              "1": 16,
+              "2": 256,
+              "3": 4096,
+              "4": 65536,
+              "5": 1048576
+            },
+            "peak_recipe_depth": 5
+          }
+        }
+      ],
+      "median_seconds": 3.643715799998972
+    },
+    {
+      "case": {
+        "product": "high_quality_pesudo",
+        "level": "max",
+        "size": 6,
+        "method": "reference"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "ok",
+          "seconds": 40.235877700000856,
+          "initial_memory": {
+            "peak_working_set_bytes": 33615872,
+            "peak_commit_bytes": 24514560,
+            "private_bytes": 23924736
+          },
+          "peak_working_set_bytes": 33615872,
+          "peak_commit_bytes": 24514560,
+          "private_bytes": 23924736,
+          "best_modifier": {
+            "recipe": [
+              "gasoline",
+              "cuke",
+              "addy",
+              "battery",
+              "horse_semen",
+              "mega_bean"
+            ],
+            "effects": [
+              "zombifying",
+              "bright_eyed",
+              "electrifying",
+              "long_faced",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.92,
+            "sell_price": "274.3999999999999772626324556767940521240234375",
+            "ingredient_cost": "40.00",
+            "profit": "234.3999999999999772626324557"
+          },
+          "best_profit": {
+            "recipe": [
+              "cuke",
+              "paracetamol",
+              "gasoline",
+              "cuke",
+              "battery",
+              "mega_bean"
+            ],
+            "effects": [
+              "tropic_thunder",
+              "zombifying",
+              "bright_eyed",
+              "glowing",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.84,
+            "sell_price": "268.80000000000001136868377216160297393798828125",
+            "ingredient_cost": "27.00",
+            "profit": "241.8000000000000113686837722"
+          },
+          "stats": {
+            "mode": "exact_streaming",
+            "available_substances": 16,
+            "max_size": 6,
+            "candidate_limit": 20000000,
+            "estimated_candidates": 17895696,
+            "evaluated_candidates": 17895696,
+            "candidates_by_depth": {
+              "1": 16,
+              "2": 256,
+              "3": 4096,
+              "4": 65536,
+              "5": 1048576,
+              "6": 16777216
+            },
+            "peak_recipe_depth": 6
+          }
+        }
+      ],
+      "median_seconds": 40.235877700000856
+    },
+    {
+      "case": {
+        "product": "cocaine",
+        "level": "max",
+        "size": 5,
+        "method": "reference"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "ok",
+          "seconds": 2.6589555999998993,
+          "initial_memory": {
+            "peak_working_set_bytes": 33824768,
+            "peak_commit_bytes": 25161728,
+            "private_bytes": 23990272
+          },
+          "peak_working_set_bytes": 33824768,
+          "peak_commit_bytes": 25161728,
+          "private_bytes": 23990272,
+          "best_modifier": {
+            "recipe": [
+              "gasoline",
+              "cuke",
+              "horse_semen",
+              "battery",
+              "mega_bean"
+            ],
+            "effects": [
+              "long_faced",
+              "zombifying",
+              "bright_eyed",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.42,
+            "sell_price": "513",
+            "ingredient_cost": "31.00",
+            "profit": "482.00"
+          },
+          "best_profit": {
+            "recipe": [
+              "banana",
+              "cuke",
+              "viagra",
+              "horse_semen",
+              "mega_bean"
+            ],
+            "effects": [
+              "tropic_thunder",
+              "electrifying",
+              "long_faced",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.4,
+            "sell_price": "510",
+            "ingredient_cost": "24.00",
+            "profit": "486.00"
+          },
+          "stats": {
+            "mode": "exact_streaming",
+            "available_substances": 16,
+            "max_size": 5,
+            "candidate_limit": 20000000,
+            "estimated_candidates": 1118480,
+            "evaluated_candidates": 1118480,
+            "candidates_by_depth": {
+              "1": 16,
+              "2": 256,
+              "3": 4096,
+              "4": 65536,
+              "5": 1048576
+            },
+            "peak_recipe_depth": 5
+          }
+        }
+      ],
+      "median_seconds": 2.6589555999998993
+    },
+    {
+      "case": {
+        "product": "cocaine",
+        "level": "max",
+        "size": 6,
+        "method": "reference"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "ok",
+          "seconds": 40.518478799998775,
+          "initial_memory": {
+            "peak_working_set_bytes": 33460224,
+            "peak_commit_bytes": 24743936,
+            "private_bytes": 22900736
+          },
+          "peak_working_set_bytes": 33460224,
+          "peak_commit_bytes": 24743936,
+          "private_bytes": 22900736,
+          "best_modifier": {
+            "recipe": [
+              "gasoline",
+              "cuke",
+              "addy",
+              "battery",
+              "horse_semen",
+              "mega_bean"
+            ],
+            "effects": [
+              "zombifying",
+              "bright_eyed",
+              "electrifying",
+              "long_faced",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.92,
+            "sell_price": "588",
+            "ingredient_cost": "40.00",
+            "profit": "548.00"
+          },
+          "best_profit": {
+            "recipe": [
+              "cuke",
+              "paracetamol",
+              "gasoline",
+              "cuke",
+              "battery",
+              "mega_bean"
+            ],
+            "effects": [
+              "tropic_thunder",
+              "zombifying",
+              "bright_eyed",
+              "glowing",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.84,
+            "sell_price": "576",
+            "ingredient_cost": "27.00",
+            "profit": "549.00"
+          },
+          "stats": {
+            "mode": "exact_streaming",
+            "available_substances": 16,
+            "max_size": 6,
+            "candidate_limit": 20000000,
+            "estimated_candidates": 17895696,
+            "evaluated_candidates": 17895696,
+            "candidates_by_depth": {
+              "1": 16,
+              "2": 256,
+              "3": 4096,
+              "4": 65536,
+              "5": 1048576,
+              "6": 16777216
+            },
+            "peak_recipe_depth": 6
+          }
+        }
+      ],
+      "median_seconds": 40.518478799998775
+    },
+    {
+      "case": {
+        "product": "og_kush",
+        "level": "max",
+        "size": 5,
+        "method": "baseline"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "ok",
+          "seconds": 10.22196249999979,
+          "initial_memory": {
+            "peak_working_set_bytes": 33755136,
+            "peak_commit_bytes": 25141248,
+            "private_bytes": 23191552
+          },
+          "peak_working_set_bytes": 33755136,
+          "peak_commit_bytes": 25141248,
+          "private_bytes": 23191552,
+          "best_modifier": {
+            "recipe": [
+              "gasoline",
+              "cuke",
+              "horse_semen",
+              "battery",
+              "mega_bean"
+            ],
+            "effects": [
+              "long_faced",
+              "zombifying",
+              "bright_eyed",
+              "glowing",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.9,
+            "sell_price": "136.5",
+            "ingredient_cost": "31.00",
+            "profit": "105.50"
+          },
+          "best_profit": {
+            "recipe": [
+              "gasoline",
+              "cuke",
+              "battery",
+              "viagra",
+              "mega_bean"
+            ],
+            "effects": [
+              "zombifying",
+              "bright_eyed",
+              "tropic_thunder",
+              "glowing",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.84,
+            "sell_price": "134.400000000000005684341886080801486968994140625",
+            "ingredient_cost": "26.00",
+            "profit": "108.4000000000000056843418861"
+          },
+          "stats": {}
+        }
+      ],
+      "median_seconds": 10.22196249999979
+    },
+    {
+      "case": {
+        "product": "sour_diesel",
+        "level": "max",
+        "size": 5,
+        "method": "baseline"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "ok",
+          "seconds": 10.014854999999443,
+          "initial_memory": {
+            "peak_working_set_bytes": 33673216,
+            "peak_commit_bytes": 24760320,
+            "private_bytes": 22487040
+          },
+          "peak_working_set_bytes": 33673216,
+          "peak_commit_bytes": 24760320,
+          "private_bytes": 22487040,
+          "best_modifier": {
+            "recipe": [
+              "cuke",
+              "mega_bean",
+              "iodine",
+              "horse_semen",
+              "motor_oil"
+            ],
+            "effects": [
+              "cyclopean",
+              "jennerising",
+              "electrifying",
+              "long_faced",
+              "anti_gravity",
+              "slippery"
+            ],
+            "modifier": 2.88,
+            "sell_price": "135.799999999999982946974341757595539093017578125",
+            "ingredient_cost": "32.00",
+            "profit": "103.7999999999999829469743418"
+          },
+          "best_profit": {
+            "recipe": [
+              "cuke",
+              "viagra",
+              "mega_bean",
+              "iodine",
+              "motor_oil"
+            ],
+            "effects": [
+              "tropic_thunder",
+              "cyclopean",
+              "thought_provoking",
+              "jennerising",
+              "anti_gravity",
+              "slippery"
+            ],
+            "modifier": 2.7600000000000002,
+            "sell_price": "131.599999999999994315658113919198513031005859375",
+            "ingredient_cost": "27.00",
+            "profit": "104.5999999999999943156581139"
+          },
+          "stats": {}
+        }
+      ],
+      "median_seconds": 10.014854999999443
+    },
+    {
+      "case": {
+        "product": "green_crack",
+        "level": "max",
+        "size": 5,
+        "method": "baseline"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "ok",
+          "seconds": 13.94778149999911,
+          "initial_memory": {
+            "peak_working_set_bytes": 34107392,
+            "peak_commit_bytes": 25075712,
+            "private_bytes": 24113152
+          },
+          "peak_working_set_bytes": 34107392,
+          "peak_commit_bytes": 25075712,
+          "private_bytes": 24113152,
+          "best_modifier": {
+            "recipe": [
+              "mega_bean",
+              "iodine",
+              "addy",
+              "horse_semen",
+              "motor_oil"
+            ],
+            "effects": [
+              "cyclopean",
+              "jennerising",
+              "electrifying",
+              "long_faced",
+              "anti_gravity",
+              "slippery"
+            ],
+            "modifier": 2.88,
+            "sell_price": "135.799999999999982946974341757595539093017578125",
+            "ingredient_cost": "39.00",
+            "profit": "96.79999999999998294697434176"
+          },
+          "best_profit": {
+            "recipe": [
+              "paracetamol",
+              "gasoline",
+              "cuke",
+              "battery",
+              "mega_bean"
+            ],
+            "effects": [
+              "tropic_thunder",
+              "zombifying",
+              "bright_eyed",
+              "glowing",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.84,
+            "sell_price": "134.400000000000005684341886080801486968994140625",
+            "ingredient_cost": "25.00",
+            "profit": "109.4000000000000056843418861"
+          },
+          "stats": {}
+        }
+      ],
+      "median_seconds": 13.94778149999911
+    },
+    {
+      "case": {
+        "product": "granddaddy_purple",
+        "level": "max",
+        "size": 5,
+        "method": "baseline"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "ok",
+          "seconds": 25.842941000000792,
+          "initial_memory": {
+            "peak_working_set_bytes": 33775616,
+            "peak_commit_bytes": 24965120,
+            "private_bytes": 22278144
+          },
+          "peak_working_set_bytes": 33775616,
+          "peak_commit_bytes": 24965120,
+          "private_bytes": 22548480,
+          "best_modifier": {
+            "recipe": [
+              "chili",
+              "energy_drink",
+              "addy",
+              "battery",
+              "horse_semen"
+            ],
+            "effects": [
+              "athletic",
+              "zombifying",
+              "tropic_thunder",
+              "bright_eyed",
+              "electrifying",
+              "long_faced"
+            ],
+            "modifier": 2.7800000000000002,
+            "sell_price": "132.30000000000001136868377216160297393798828125",
+            "ingredient_cost": "39.00",
+            "profit": "93.30000000000001136868377216"
+          },
+          "best_profit": {
+            "recipe": [
+              "banana",
+              "cuke",
+              "viagra",
+              "horse_semen",
+              "mega_bean"
+            ],
+            "effects": [
+              "sedating",
+              "tropic_thunder",
+              "electrifying",
+              "long_faced",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.66,
+            "sell_price": "128.099999999999994315658113919198513031005859375",
+            "ingredient_cost": "24.00",
+            "profit": "104.0999999999999943156581139"
+          },
+          "stats": {}
+        }
+      ],
+      "median_seconds": 25.842941000000792
+    },
+    {
+      "case": {
+        "product": "low_quality_pesudo",
+        "level": "max",
+        "size": 5,
+        "method": "baseline"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "ok",
+          "seconds": 23.78602520000095,
+          "initial_memory": {
+            "peak_working_set_bytes": 34050048,
+            "peak_commit_bytes": 24956928,
+            "private_bytes": 23949312
+          },
+          "peak_working_set_bytes": 34050048,
+          "peak_commit_bytes": 24956928,
+          "private_bytes": 23949312,
+          "best_modifier": {
+            "recipe": [
+              "gasoline",
+              "cuke",
+              "horse_semen",
+              "battery",
+              "mega_bean"
+            ],
+            "effects": [
+              "long_faced",
+              "zombifying",
+              "bright_eyed",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.42,
+            "sell_price": "239.400000000000005684341886080801486968994140625",
+            "ingredient_cost": "31.00",
+            "profit": "208.4000000000000056843418861"
+          },
+          "best_profit": {
+            "recipe": [
+              "banana",
+              "cuke",
+              "viagra",
+              "horse_semen",
+              "mega_bean"
+            ],
+            "effects": [
+              "tropic_thunder",
+              "electrifying",
+              "long_faced",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.4,
+            "sell_price": "238",
+            "ingredient_cost": "24.00",
+            "profit": "214.00"
+          },
+          "stats": {}
+        }
+      ],
+      "median_seconds": 23.78602520000095
+    },
+    {
+      "case": {
+        "product": "pseudo",
+        "level": "max",
+        "size": 5,
+        "method": "baseline"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "ok",
+          "seconds": 24.505379599999287,
+          "initial_memory": {
+            "peak_working_set_bytes": 33468416,
+            "peak_commit_bytes": 24612864,
+            "private_bytes": 22679552
+          },
+          "peak_working_set_bytes": 33468416,
+          "peak_commit_bytes": 24612864,
+          "private_bytes": 22679552,
+          "best_modifier": {
+            "recipe": [
+              "gasoline",
+              "cuke",
+              "horse_semen",
+              "battery",
+              "mega_bean"
+            ],
+            "effects": [
+              "long_faced",
+              "zombifying",
+              "bright_eyed",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.42,
+            "sell_price": "239.400000000000005684341886080801486968994140625",
+            "ingredient_cost": "31.00",
+            "profit": "208.4000000000000056843418861"
+          },
+          "best_profit": {
+            "recipe": [
+              "banana",
+              "cuke",
+              "viagra",
+              "horse_semen",
+              "mega_bean"
+            ],
+            "effects": [
+              "tropic_thunder",
+              "electrifying",
+              "long_faced",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.4,
+            "sell_price": "238",
+            "ingredient_cost": "24.00",
+            "profit": "214.00"
+          },
+          "stats": {}
+        }
+      ],
+      "median_seconds": 24.505379599999287
+    },
+    {
+      "case": {
+        "product": "high_quality_pesudo",
+        "level": "max",
+        "size": 5,
+        "method": "baseline"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "ok",
+          "seconds": 13.193954399999711,
+          "initial_memory": {
+            "peak_working_set_bytes": 33914880,
+            "peak_commit_bytes": 24784896,
+            "private_bytes": 22339584
+          },
+          "peak_working_set_bytes": 33914880,
+          "peak_commit_bytes": 24784896,
+          "private_bytes": 22339584,
+          "best_modifier": {
+            "recipe": [
+              "gasoline",
+              "cuke",
+              "horse_semen",
+              "battery",
+              "mega_bean"
+            ],
+            "effects": [
+              "long_faced",
+              "zombifying",
+              "bright_eyed",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.42,
+            "sell_price": "239.400000000000005684341886080801486968994140625",
+            "ingredient_cost": "31.00",
+            "profit": "208.4000000000000056843418861"
+          },
+          "best_profit": {
+            "recipe": [
+              "banana",
+              "cuke",
+              "viagra",
+              "horse_semen",
+              "mega_bean"
+            ],
+            "effects": [
+              "tropic_thunder",
+              "electrifying",
+              "long_faced",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.4,
+            "sell_price": "238",
+            "ingredient_cost": "24.00",
+            "profit": "214.00"
+          },
+          "stats": {}
+        }
+      ],
+      "median_seconds": 13.193954399999711
+    },
+    {
+      "case": {
+        "product": "cocaine",
+        "level": "max",
+        "size": 5,
+        "method": "baseline"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "ok",
+          "seconds": 10.186002800001006,
+          "initial_memory": {
+            "peak_working_set_bytes": 33452032,
+            "peak_commit_bytes": 24694784,
+            "private_bytes": 22548480
+          },
+          "peak_working_set_bytes": 33452032,
+          "peak_commit_bytes": 24694784,
+          "private_bytes": 22548480,
+          "best_modifier": {
+            "recipe": [
+              "gasoline",
+              "cuke",
+              "horse_semen",
+              "battery",
+              "mega_bean"
+            ],
+            "effects": [
+              "long_faced",
+              "zombifying",
+              "bright_eyed",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.42,
+            "sell_price": "513",
+            "ingredient_cost": "31.00",
+            "profit": "482.00"
+          },
+          "best_profit": {
+            "recipe": [
+              "banana",
+              "cuke",
+              "viagra",
+              "horse_semen",
+              "mega_bean"
+            ],
+            "effects": [
+              "tropic_thunder",
+              "electrifying",
+              "long_faced",
+              "cyclopean",
+              "foggy"
+            ],
+            "modifier": 2.4,
+            "sell_price": "510",
+            "ingredient_cost": "24.00",
+            "profit": "486.00"
+          },
+          "stats": {}
+        }
+      ],
+      "median_seconds": 10.186002800001006
+    },
+    {
+      "case": {
+        "product": "og_kush",
+        "level": "max",
+        "size": 6,
+        "method": "baseline"
+      },
+      "timeout_seconds": 240.0,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "time_limit",
+          "process_seconds": 240.1395577000003,
+          "peak_working_set_bytes": 33185792,
+          "peak_commit_bytes": 23851008,
+          "private_bytes": 22716416
+        }
+      ]
+    }
+  ]
+}

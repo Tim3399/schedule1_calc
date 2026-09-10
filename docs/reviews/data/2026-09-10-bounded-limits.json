@@ -1,0 +1,188 @@
+{
+  "created_utc": "2026-09-10T13:11:17.711321+00:00",
+  "python": "3.12.14",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "source_sha256": {
+    "src/lookup/lookup.py": "df8ab950ca1890f7c4df5b51f6f19cbaf05526b732585336f263f2aeb34c3bb5",
+    "src/functionality/calc_modifier.py": "66db931ef3a6d092d95acc0622935162b2045fddf751e5ae286590fcdde4cb9c",
+    "src/util/models.py": "813f2e006c0aad847fd0a45fb08058518e2d8a8ce5eb33264f0fc848dd1cd40e",
+    "experiments/search_runtime.py": "966d9ebaec0ccb0a040ea58533d590be0db754cf4b882c7c73d26da408a1cdb6",
+    "experiments/search_reference.py": "a35d3989875cb967e203971e4f009dcaca86f5899b05e458fdff83001dba860e",
+    "experiments/search_bounded.py": "e04c9486791d136790aa530950638d2dd30ff681bf8d2134c3886c30162c78f4",
+    "experiments/search_fast.py": "36960bf9be90cedc7b03bbc69b763e4ca8015908160c2e1216267534e7c9758a",
+    "tools/benchmark_search.py": "3f0e963299755fc0e5474ee1b5ed5f6bb3765701811d8807e63897259b4106c2",
+    "tools/evaluate_search.py": "29e92068d135a37b49fa00a6b68d6381f8e909d1387f86fee2a8d3bb81c837f6"
+  },
+  "memory_note": "Whole-process Windows peak working set/commit, including imports. private_bytes is current usage at measurement, not a peak. Supervisor samples private bytes every 50ms; reported peaks can exceed the stop threshold.",
+  "baseline_note": "Legacy exhaustive search, logging disabled and candidate budget raised to 20 million only inside the bounded child process.",
+  "cases": [
+    {
+      "case": {
+        "product": "og_kush",
+        "level": "max",
+        "size": 7,
+        "method": "bounded1"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "search_limit",
+          "seconds": 6.8241673999982595,
+          "error": "Exact prefix frontier exceeded 300,000 states while building depth 6.",
+          "peak_working_set_bytes": 387928064,
+          "peak_commit_bytes": 378486784,
+          "private_bytes": 378486784
+        }
+      ]
+    },
+    {
+      "case": {
+        "product": "og_kush",
+        "level": "max",
+        "size": 7,
+        "method": "bounded2"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "search_limit",
+          "seconds": 1.466919999998936,
+          "error": "Exact prefix frontier exceeded 100,000 states while building depth 5.",
+          "peak_working_set_bytes": 130314240,
+          "peak_commit_bytes": 121036800,
+          "private_bytes": 120479744
+        }
+      ]
+    },
+    {
+      "case": {
+        "product": "og_kush",
+        "level": "max",
+        "size": 8,
+        "method": "bounded1"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "search_limit",
+          "seconds": 7.995482500002254,
+          "error": "Exact prefix frontier exceeded 300,000 states while building depth 6.",
+          "peak_working_set_bytes": 388018176,
+          "peak_commit_bytes": 378527744,
+          "private_bytes": 378527744
+        }
+      ]
+    },
+    {
+      "case": {
+        "product": "og_kush",
+        "level": "max",
+        "size": 8,
+        "method": "bounded2"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "search_limit",
+          "seconds": 1.4317894000014348,
+          "error": "Exact prefix frontier exceeded 100,000 states while building depth 5.",
+          "peak_working_set_bytes": 129937408,
+          "peak_commit_bytes": 120541184,
+          "private_bytes": 120000512
+        }
+      ]
+    },
+    {
+      "case": {
+        "product": "cocaine",
+        "level": "max",
+        "size": 7,
+        "method": "bounded1"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "search_limit",
+          "seconds": 6.130584099999396,
+          "error": "Exact prefix frontier exceeded 300,000 states while building depth 6.",
+          "peak_working_set_bytes": 355479552,
+          "peak_commit_bytes": 346476544,
+          "private_bytes": 346476544
+        }
+      ]
+    },
+    {
+      "case": {
+        "product": "cocaine",
+        "level": "max",
+        "size": 7,
+        "method": "bounded2"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "search_limit",
+          "seconds": 1.2437652000007802,
+          "error": "Exact prefix frontier exceeded 100,000 states while building depth 5.",
+          "peak_working_set_bytes": 125681664,
+          "peak_commit_bytes": 116215808,
+          "private_bytes": 116215808
+        }
+      ]
+    },
+    {
+      "case": {
+        "product": "cocaine",
+        "level": "max",
+        "size": 8,
+        "method": "bounded1"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "search_limit",
+          "seconds": 5.711297499998182,
+          "error": "Exact prefix frontier exceeded 300,000 states while building depth 6.",
+          "peak_working_set_bytes": 355303424,
+          "peak_commit_bytes": 346017792,
+          "private_bytes": 346017792
+        }
+      ]
+    },
+    {
+      "case": {
+        "product": "cocaine",
+        "level": "max",
+        "size": 8,
+        "method": "bounded2"
+      },
+      "timeout_seconds": 120,
+      "memory_limit_mib": 512,
+      "requested_repeats": 1,
+      "samples": [
+        {
+          "status": "search_limit",
+          "seconds": 1.1156612999984645,
+          "error": "Exact prefix frontier exceeded 100,000 states while building depth 5.",
+          "peak_working_set_bytes": 126226432,
+          "peak_commit_bytes": 116772864,
+          "private_bytes": 116772864
+        }
+      ]
+    }
+  ]
+}
