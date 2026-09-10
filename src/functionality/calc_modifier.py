@@ -5,6 +5,7 @@ from typing import Dict, List, Union, Tuple
 from itertools import product as itertool_product
 import time
 from functools import wraps
+from math import isqrt
 
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
@@ -19,6 +20,90 @@ from src.util.models import CombinationResult
 from src.datenbank.initialize_db import initialize_database
 from src.datenbank.populate_db import populate_database, store_all_combinations_normalized
 from src.datenbank.get_db_data import get_best_recipe_filtered
+
+
+class CombinationSearchLimitExceeded(ValueError):
+    """Raised when a requested combination search exceeds a safe computational limit."""
+
+    def __init__(
+        self,
+        requested_size: int,
+        allowed_size: int,
+        estimated_count: int,
+        limit: int,
+        work_units: str = "combinations",
+        limit_scope: str = "per-size",
+    ):
+        message = (
+            f"Request would require too many {work_units}: requested size {requested_size} "
+            f"(estimated {estimated_count:,}, max safe {limit_scope} limit {limit}). "
+            f"Maximum safe size for this level is {allowed_size}."
+        )
+        super().__init__(message)
+        self.requested_size = requested_size
+        self.allowed_size = allowed_size
+        self.estimated_count = estimated_count
+        self.limit = limit
+
+
+COMBINATION_SEARCH_LIMIT = 200_000
+
+
+def _bounded_power_with_limit(base: int, exponent: int, limit: int) -> int:
+    """Compute base**exponent, but stop once the result exceeds limit."""
+    if exponent <= 0:
+        return 1
+
+    if base <= 1:
+        return 1
+
+    value = 1
+    for _ in range(exponent):
+        if value > limit // base:
+            return limit + 1
+        value *= base
+    return value
+
+
+def _safe_search_size(available_count: int, limit: int) -> int:
+    """Return the largest recipe size allowed by the bounded search work."""
+    if available_count <= 0:
+        raise ValueError("No substances are available for the given level.")
+    if limit <= 0:
+        return 0
+    if available_count == 1:
+        return (isqrt(1 + 8 * limit) - 1) // 2
+
+    safe_size = 0
+    combinations_at_size = 1
+    while combinations_at_size <= limit // available_count:
+        combinations_at_size *= available_count
+        safe_size += 1
+    return safe_size
+
+
+def _validate_search_size(requested_size: int, available_count: int, limit: int) -> int:
+    """Reject a recipe size that would exceed bounded enumeration work."""
+    safe_size = _safe_search_size(available_count, limit)
+    if requested_size <= safe_size:
+        return safe_size
+
+    if available_count == 1:
+        estimated_work = limit + 1
+        work_units = "ingredient-processing budget units"
+        limit_scope = "total ingredient-processing"
+    else:
+        estimated_work = _bounded_power_with_limit(available_count, requested_size, limit)
+        work_units = "combinations"
+        limit_scope = "per-size"
+    raise CombinationSearchLimitExceeded(
+        requested_size=requested_size,
+        allowed_size=safe_size,
+        estimated_count=estimated_work,
+        limit=limit,
+        work_units=work_units,
+        limit_scope=limit_scope,
+    )
 
 
 def timing(func):
@@ -116,7 +201,10 @@ def _calculate_price(product_name: str, total_effect_multiplier: float) -> Decim
 
 @timing
 def _find_best_combinations(
-    combination_size: int, product_name: str, max_level: Union[int, str]
+    combination_size: int,
+    product_name: str,
+    max_level: Union[int, str],
+    collect_all_combinations: bool = False,
 ) -> Tuple[Dict[int, Dict[str, CombinationResult]], CombinationResult, CombinationResult]:
     """
     Find all combinations of substances and calculate their total effect multiplier, price, and profit.
@@ -145,10 +233,11 @@ def _find_best_combinations(
         substance.name for substance in substances if substance.level <= max_level
     ]
 
-    if combination_size > len(filtered_substances):
-        raise ValueError(
-            "Not enough substances available for the given combination size and level."
-        )
+    if combination_size <= 0:
+        raise ValueError("Combination size must be a positive integer.")
+
+    max_available_substances = len(filtered_substances)
+    _validate_search_size(combination_size, max_available_substances, COMBINATION_SEARCH_LIMIT)
 
     # Create a map of products for quick lookup
     product_map = {product.name: product for product in products}
@@ -164,7 +253,7 @@ def _find_best_combinations(
 
     for size in range(combination_size, 0, -1):
         logger.info(f"Calculating combinations of size {size}...")
-        combinations_data = {}
+        combinations_data = {} if collect_all_combinations else None
 
         # Test all combinations of the given size
         for combination in itertool_product(filtered_substances, repeat=size):
@@ -184,7 +273,6 @@ def _find_best_combinations(
             # Create a unique key for the combination
             combination_key = "_".join(combination)
 
-            # Store the result in the dictionary
             combination_result = CombinationResult(
                 sell_price=sell_price,
                 substance_cost=substance_cost,
@@ -192,7 +280,8 @@ def _find_best_combinations(
                 substances=list(combination),
                 effects=list(active_effects.keys()),
             )
-            combinations_data[combination_key] = combination_result
+            if collect_all_combinations:
+                combinations_data[combination_key] = combination_result
 
             # Update the best modifier entry
             if current_multiplier > highest_modifier:
@@ -209,13 +298,17 @@ def _find_best_combinations(
                 f"Sell Price: {sell_price:.2f}, Cost: {substance_cost:.2f}, Profit: {profit:.2f}"
             )
 
-        all_combinations_by_size[size] = combinations_data
+        if collect_all_combinations:
+            all_combinations_by_size[size] = combinations_data
     return all_combinations_by_size, best_modifier_entry, best_profit_entry
 
 
 @timing
 def get_best_mix(
-    combination_size: int, product_name: str, max_level: Union[int, str]
+    combination_size: int,
+    product_name: str,
+    max_level: Union[int, str],
+    collect_all_combinations: bool = False,
 ) -> Tuple[CombinationResult, CombinationResult, Dict[str, CombinationResult]]:
     """
     Get the best mix of substances for a given product and level.
@@ -234,7 +327,12 @@ def get_best_mix(
     if isinstance(max_level, str):
         max_level = max_level.lower().replace(" ", "_")
 
-    return _find_best_combinations(combination_size, product_name, max_level)
+    return _find_best_combinations(
+        combination_size,
+        product_name,
+        max_level,
+        collect_all_combinations=collect_all_combinations,
+    )
 
 
 @timing
@@ -296,16 +394,15 @@ def find_min_substances_for_effect(
     if not product:
         raise ValueError(f"Product '{product_name}' not found!")
 
-    # Search for the smallest combination size that yields the desired effects
-    for size in range(1, min(max_search_size, len(filtered_substances)) + 1):
-        estimated_count = len(filtered_substances) ** size
-        if estimated_count > combination_search_limit:
-            logger.warning(
-                f"Search for size={size} would check {estimated_count} combinations; "
-                "skipping this size due to limit."
-            )
-            continue
+    safe_search_size = _safe_search_size(len(filtered_substances), combination_search_limit)
+    if max_search_size > safe_search_size:
+        logger.warning(
+            f"Search is limited to size={safe_search_size} by the "
+            f"{combination_search_limit:,} search-work budget."
+        )
 
+    # Search for the smallest combination size that yields the desired effects
+    for size in range(1, min(max_search_size, safe_search_size) + 1):
         found_results: List[CombinationResult] = []
         # iterate over all ordered combinations with repetition
         for comb in itertool_product(filtered_substances, repeat=size):
@@ -367,7 +464,7 @@ def generate_db_entrys(
 ) -> None:
 
     all_combinations_by_size, best_modifier_entry, best_profit_entry = get_best_mix(
-        combination_size, product_name, max_level
+        combination_size, product_name, max_level, collect_all_combinations=True
     )
     for size, combinations_data in all_combinations_by_size.items():
         store_all_combinations_normalized("combinations.db", product_name, size, combinations_data)
