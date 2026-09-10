@@ -74,6 +74,8 @@ Generierte Dateien, `node_modules`, virtuelle Umgebungen, Caches, Builds und Log
 
 CI installiert Python aus `.python-version` mit der auf einen Commit gepinnten Action `astral-sh/setup-uv` und uv **0.12.8**; der uv-Pin steht im Workflow und gilt nur für CI. Die Action erstellt und aktiviert `.venv`, sodass alle folgenden `python`-Befehle den gewählten Interpreter verwenden. `uv pip install -r requirements-dev.txt` installiert die gepinnten Python-Pakete in diese Umgebung. Damit ist Python **3.12.14** auch unter Windows verfügbar, wo `actions/setup-python` diese Sicherheitsversion nicht bereitstellt.
 
+Die Tests der Browser-Suche starten den gepinnten Node-Interpreter als Unterprozess. `tools/project.py test` prüft dadurch JavaScript-Worker-Verträge sowie Ergebnisgleichheit zwischen Browser- und Python-Engines. Fehlendes Node oder fehlende Browser-Testdateien sind Fehler. Der Anwendungsstart benötigt weiterhin kein Node: JavaScript läuft beim Besucher, Flask liefert Oberfläche und Modell aus.
+
 ## Lokaler Start
 
 | Dienst                 | Bindung / Standard | Override                      | Bereitschaft                                              |
@@ -94,9 +96,13 @@ Vollständiges Beispiel für einen alternativen Port unter PowerShell:
 
 Der Launcher installiert nichts, erzeugt keine Datenbank und erhöht keine Version. Die UI berechnet aus Python-Lookups. Optionale SQLite-Dateien und Logs sind lokale Daten. Pro Checkout eigene Verzeichnisse und für Exporte eigene Datenbankpfade verwenden. Verschiedene Ports im selben Checkout isolieren vorhandene Logging-/Datenpfade nicht; diese Art automatischer Datenisolation ist offen.
 
+Öffentliche Besucher rechnen in einem Browser-Worker. `GET /search-data` liefert ausschließlich Lookup-Daten und Skalen. Ohne `SCHEDULE1_API_TOKEN` sind beide alten Rechen-POST-Endpunkte deaktiviert; mit diesem ausschließlich serverseitig hinterlegten Secret verlangen sie den passenden Bearer-Header. Ein Formular ohne JavaScript löst keine Serversuche aus. Der [Suchvertrag](SEARCH_MODES.md) beschreibt Abbruch, numerische Gleichheit und den privaten API-Zugang.
+
 ## Version und Veröffentlichung
 
 Maßgeblich ist Root-`VERSION`. Kopien sind `package.json.version`, `package-lock.json.version` und `package-lock.json.packages[""].version`. Nur stabile `MAJOR.MINOR.PATCH`-Versionen werden unterstützt: Patch für kompatible Fehlerbehebung, Minor für kompatible Funktionalität, Major für inkompatible öffentliche Verträge.
+
+Ausdrückliche Versionsentscheidung für 1.2.0: Die Browser-Umstellung wird auf Nutzerwunsch als Minor veröffentlicht. Der gleichzeitig eingeschränkte Server-API-Zugang ist eine bewusste Ausnahme von der Kompatibilitätsregel und erfordert bei bisherigen API-Clients die in den [Release-Hinweisen](releases/1.2.0.md) beschriebene Umstellung.
 
 Der Updater prüft alle Kopien vor dem Schreiben, verlangt einen sauberen Arbeitsbaum, verwirft gleiche/niedrigere Versionen und prüft vorhandene lokale Tags. Er bereitet die drei Dateien vor und versucht bei Schreibfehlern, Originale wiederherzustellen; Wiederherstellungsfehler werden gemeldet. Danach Diff reviewen, formatieren und `check`/`test` ausführen. Der Befehl erzeugt keine Commits, Tags, Pushes oder Veröffentlichungen.
 
@@ -109,7 +115,7 @@ Es gibt keine Frontend-Bundles oder getrackten Buildausgaben. Der Server liest d
 | npm als Befehlsoberfläche                 | Python-Äquivalente                                               | App primär Python; kein Node zum bloßen Start                                   |
 | Frontend-dev mit Hot Reload               | Gemeinsamer Flask-Start ohne Reload                              | Kein eigener Buildserver; bei Reloader-Einführung Identität/Stopp erneut prüfen |
 | Produktions-Build/Bundle-Metadaten        | Quell-ZIP und Container mit Manifest; kein Frontend-Bundle       | Artefaktvertrag und Grenzen im CI/CD-Profil                                     |
-| Release-Gates, Remote-/Registry-Versionen | Implementiert, tatsächliche Publikation noch nicht ausgeführt    | Siehe CI/CD-Profil und konkrete Laufnachweise                                   |
+| Release-Gates, Remote-/Registry-Versionen | Mit v1.1.0 veröffentlicht und verifiziert                        | Jeder neue Tag benötigt seine eigenen Gates; siehe CI/CD-Profil                 |
 | Lint/Typprüfung                           | Nicht eingerichtet; Syntax und Format vorhanden                  | Bestehende Codebefunde separat abarbeiten                                       |
 | Vollständige E2E-/Fachtests               | Offen                                                            | Werkzeugtests decken das Spielmodell und UI nicht vollständig ab                |
 | Parallele Starts im selben Checkout       | Port konfigurierbar, Daten nicht vollständig isoliert            | Getrennte Checkouts/Exportpfade; später konfigurierbare Datenpfade              |

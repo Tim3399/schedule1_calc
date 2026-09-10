@@ -55,6 +55,8 @@ The search considers ingredient order, repeated ingredients and all sizes from o
 
 The rank filters ingredients but does not enforce the unlock rank of the base product. The web interface defaults to **Exact**, returning both winners only after the complete exact search certifies them. **Fast** returns explicitly approximate results. Resource limits produce HTTP 503 with `incomplete`, no winning recipes, and no automatic switch of modes. Five or six steps are supported when the search completes within its limits. Both modes retain winners only; the separate legacy/database export path keeps its existing combination budget. See the [search-mode contract (German)](docs/SEARCH_MODES.md) for parameters and response schemas, and [Reviews and known limitations](#reviews-and-known-limitations) for remaining data and calculation issues.
 
+The website runs searches on your device. **Cancel search** stops the calculation; JavaScript and Web Worker support are required. The server supplies rules and prices but receives no calculation requests from the website. Server-side calculation is disabled by default. A [private API with a server-configured access token (German)](docs/SEARCH_MODES.md#private-server-api) remains available for internal programs.
+
 ## Development setup
 
 Development and CI tools are pinned to exact versions: **Python 3.12.14**, **Node 22.23.2** and **npm 10.9.8**. Their shared source is [tools/toolchains.json](tools/toolchains.json). Select these versions before setup; an environment created with a different Python version must be recreated with the correct interpreter for development checks.

@@ -70,7 +70,7 @@ def main() -> int:
     except (OSError, SmokeError, ReleaseError, zipfile.BadZipFile) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
-    print("[source-smoke] Extracted source renders and calculates successfully.")
+    print("[source-smoke] Browser assets/model are available; server calculations remain private.")
     return 0
 
 

@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
 
 from functionality.logging import logging_config
+from tests.api_test_support import authorized_client
 
 with mock.patch.object(logging_config, "setup_logging", return_value=mock.Mock()):
     from functionality import calc_modifier
@@ -23,7 +24,7 @@ with mock.patch.object(logging_config, "setup_logging", return_value=mock.Mock()
 class RepeatedIngredientTests(unittest.TestCase):
     def setUp(self):
         app.config.update(TESTING=True)
-        self.client = app.test_client()
+        self.client = authorized_client(self, app)
         quiet_logger = logging.getLogger(f"{__name__}.{self.id()}")
         quiet_logger.disabled = True
         logger_patch = mock.patch.object(calc_modifier, "logger", quiet_logger)

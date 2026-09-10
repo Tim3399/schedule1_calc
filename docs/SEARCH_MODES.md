@@ -2,6 +2,20 @@
 
 Die Weboberfläche und `POST /get_best_mix` bieten die Modi `exact` und `fast`. Ohne Auswahl gilt `exact`. Beide suchen Rezepte mit einer bis zur angeforderten Zahl an Zutaten; Reihenfolge und Wiederholungen werden berücksichtigt. Ein Rezept ohne Zusätze ist Teil der getrennten Minimum-Effekt-Suche, nicht dieser Best-Mix-Suche.
 
+## Berechnung auf dem Gerät des Besuchers
+
+Die Website lädt einmal die Regeln und Preise über `GET /search-data`. Jede Suche läuft anschließend in einem eigenen Browser-Worker aus `webapp/static/js/search-engine.js`; sie sendet keine Rechenanfrage an den Server. Die Seite bleibt bedienbar und zeigt Suchphase, Tiefe und Arbeitszähler. **Cancel search** beendet den Worker und verwirft alle Kandidaten. Ein neuer Lauf startet unabhängig; verspätete Nachrichten alter Läufe werden ignoriert.
+
+Die Laufzeit und verfügbare Speichermenge hängen vom Gerät ab. JavaScript und Web Workers sind erforderlich; fehlende Unterstützung, Ladefehler, Abbruch und Zeitlimits lösen keinen Server-Fallback aus. Ohne JavaScript bleibt die Rechenschaltfläche gesperrt. Worker-Auslagerung und unmittelbares Beenden verwenden die [Web-Worker-API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers).
+
+Der Server erzeugt das schreibgeschützte Modell aus `src/lookup/lookup.py`, einschließlich geordneter Ersetzungsregeln und eines Modellhashs. Es gibt keine zweite manuell gepflegte Spieldatenliste. Die Skalen sind 100 Effektpunkte und 100 Cent pro Dollar. Geldwerte und Profitvergleiche verwenden exakt darstellbare ganzzahlige Zehntausendstel-Dollar; nicht darstellbare zukünftige Daten werden abgelehnt statt gerundet. Der Effekt-Multiplikator und sein Ranking behalten die kompensierte Float-Summierung von [CPython 3.12.14](https://github.com/python/cpython/blob/v3.12.14/Python/bltinmodule.c#L2464-L2497). Ein mathematisch gleicher Effektzuschlag darf dadurch weiterhin einen historisch unterschiedlichen Float-Gleichstand haben.
+
+## Private Server-API
+
+Die Python-Suche bleibt für vertrauenswürdige Programme erhalten. Ohne serverseitig gesetztes `SCHEDULE1_API_TOKEN` sind **beide** Rechenwege (`POST /get_best_mix` und der bisherige `POST /`) deaktiviert und liefern HTTP 404 ohne Berechnung. Ist ein geheimes zufälliges Token konfiguriert, muss der Client `Authorization: Bearer <token>` über einen vertrauenswürdigen lokalen oder TLS-Transport senden; fehlende oder falsche Zugangsdaten liefern HTTP 401, bevor Eingaben verarbeitet oder Suchläufe begonnen werden. URL-Parameter und Cookies schalten die API nicht frei. Das Token gehört weder in den Browser noch in den öffentlichen Modellendpunkt.
+
+Die folgenden HTTP-Schemas gelten für autorisierte API-Aufrufe. Öffentliche Website-Nutzer benötigen keinen API-Zugang.
+
 ## Exakter Modus
 
 Der exakte Modus gibt die Gewinner für Profit und Multiplikator ausschließlich nach vollständigem Abschluss seiner exakten Suche zurück. Die Garantie bezieht sich auf die angeforderten Eingaben und die aktuelle zentrale Berechnung. Sie gilt auch bei mehreren gleich guten Rezepten: Die bisherige Bevorzugung längerer Rezepte und anschließend der Lookup-Reihenfolge bleibt erhalten.
@@ -51,26 +65,37 @@ Im Schnellmodus lauten diese Werte `fast`, `approximate` und `false`. Ein Ressou
 }
 ```
 
-Die Felder `best_modifier` und `best_profit` fehlen dann vollständig. Ungültige Eingaben bleiben HTTP 400; unerwartete interne Fehler werden als generischer HTTP 500 ohne Gewinner gemeldet. Formularaufrufe ohne JavaScript folgen denselben Regeln. Der Browser leert alte Ergebnisse beim Start, verhindert gleichzeitige eigene Suchanfragen und akzeptiert nur Ergebnisse für den tatsächlich angeforderten Modus.
+Die Felder `best_modifier` und `best_profit` fehlen dann vollständig. Ungültige Eingaben autorisierter Aufrufe bleiben HTTP 400; unerwartete interne Fehler werden als generischer HTTP 500 ohne Gewinner gemeldet. Der Browser verwendet entsprechende Ergebniszustände lokal, leert alte Ergebnisse beim Start, verhindert gleichzeitige eigene Suchanfragen und akzeptiert nur Ergebnisse für den tatsächlich angeforderten Modus.
 
 ## Ressourcen und Rechenmodell
 
-Die serverseitigen Standards in `src/functionality/mix_search.py` sind:
+Die Browser-Engine übernimmt die Suchgrenzen der Python-API aus `src/functionality/mix_search.py`:
 
 | Modus   |                                               Sucharbeit |        Zeit | Zustände                                                       |
 | ------- | -------------------------------------------------------: | ----------: | -------------------------------------------------------------- |
 | Exakt   |                           20 Millionen Übergangsanfragen | 90 Sekunden | 300.000 pro Präfixschicht, zwei Caches mit je 32.768 Einträgen |
 | Schnell | 2 Millionen Übergangsanfragen einschließlich Vorausblick | 15 Sekunden | Beam-Breite 1.024, temporäre Nachfolger zusätzlich             |
 
-Mehr als 16 Schritte überschreiten die derzeit unterstützte Größe und führen ebenfalls zu `incomplete`. Die exakte Suche streamt die letzte Schicht vollständig. Zeitkontrollen sind kooperativ: Exakt wird alle 1.024 Übergangsanfragen sowie vor Rückgabe geprüft. Dies sind Grenzen für Sucharbeit und Datenstrukturen, kein harter Betriebssystemschutz in Bytes. Der separate historische Messrunner hat zusätzlich einen Prozess-Speicherwächter; die Webanwendung übernimmt diesen Windows-spezifischen Wächter nicht.
+Mehr als 16 Schritte überschreiten die derzeit unterstützte Größe und führen ebenfalls zu `incomplete`. Die exakte Suche streamt die letzte Schicht vollständig. Zeitkontrollen sind kooperativ: Python prüft im exakten Modus alle 1.024 Übergangsanfragen, die Browser-Engine vor jedem Übergang; beide prüfen zusätzlich vor Rückgabe. Die Oberfläche beendet einen hängenden Worker spätestens bei ihrer nächsten Zeitkontrolle nach 95 Sekunden (exakt) beziehungsweise 20 Sekunden (schnell), einschließlich Ladezeit. Hintergrund-Tabs können Browser-Timer verzögern. Dies sind Grenzen für Sucharbeit und Datenstrukturen, kein harter Betriebssystemschutz in Bytes. Der separate historische Messrunner hat zusätzlich einen Prozess-Speicherwächter; die Webanwendung übernimmt diesen Windows-spezifischen Wächter nicht.
 
-Beide produktiven Engines erhalten die zentrale Preisberechnung als Pflichtfunktion. Diese berechnet Preise aus den einzelnen Effektwerten dezimal; die Float-Berechnung des angezeigten Multiplikators bleibt erhalten. Unbelegte Rundung auf ganze Dollar wird nicht angenommen. Die alten Experimente und JSON-Messdaten dokumentieren ausdrücklich das damalige Float-Preismodell. Ihre Differentialtests und Messwerkzeuge verwenden `experiments/legacy_pricing.py`; die produktiven Suchmodi importieren keine Experimente. Alte Profittabellen sind daher keine neue Referenz für geänderte Preise oder Gleichstände.
+Die beiden Python-Engines erhalten die zentrale Preisberechnung als Pflichtfunktion. Diese berechnet Preise aus den einzelnen Effektwerten dezimal; die Float-Berechnung des angezeigten Multiplikators bleibt erhalten. Die Browser-Engine bildet diese Zahlenwerte mit den oben beschriebenen Ganzzahlen und der kompensierten Float-Summe nach. Unbelegte Rundung auf ganze Dollar wird nicht angenommen. Die alten Experimente und JSON-Messdaten dokumentieren ausdrücklich das damalige Float-Preismodell. Ihre Differentialtests und Messwerkzeuge verwenden `experiments/legacy_pricing.py`; die produktiven Suchmodi importieren keine Experimente. Alte Profittabellen sind daher keine neue Referenz für geänderte Preise oder Gleichstände.
 
-Der bisherige `calc_modifier.get_best_mix` bleibt als vollständiger Legacy-/Exportpfad mit seinem bisherigen Kombinationsbudget bestehen. Der neue Webpfad verwendet `mix_search.get_best_mix`; Datenbankexport und CLI-Minimumsuche werden dadurch nicht auf einen Beam umgestellt.
+Der bisherige `calc_modifier.get_best_mix` bleibt als vollständiger Legacy-/Exportpfad mit seinem bisherigen Kombinationsbudget bestehen. Die private API verwendet `mix_search.get_best_mix`; die Website verwendet die entsprechende JavaScript-Portierung. Datenbankexport und CLI-Minimumsuche werden dadurch nicht auf einen Beam umgestellt.
+
+`tests/test_browser_search.py` führt die JavaScript-Tests und vollständige Gewinnervergleiche mit den Python-Engines über den gepinnten Node-Interpreter aus. `tests/test_private_calculation_api.py` prüft die Zugangssperre einschließlich des alten Formularpfads. Diese Tests gehören zu `tools/project.py test`; sie werden nicht durch fehlendes Node oder eine fehlende Browser-Engine übersprungen.
 
 Gezielte Vertragstests: `tests/test_search_modes.py`. Sie prüfen unter anderem exakte Ergebnisse gegen vollständige Suche unter dem aktuellen Preismodell, beide Abbruchpfade ohne Fallback und ohne Gewinner, einen erst am Suchende eintretenden Zeitabbruch sowie die Kennzeichnung schneller Ergebnisse. Die früheren Messungen und die wissenschaftlichen Quellen stehen im [Evaluationsbericht](reviews/2026-09-10-bounded-search-research.md).
 
-## Integrationsprüfung am 10.09.2026
+## Browser-Integrationsprüfung am 10.09.2026
+
+- `tools/project.py check`: erfolgreich, einschließlich Version-/Runtimepins und Format-/Syntaxprüfung.
+- `tools/project.py test`: 152 Tests erfolgreich im abschließenden Lauf (36,402 Sekunden), einschließlich der über Node gestarteten Engine-, Worker- und Oberflächentests. Ein vorangegangener Lauf während paralleler Lasttests scheiterte im bestehenden Windows-Test `test_timeout_returns_no_partial_exact_winner` am Beenden seines Testprozesses; der isolierte Wiederholungslauf und der anschließende vollständige Lauf waren erfolgreich. Der historische Prozessrunner wurde hierfür nicht geändert.
+- Zusätzlicher Vergleich über `tests.test_browser_search.BrowserSearchTests.run_browser` und `_python_result`: vollständige Gewinnergleichheit für alle acht Produkte mit fünf Zutaten sowie OG Kush mit sechs Zutaten in beiden Modi. Die zehn Vergleiche wurden gemeinsam ausgeführt; dies ist eine Korrektheitsprüfung, keine neue isolierte Laufzeitmessreihe.
+- Echter Browser über `tools/project.py start --port 42751`, Quellidentität `cacdb2ad99f43a0f07646bfd26a9d0c7fc692cdc76e0a15c56275b6ef96f63b2`: sechs Zutaten liefern exakt 119,50 Dollar Profit beziehungsweise 118,30 Dollar im Schnellmodus. Abbruch einer größeren Suche, Neustart und anschließendes Größenlimit bei 17 Zutaten zeigen keine alten oder unvollständigen Gewinner. Keine Browser-Konsolenfehler.
+- Das Serverprotokoll der Browser-Läufe enthält nur Modell-/Skript-GETs. Der getrennte HTTP-Smoke prüft die Modell-/Skriptverfügbarkeit und erhält für beide anonymen Rechen-POSTs HTTP 404. Der eigene Testserver wurde beendet und sein Port geschlossen; der Prüftab wurde geschlossen.
+- Diese Nachweise entstanden vor dem Versionsschritt für 1.2.0. Sie ersetzen dessen eigenen Container-/Release-Lauf nicht; der veröffentlichte Tag und seine CI-Protokolle liefern den späteren Publikationsnachweis.
+
+## Frühere Server-Integrationsprüfung am 10.09.2026
 
 - `tools/project.py test`: 101 Tests bestanden im vollständigen Lauf nach der Modusintegration. Eine anschließend im parallelen Export-Task hinzugefügte Testdatei war bei der Discovery dieses Laufs noch nicht enthalten.
 - `tools/project.py check`: bestanden, einschließlich Runtime-/Versionpins, Ruff, Biome, Prettier und Syntaxprüfung. Die zwischenzeitlichen Formatabweichungen des parallelen Export-Tasks waren beim abschließenden Check behoben.

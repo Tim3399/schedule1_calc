@@ -47,42 +47,66 @@ def _request(url, *, payload=None, timeout=2):
 
 
 def probe_application(base_url, *, timeout=2):
-    """Validate the rendered UI and representative API success and failure behavior.
-
-    The current application returns 500 for an invalid product. A future input-validation
-    improvement may return the more appropriate 400 or 422 without weakening this smoke.
-    """
+    """Check browser assets/model and prove anonymous requests cannot start server work."""
     root_status, _, root_body = _request(f"{base_url}/", timeout=timeout)
-    if root_status != 200 or b"Best Mix Calculator" not in root_body:
+    if root_status != 200 or any(
+        marker not in root_body
+        for marker in (b"Best Mix Calculator", b"data-worker-url", b"data-search-data-url")
+    ):
         raise SmokeError("GET / did not render the calculator")
 
-    valid = {
+    status, headers, body = _request(f"{base_url}/search-data", timeout=timeout)
+    try:
+        catalog = json.loads(body)
+    except (TypeError, ValueError) as error:
+        raise SmokeError("browser search model was not JSON") from error
+    if (
+        status != 200
+        or "application/json" not in headers.get("Content-Type", "")
+        or not isinstance(catalog, dict)
+        or catalog.get("schema_version") != 1
+        or catalog.get("effect_scale") != 100
+        or catalog.get("money_scale") != 100
+        or not all(
+            isinstance(catalog.get(key), list) and catalog[key]
+            for key in ("effects", "products", "substances")
+        )
+        or not isinstance(catalog.get("levels"), dict)
+        or not catalog["levels"]
+    ):
+        raise SmokeError("browser search model is missing or incompatible")
+
+    for filename, marker in (
+        ("search-engine.js", b"Schedule1Search"),
+        ("search-worker.js", b"search-engine.js"),
+        ("script.js", b"Worker"),
+    ):
+        status, _, body = _request(f"{base_url}/static/js/{filename}", timeout=timeout)
+        if status != 200 or marker not in body:
+            raise SmokeError(f"browser search asset is missing: {filename}")
+
+    request_data = {
         "level": "street_rat_i",
         "combination_size": 1,
         "product_name": "og_kush",
     }
-    status, headers, body = _request(f"{base_url}/get_best_mix", payload=valid, timeout=timeout)
-    if status != 200 or "application/json" not in headers.get("Content-Type", ""):
-        raise SmokeError("representative calculation did not return JSON HTTP 200")
-    try:
-        result = json.loads(body)
-    except (TypeError, ValueError) as error:
-        raise SmokeError("representative calculation returned invalid JSON") from error
-    if not {"best_modifier", "best_profit"}.issubset(result):
-        raise SmokeError("representative calculation omitted expected results")
-
-    invalid = dict(valid, product_name="not_a_product")
-    status, headers, body = _request(f"{base_url}/get_best_mix", payload=invalid, timeout=timeout)
-    try:
-        error_result = json.loads(body)
-    except (TypeError, ValueError) as error:
-        raise SmokeError("invalid-input response was not JSON") from error
-    if (
-        status not in {400, 422, 500}
-        or "application/json" not in headers.get("Content-Type", "")
-        or not error_result.get("error")
-    ):
-        raise SmokeError("invalid product did not return a supported JSON error response")
+    for route in ("/get_best_mix", "/"):
+        status, headers, body = _request(
+            f"{base_url}{route}", payload=request_data, timeout=timeout
+        )
+        try:
+            result = json.loads(body)
+        except (TypeError, ValueError) as error:
+            raise SmokeError("private calculation denial was not JSON") from error
+        if (
+            status not in {401, 404}
+            or "application/json" not in headers.get("Content-Type", "")
+            or not isinstance(result, dict)
+            or not result.get("error")
+            or "best_modifier" in result
+            or "best_profit" in result
+        ):
+            raise SmokeError(f"anonymous server calculation was not blocked at {route}")
 
 
 def wait_for_application(base_url, *, deadline_seconds=20):

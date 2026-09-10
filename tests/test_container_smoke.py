@@ -29,33 +29,54 @@ def image_inspection(*, revision="abc123", user="10001:10001"):
 
 
 class ContainerSmokeTests(unittest.TestCase):
+    def public_responses(self):
+        catalog = {
+            "schema_version": 1,
+            "effect_scale": 100,
+            "money_scale": 100,
+            "levels": {"max": 51},
+            "products": [{"name": "og_kush"}],
+            "effects": [{"name": "calming"}],
+            "substances": [{"name": "cuke"}],
+        }
+        return [
+            (200, {}, b"Best Mix Calculator data-worker-url data-search-data-url"),
+            (200, {"Content-Type": "application/json"}, json.dumps(catalog).encode()),
+            (200, {}, b"Schedule1Search"),
+            (200, {}, b"search-engine.js"),
+            (200, {}, b"Worker"),
+        ]
+
     @mock.patch.object(container_smoke, "_request")
-    def test_application_probe_accepts_current_legacy_invalid_input_status(self, request):
-        request.side_effect = [
-            (200, {"Content-Type": "text/html"}, b"<h1>Best Mix Calculator</h1>"),
-            (
-                200,
-                {"Content-Type": "application/json"},
-                b'{"best_modifier": {}, "best_profit": {}}',
-            ),
-            (500, {"Content-Type": "application/json"}, b'{"error": "invalid product"}'),
+    def test_application_probe_accepts_browser_model_and_private_api(self, request):
+        request.side_effect = self.public_responses() + [
+            (404, {"Content-Type": "application/json"}, b'{"error": "disabled"}'),
+            (401, {"Content-Type": "application/json"}, b'{"error": "authorization required"}'),
         ]
 
         container_smoke.probe_application("http://127.0.0.1:8080")
 
     @mock.patch.object(container_smoke, "_request")
-    def test_application_probe_rejects_invalid_input_that_appears_successful(self, request):
-        request.side_effect = [
-            (200, {"Content-Type": "text/html"}, b"<h1>Best Mix Calculator</h1>"),
-            (
-                200,
-                {"Content-Type": "application/json"},
-                b'{"best_modifier": {}, "best_profit": {}}',
-            ),
-            (200, {"Content-Type": "application/json"}, b'{"error": "invalid product"}'),
+    def test_application_probe_rejects_public_server_calculation(self, request):
+        request.side_effect = self.public_responses() + [
+            (200, {"Content-Type": "application/json"}, b'{"best_profit": {}}'),
         ]
 
-        with self.assertRaisesRegex(container_smoke.SmokeError, "invalid product"):
+        with self.assertRaisesRegex(container_smoke.SmokeError, "anonymous server calculation"):
+            container_smoke.probe_application("http://127.0.0.1:8080")
+
+    @mock.patch.object(container_smoke, "_request")
+    def test_application_probe_rejects_missing_browser_asset(self, request):
+        request.side_effect = self.public_responses()[:2] + [(404, {}, b"missing")]
+        with self.assertRaisesRegex(container_smoke.SmokeError, "browser search asset"):
+            container_smoke.probe_application("http://127.0.0.1:8080")
+
+    @mock.patch.object(container_smoke, "_request")
+    def test_application_probe_rejects_incompatible_catalog(self, request):
+        request.side_effect = self.public_responses()[:1] + [
+            (200, {"Content-Type": "application/json"}, b'{"schema_version": 2}')
+        ]
+        with self.assertRaisesRegex(container_smoke.SmokeError, "model is missing or incompatible"):
             container_smoke.probe_application("http://127.0.0.1:8080")
 
     @mock.patch.object(container_smoke.uuid, "uuid4")

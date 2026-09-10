@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT), str(ROOT / "src")]
 
 from functionality.logging import logging_config
+from tests.api_test_support import authorized_client
 
 with patch.object(logging_config, "setup_logging", return_value=Mock()):
     from functionality import calc_modifier
@@ -20,7 +21,7 @@ with patch.object(logging_config, "setup_logging", return_value=Mock()):
 class SearchModeTests(unittest.TestCase):
     def setUp(self):
         app_module.app.config.update(TESTING=True)
-        self.client = app_module.app.test_client()
+        self.client = authorized_client(self, app_module.app)
         self.request_data = {
             "combination_size": 3,
             "product_name": "og_kush",

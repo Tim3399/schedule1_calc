@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
 
 from functionality.logging import logging_config
+from tests.api_test_support import authorized_client
 
 with mock.patch.object(logging_config, "setup_logging", return_value=mock.Mock()):
     from src.util.models import CombinationResult
@@ -21,7 +22,7 @@ with mock.patch.object(logging_config, "setup_logging", return_value=mock.Mock()
 class RequestValidationTests(unittest.TestCase):
     def setUp(self):
         app_module.app.config.update(TESTING=True)
-        self.client = app_module.app.test_client()
+        self.client = authorized_client(self, app_module.app)
         self.valid_json = {
             "combination_size": "1",
             "product_name": "og_kush",

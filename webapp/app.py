@@ -1,18 +1,48 @@
 import os
 import re
 import sys
+from hmac import compare_digest
 
 from flask import Flask, jsonify, render_template, request
 from werkzeug.exceptions import BadRequest
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 from functionality.logging.logging_config import setup_logging
+from src.functionality.browser_catalog import get_catalog
 from src.functionality.mix_search import SearchIncomplete, get_best_mix
 from src.lookup.lookup import level_name_to_int, products
 
 logger = setup_logging()
 
 app = Flask(__name__)
+app.config["SERVER_CALCULATION_TOKEN"] = os.environ.get("SCHEDULE1_API_TOKEN")
+
+
+@app.before_request
+def protect_server_calculations():
+    """Both legacy POST paths stay private; public visitors only download the model."""
+    if request.method != "POST" or request.endpoint not in {"index", "get_best_mix_json"}:
+        return None
+    token = app.config.get("SERVER_CALCULATION_TOKEN")
+    if not isinstance(token, str) or not token:
+        return jsonify({"error": "Server-side calculation is disabled."}), 404
+    authorization = request.headers.get("Authorization", "")
+    if not compare_digest(authorization.encode("utf-8"), f"Bearer {token}".encode("utf-8")):
+        return (
+            jsonify({"error": "Server-side calculation requires authorization."}),
+            401,
+            {"WWW-Authenticate": "Bearer", "Cache-Control": "no-store"},
+        )
+    return None
+
+
+@app.get("/search-data")
+def search_data_json():
+    """Serve shared rules and prices without running a recipe search."""
+    response = jsonify(get_catalog())
+    response.headers["Cache-Control"] = "no-cache"
+    response.set_etag(get_catalog()["model_hash"])
+    return response.make_conditional(request)
 
 
 class RequestValidationError(ValueError):

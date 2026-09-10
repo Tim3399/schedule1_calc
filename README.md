@@ -55,6 +55,8 @@ Die Suche berücksichtigt Zutatenreihenfolgen, wiederholte Zutaten und die Grö�
 
 Der Rang filtert die Zutaten, erzwingt aber keine Freischaltung des Ausgangsprodukts. In der Weboberfläche ist **Exact** voreingestellt: Beide Sieger werden erst nach bewiesen vollständiger Suche ausgegeben. **Fast** liefert ausdrücklich als Näherung gekennzeichnete Ergebnisse. Bei Ressourcenlimits antwortet die JSON-API mit HTTP 503 und `incomplete`, ohne Siegerrezepte und ohne automatischen Moduswechsel. Auch fünf oder sechs Schritte sind möglich, sofern die Suche innerhalb ihrer Grenzen abschließt. Beide Modi behalten nur Gewinner; der separate Legacy-/Datenbankexportpfad hat weiterhin sein bisheriges Kombinationsbudget. Parameter und Antwortschema stehen im [Vertrag der Suchmodi](docs/SEARCH_MODES.md). Weitere Daten- und Berechnungsgrenzen stehen unter [Review und bekannte Grenzen](#review-und-bekannte-grenzen).
 
+Die Website führt die Suche auf deinem Gerät aus. **Cancel search** bricht sie ab; ohne JavaScript oder Web-Worker-Unterstützung ist keine Berechnung möglich. Regeln und Preise werden vom Server geladen, Rechenanfragen werden nicht an ihn geschickt. Der Server-Rechenzugang ist standardmäßig deaktiviert. Für interne Programme bleibt eine [private API mit serverseitigem Zugangstoken](docs/SEARCH_MODES.md#private-server-api) erhalten.
+
 ## Entwicklung einrichten
 
 Die Entwicklungs- und CI-Werkzeuge sind exakt gepinnt: **Python 3.12.14**, **Node 22.23.2** und **npm 10.9.8**. Gemeinsame Quelle ist [tools/toolchains.json](tools/toolchains.json). Wähle diese Versionen vor der Einrichtung; eine bereits mit einem anderen Python angelegte Umgebung muss für die Entwicklungsprüfungen passend neu eingerichtet werden.

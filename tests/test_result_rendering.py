@@ -11,6 +11,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
 
 from functionality.logging import logging_config
+from tests.api_test_support import authorized_client
 
 with mock.patch.object(logging_config, "setup_logging", return_value=mock.Mock()):
     from webapp.app import app
@@ -19,7 +20,7 @@ with mock.patch.object(logging_config, "setup_logging", return_value=mock.Mock()
 class ResultRenderingTests(unittest.TestCase):
     def setUp(self):
         app.config.update(TESTING=True)
-        self.client = app.test_client()
+        self.client = authorized_client(self, app)
 
     def post_mix(self, combination_size, product_name, level):
         return self.client.post(

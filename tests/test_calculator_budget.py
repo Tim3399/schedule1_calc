@@ -11,6 +11,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
 
 from functionality.logging import logging_config
+from tests.api_test_support import authorized_client
 
 with mock.patch.object(logging_config, "setup_logging", return_value=mock.Mock()):
     from functionality import calc_modifier
@@ -21,7 +22,7 @@ with mock.patch.object(logging_config, "setup_logging", return_value=mock.Mock()
 class CalculatorBudgetTests(unittest.TestCase):
     def setUp(self):
         app.config.update(TESTING=True)
-        self.client = app.test_client()
+        self.client = authorized_client(self, app)
 
     def test_json_endpoint_returns_no_winner_when_exact_search_hits_its_limit(self):
         with (

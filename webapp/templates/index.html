@@ -9,7 +9,14 @@
   <body>
     <div class="container">
       <h1>Best Mix Calculator</h1>
-      <form id="best-mix-form" method="POST" action="/">
+      <p>All mix calculations run locally on this device.</p>
+      <form
+        id="best-mix-form"
+        method="GET"
+        action="/"
+        data-search-data-url="{{ url_for('search_data_json') }}"
+        data-worker-url="{{ url_for('static', filename='js/search-worker.js') }}"
+      >
         <label for="level">Level:</label>
         <select id="level" name="level" required>
           {% for level_name, level_id in level_name_to_int.items() %}
@@ -17,7 +24,7 @@
           {% endfor %}
         </select>
 
-        <label for="combination_size">Combination Size:</label>
+        <label for="combination-size">Combination Size:</label>
         <input
           type="number"
           id="combination-size"
@@ -27,7 +34,7 @@
           required
         />
 
-        <label for="product_name">Product Name:</label>
+        <label for="product-name">Product Name:</label>
         <select id="product-name" name="product_name" required>
           {% for product in products %}
           <option value="{{ product.name }}">{{ product.name }}</option>
@@ -47,8 +54,13 @@
           {% endif %}
         </select>
 
-        <button type="submit">Get Best Mix</button>
+        <button type="submit" disabled>Get Best Mix</button>
+        <button type="button" id="cancel-search" hidden>Cancel Search</button>
       </form>
+
+      <noscript>
+        <p>This calculator needs JavaScript to run the search on your device.</p>
+      </noscript>
 
       <div id="result">
         {% if error %}

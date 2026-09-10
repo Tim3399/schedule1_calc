@@ -6,7 +6,15 @@ their adopted baseline **1.0.0**. The test-runner change is the explicitly inclu
 tooling dependency; existing local runtime, version-update and formatter contracts
 remain in [PROJECT_PROFILE.md](PROJECT_PROFILE.md).
 
-Scope status: **partial; CI and artifacts verified, publication pending**. GitHub
+Scope status: **CI, artifacts and tagged publication verified; hosting is separate**.
+Release [v1.1.0](https://github.com/Tim3399/schedule1_calc/releases/tag/v1.1.0)
+was published from `15cec5d27f264a0cf23f20c37c487211d0bfd884` by
+[run 34492952653](https://github.com/Tim3399/schedule1_calc/actions/runs/34492952653).
+Its receipt records image digest
+`sha256:a0b3ef1adfeb9002fabf4b1429ac9017a03ed080a950c529b79fb2590164dba3`.
+That release predates browser computation and does not verify the new browser contract.
+
+Historical CI migration evidence: GitHub
 [run 34475505106](https://github.com/Tim3399/schedule1_calc/actions/runs/34475505106)
 passed all 42 tests on each platform, both packaged application smokes and the
 aggregate gate for commit `92c8a8d11ba8036c36e0318e9850073ba105a030`.
@@ -46,7 +54,9 @@ retained. Python bytecode and generated artifacts are excluded from source contr
 The source ZIP is an archive of the exact committed Git tree, under
 `schedule1_calc-VERSION/`. Untracked files, local secrets and dependency caches are
 not added. CI extracts and starts this archive, then checks the rendered calculator,
-a successful calculation and an invalid-product JSON response.
+the browser model and all three search scripts. Anonymous requests to both calculation
+POST paths must be rejected without winning recipes. Browser/Python winner parity and
+the worker protocol are tested through Node as part of `tools/project.py test`.
 
 The container supports **Linux/amd64**. Its Python 3.12.14 base is pinned by manifest
 digest. `requirements-container.txt` declares direct production dependencies;
@@ -113,9 +123,9 @@ compatibility. The calculator has no required persistent database migration here
 
 Declared exceptions and remaining evidence:
 
-- The selected historical source returns JSON HTTP 500 for an invalid product.
-  Smoke also accepts corrected 400/422 behavior, so it does not require retaining
-  that defect. Application validation changes are a separate task.
+- Earlier source smokes exercised public server calculation and invalid-product
+  responses. The browser migration now requires public model/assets and denial of
+  anonymous server calculations; authenticated input validation remains in API tests.
 - There is no complete game-model, browser automation or type-checking claim.
   The added HTTP smoke proves only the representative packaged behavior it executes.
 - Container signing is not currently required by this project's distribution policy;
@@ -126,8 +136,8 @@ Declared exceptions and remaining evidence:
 - Local actionlint 1.7.12 does not yet recognize GitHub's documented `queue` key.
   Validation suppresses only that exact unsupported-key diagnostic; hosted execution
   and the official concurrency documentation are separate evidence.
-- The current branch is based on GitHub commit `f618c151`; newer application changes
-  in another checkout are intentionally outside this CI/CD migration.
+- The original CI/CD migration was based on GitHub commit `f618c151`; application
+  changes from another checkout were outside that migration's verification scope.
 
 Record completed local checks and the exact hosted revision/run in the migration
 report. Do not rewrite the historical project verification entries to imply that
