@@ -113,11 +113,13 @@ Statt `patch` sind `minor`, `major` oder eine höhere explizite Version wie `1.1
 
 ## Optional: Lookup-Datenbank anlegen
 
-Für die interaktive Webberechnung ist keine SQLite-Datenbank erforderlich. Für einen neuen optionalen Datenexport die Funktionen aus dem Repository-Kontext aufrufen:
+Für die interaktive Webberechnung ist keine SQLite-Datenbank erforderlich. Für einen neuen optionalen Datenexport aus dem Repository-Verzeichnis aufrufen:
 
 ```powershell
-.\.venv\Scripts\python.exe -c "from src.datenbank.initialize_db import initialize_database; from src.datenbank.populate_db import populate_database; initialize_database('combinations.db'); populate_database('combinations.db')"
+.\.venv\Scripts\python.exe -m src.datenbank.populate_db --db-path combinations.db
 ```
+
+Der Befehl legt fehlende Tabellen an und befüllt sie mit Stammdaten. Alternativ funktioniert der direkte Aufruf `src/datenbank/populate_db.py` mit denselben Argumenten. `--db-path` ist optional und verwendet standardmäßig `combinations.db`; relative Pfade beziehen sich auf das aktuelle Arbeitsverzeichnis. `--help` zeigt die Optionen.
 
 Die Befüllung erzeugt Stammdaten, keine vorberechneten Rezeptkombinationen. Sie ist keine Migration vorhandener Werte: `INSERT OR IGNORE` aktualisiert vorhandene Zeilen nicht. Bei parallelen Exporten pro Checkout einen eigenen Datenbankpfad verwenden. Vorhandene Datenbanken nicht ungeprüft überschreiben oder löschen.
 

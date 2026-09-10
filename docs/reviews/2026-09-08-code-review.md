@@ -4,7 +4,7 @@ Ausgangspunkt ist Commit `8639d74`. Geprüft wurde die vorhandene Fachlogik von 
 
 Die ursprünglichen wesentlichen Probleme waren eine unbeschränkte Vollsuche im HTTP-Request, ein im Frontend verborgenes profitableres Ergebnis, falsche Erfolgsmeldungen für ungültige Eingaben sowie Such- und Datenbankpfade, die vorhandene Lösungen beziehungsweise aktualisierte Stammdaten nicht korrekt berücksichtigen.
 
-**Nachtrag vom 10.09.2026:** F01 (P1), F02/F03/F04/F05/F06 (P2) und F12 (P3) sind im lokalen Arbeitsstand behoben. Die übrigen fünf Befunde bleiben offen beziehungsweise teilweise bearbeitet. Die folgenden ursprünglichen Nachweise beschreiben den Stand vom 08.09.2026; Änderungen sind beim jeweiligen Befund vermerkt. Der Wiki-Abgleich wurde durch diesen Patch nicht verändert.
+**Nachtrag vom 10.09.2026:** F01 (P1), F02/F03/F04/F05/F06 (P2) und F07/F12 (P3) sind im lokalen Arbeitsstand behoben. Die übrigen vier Befunde F08–F11 bleiben offen. Die folgenden ursprünglichen Nachweise beschreiben den Stand vom 08.09.2026; Änderungen sind beim jeweiligen Befund vermerkt. Der Wiki-Abgleich wurde durch diesen Patch nicht verändert.
 
 ## Vorgehen und Aussagegrenzen
 
@@ -133,13 +133,19 @@ Auch bei Rundung der Verkaufspreise auf ganze Dollar bleibt das zweite Rezept um
 
 **Mögliche Korrektur:** Den Zustand ohne Zusätze zuerst gegen gewünschte und ausgeschlossene Effekte prüfen. Der Rückgabevertrag und die CLI müssen dabei „gültiges Rezept mit null Zutaten“ von „nichts gefunden“ unterscheiden; derzeit verwendet die CLI allein `size == 0` als Fehlschlag.
 
-### F07 · P3 · Der direkte DB-Scripteinstieg fehlt; der aktuelle README-Aufruf ist korrigiert
+### F07 · P3 · Der direkte DB-Scripteinstieg fehlt
+
+**Status am 10.09.2026: behoben.** Sowohl `python src/datenbank/populate_db.py` als auch `python -m src.datenbank.populate_db` initialisieren jetzt das Schema und befüllen die Stammdaten. `--db-path` wählt die Datenbank; ohne Angabe gilt `combinations.db` relativ zum Arbeitsverzeichnis. Der direkte Scriptaufruf funktioniert auch aus einem anderen Arbeitsverzeichnis. Import und `--help` führen keine Datenbankoperationen aus. README und englische Übersetzung dokumentieren den Moduleinstieg. Die folgenden Angaben dokumentieren den ursprünglichen Befund; die Aktualisierung bestehender Lookup-Werte bleibt separat unter F08 offen.
+
+**Nachprüfung:** `tests/test_database_entry.py` startet beide Einstiege als echte Unterprozesse mit temporären Datenbanken, einschließlich Pfaden mit Leerzeichen und direktem Aufruf aus einem anderen Arbeitsverzeichnis ohne `PYTHONPATH`. Geprüft werden die erzeugten Stammdaten, der Standardpfad, wiederholte Befüllung ohne Duplikate sowie Import/Hilfe ohne Datenbankanlage und ein Fehlerstatus bei unbrauchbarem Datenbankpfad.
+
+**Prüfgrenze des gemeinsamen Arbeitsstands:** Die fünf F07-Tests, ihre Ruff-Prüfung und Python-Kompilierung bestehen. Der anschließende Gesamtlauf vom 10.09.2026 führte 77 Tests aus und meldete drei fehlgeschlagene Teiltests in den parallel hinzugekommenen Such-Experimenten: `test_search_fast.py` verglich auch die variable Statistik `elapsed_seconds`. Der Sammelcheck meldete außerdem eine Ruff-Abweichung in `experiments/search_fast.py`. Diese Befunde wurden an den zuständigen parallelen Task zurückgegeben; dieser Lauf gilt nicht als bestandene Gesamtprüfung.
 
 **Stelle:** [populate_db.py](C:/Users/timra/git/schedule1_calc/src/datenbank/populate_db.py:4), Imports Zeilen 4–5 und fehlender Programmeinstieg am Dateiende. Der README-Quickstart in Ausgangscommit `8639d74` nannte `python src\datenbank\populate_db.py`.
 
 **Nachweis:** Dieser direkte Befehl scheitert aus dem Repository-Root mit `ModuleNotFoundError: No module named 'src'`. Wird der Root-Pfad extern bereitgestellt, endet das Script ohne Befüllung: Ein Aufruf per `runpy.run_path(..., run_name="__main__")` mit instrumentiertem `sqlite3.connect` führt null Datenbankzugriffe aus, weil lediglich Funktionen definiert werden.
 
-**Aktueller Stand:** Der parallel aktualisierte [README-Abschnitt](C:/Users/timra/git/schedule1_calc/README.md:60) ruft `initialize_database(...)` und `populate_database(...)` jetzt ausdrücklich per `python -c` aus dem Repository-Kontext auf. Der empfohlene Quickstart ist damit korrigiert. Nur der alte direkte Script-Aufruf und ein wirkungsloser `python -m src.datenbank.populate_db` bleiben als Einstiegsfalle bestehen; deshalb ist dies im Endstand P3 statt des ursprünglichen P2-Dokumentationsfehlers.
+**Zwischenstand vor der Behebung:** Der README-Abschnitt rief `initialize_database(...)` und `populate_database(...)` ausdrücklich per `python -c` aus dem Repository-Kontext auf. Der empfohlene Quickstart war damit korrigiert. Der alte direkte Script-Aufruf und ein wirkungsloser `python -m src.datenbank.populate_db` blieben als Einstiegsfalle bestehen; deshalb wurde der Befund auf P3 statt des ursprünglichen P2-Dokumentationsfehlers eingestuft.
 
 **Mögliche Korrektur:** Falls ein ausführbares DB-Script gewünscht ist, einen konsistenten Modulaufruf mit tatsächlichem `__main__`-Einstieg und DB-Pfad anbieten. Andernfalls beim nun dokumentierten Funktionsaufruf bleiben. Der Flask-Start und `src/main.py` wurden nicht als betroffen bewertet: deren vorhandene Pfadergänzung erreicht den Repository-Root korrekt.
 

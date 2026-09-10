@@ -1,6 +1,13 @@
+import argparse
+from pathlib import Path
 import sqlite3
+import sys
 from typing import Dict
 
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from src.datenbank.initialize_db import initialize_database
 from src.util.models import CombinationResult
 from src.lookup.lookup import effects, substances, products, level_name_to_int
 
@@ -149,3 +156,22 @@ def store_all_combinations_normalized(
     conn.commit()
     conn.close()
     print(f"{len(combinations)} Kombinationen (normalisiert) gespeichert.")
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(
+        description="Initialisiert die SQLite-Datenbank und befüllt ihre Stammdaten."
+    )
+    parser.add_argument(
+        "--db-path",
+        default="combinations.db",
+        help="Pfad zur SQLite-Datenbank (Standard: combinations.db)",
+    )
+    args = parser.parse_args(argv)
+
+    initialize_database(args.db_path)
+    populate_database(args.db_path)
+
+
+if __name__ == "__main__":
+    main()

@@ -113,11 +113,13 @@ Instead of `patch`, use `minor`, `major` or a higher explicit version such as `1
 
 ## Optional: create a lookup database
 
-The interactive web calculator does not require a SQLite database. To create a new optional data export, call these functions from the repository directory:
+The interactive web calculator does not require a SQLite database. To create a new optional data export, run this command from the repository directory:
 
 ```powershell
-.\.venv\Scripts\python.exe -c "from src.datenbank.initialize_db import initialize_database; from src.datenbank.populate_db import populate_database; initialize_database('combinations.db'); populate_database('combinations.db')"
+.\.venv\Scripts\python.exe -m src.datenbank.populate_db --db-path combinations.db
 ```
+
+The command creates missing tables and populates reference data. You can also run `src/datenbank/populate_db.py` directly with the same arguments. `--db-path` is optional and defaults to `combinations.db`; relative paths resolve against the current working directory. Use `--help` to display the options.
 
 This populates reference data, not precalculated recipe combinations. It does not migrate existing values: `INSERT OR IGNORE` does not update existing rows. For parallel exports, use a separate database path for each checkout. Review existing databases before overwriting or deleting them.
 
