@@ -1,11 +1,11 @@
 # Cross-project engineering standard
 
-Baseline version: **1.0.0**. Derived from Quiltor on **2026-09-08**.
+Baseline version: **1.0.0**.
 
 This is the reusable baseline for the owner's projects. Adoption is explicit per repository;
 adding this directory does not change tooling or make another project compliant. Normative
-requirements below describe the target. [Quiltor's profile](quiltor.md) records current behavior
-and the remaining work separately.
+requirements below describe the target; each project records its own current behavior and
+remaining work separately.
 
 Start a new project with the [project profile template](templates/PROJECT_PROFILE.md) and the
 [formatting templates](templates/formatting/README.md). Merge the
@@ -88,7 +88,7 @@ Do not implement placeholder commands that succeed while required work is skippe
 Pin build runtimes and formatter versions exactly in tracked configuration. Record the package
 manager version and commit its lockfile. Runtime-manager files and CI values are generated from
 or checked against the project's declared source. Upgrades are reviewed changes to these pins;
-the baseline does not freeze every project to Quiltor's current version numbers.
+the baseline does not freeze every project to the illustrative version numbers in its templates.
 
 Development may support a broader runtime range if documented. Release checks use exact pins.
 Select Python through the project environment or a resolver that tests both version compatibility
@@ -176,9 +176,3 @@ new untracked build files. This is a distribution choice, not a requirement for 
    and served frontend identity. Run destructive failure cases in disposable fixtures.
 6. Add CI checks, record the adopted baseline version and document justified exceptions. Upgrade
    other repositories through separate reviewed changes using the same versioned baseline.
-
-The [Quiltor reference inventory](quiltor.md) records the source project's configuration and
-distinguishes inherited behavior from the improvements specified here. Its source paths refer
-to Quiltor, even when this portable directory is copied elsewhere; they are not commands or
-evidence for the adopting project. Keep that dated reference separate from the target project's
-own `docs/PROJECT_PROFILE.md`.

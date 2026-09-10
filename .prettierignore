@@ -9,5 +9,5 @@
 **/.ruff_cache/
 **/logs/
 .git/
-# Vendored baseline and templates; preserve the copied source bytes.
+# Reviewed baseline and templates; prevent incidental formatter rewrites.
 docs/standards/

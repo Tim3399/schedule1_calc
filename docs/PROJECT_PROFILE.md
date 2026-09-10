@@ -5,7 +5,8 @@
 | Feld                  | Festlegung                                                                            |
 | --------------------- | ------------------------------------------------------------------------------------- |
 | Produkt               | schedule1_calc, Flask-Anwendung für das Spiel Schedule I                              |
-| Baseline              | Cross-project engineering standard **1.0.0**, aus Quiltor vom **08.09.2026**          |
+| Kickoff skill         | `project-start` **1.1.0**, reapplied on **2026-09-10**                                |
+| Baseline              | Cross-project engineering standard **1.0.0**, adopted on **08.09.2026**               |
 | Verbindliche Baseline | [Lokale Kopie](standards/README.md), Vorlagen und Herkunft in `docs/standards/`       |
 | Status                | **Teilweise übernommen**; implementierte Befehle und offene Anforderungen siehe unten |
 | Aktive Profile        | Python, Web (JavaScript/JSON/CSS), Dokumentation (Markdown/YAML/HTML)                 |
@@ -31,7 +32,7 @@ Die Baseline regelt das Entwicklungstooling. Fachlogik und Spieldaten wurden dab
 
 Der Anwendungsstart benötigt Python **ab 3.12** und die exakten Pakete aus `requirements.txt`; Node/npm/Ruff sind dafür nicht erforderlich. Python **3.12.14** ist der geprüfte und für `doctor`/Formatierung/`check` vorgeschriebene Interpreter. Das breitere Startintervall verspricht keine getestete Kompatibilität aller zukünftigen Python-Versionen.
 
-Generierte Dateien, `node_modules`, virtuelle Umgebungen, Caches, Builds und Logs gehören nicht zur Formatierung. Die versionierte Standardskopie unter `docs/standards/` ist als übernommener Quellenstand ebenfalls von schreibender Formatierung ausgeschlossen; `SOURCE.md` dokumentiert die Originaldateien mit SHA-256. `package-lock.json` gehört npm. Gepflegte Quellen einschließlich `src/util/models.py` bleiben enthalten. TOML-, Requirements- und reine Werkzeugkonfigurationen werden manuell gepflegt und durch ihre Werkzeuge gelesen; für zusätzliche Quellsprachen ist vor Aufnahme in den Sammelcheck ein Formatierer festzulegen.
+Generierte Dateien, `node_modules`, virtuelle Umgebungen, Caches, Builds und Logs gehören nicht zur Formatierung. Die JSON-Berichte unter `docs/reviews/data/` werden von `tools/evaluate_search.py` erzeugt; vorhandene Messausgaben bleiben als datierte Nachweise bytegenau erhalten und werden weder von Biome noch manuell umformatiert. Die versionierte Standardskopie unter `docs/standards/` ist als übernommener Quellenstand ebenfalls von schreibender Formatierung ausgeschlossen; `SOURCE.md` dokumentiert die Originaldateien mit SHA-256. `package-lock.json` gehört npm. Gepflegte Quellen einschließlich `src/util/models.py` bleiben enthalten. TOML-, Requirements- und reine Werkzeugkonfigurationen werden manuell gepflegt und durch ihre Werkzeuge gelesen; für zusätzliche Quellsprachen ist vor Aufnahme in den Sammelcheck ein Formatierer festzulegen.
 
 ## Befehlsübersicht
 
@@ -99,6 +100,25 @@ Es gibt keine Frontend-Bundles oder getrackten Buildausgaben. Der Server liest d
 | Parallele Starts im selben Checkout       | Port konfigurierbar, Daten nicht vollständig isoliert | Getrennte Checkouts/Exportpfade; später konfigurierbare Datenpfade              |
 | Python-Artefaktreproduzierbarkeit         | Exakte Paketversionen, keine Artefakthashes           | Vor Release Hash-/Plattform-Lock festlegen                                      |
 | Weitere Python-Versionen                  | Start akzeptiert >=3.12; 3.12.14 geprüft              | Erst nach Laufzeit-/CI-Prüfung als getestet bezeichnen                          |
+
+## Agent workflow
+
+`AGENTS.md` binds agents to this profile, its command map and the adopted baseline. Handle small or tightly coupled changes directly. For substantial work with independently useful subtasks, use the available `orchestrated-development` skill when delegation adds clear value. Assign self-contained scopes and exclusive file ownership, preserve other contributors' changes, and review actual diffs and verification evidence before accepting worker output. Workers do not delegate further. Retain the configured model and reasoning defaults unless the user chooses otherwise; if delegation is unavailable, complete the work directly.
+
+The shared workflow is maintained in `../ai-infra/codex/AGENTS.md`; repository instructions remain a thin project binding. Reapplying `project-start` 1.1.0 retains the adopted baseline **1.0.0**. The skill's bundled baseline 1.1.0 is not an automatic migration of this repository.
+
+## Verification on 2026-09-10
+
+Reapplied `project-start` 1.1.0 to the existing checkout. Formatter configurations, matching write/check scopes, pinned dependencies, README setup commands and agent instructions were already present. Existing local changes were preserved. No launcher, version helper or application changes were required by this pass.
+
+- `.venv\Scripts\python.exe tools/project.py doctor` passed with the selected project interpreter and all runtime, package and product-version copies matching.
+- `.venv\Scripts\python.exe tools/project.py check` passed: Ruff checked 11 Python files, Biome checked 6 files, Prettier accepted all matched documents/templates, and Python syntax checks passed.
+- `.venv\Scripts\python.exe tools/project.py test` passed all 10 tooling tests, including alternate-port startup/shutdown, foreign-listener protection, missing dependencies, version rejection and rollback fixtures.
+- `.venv\Scripts\python.exe tools/project.py start --port 62164` reported `[web] Ready` on a free loopback port. HTTP checks verified the rendered frontend, version **1.0.3**, dirty Git revision, checkout source digest and matching response headers. Git's sandbox ownership exception was scoped to this launch process; no global Git settings were changed.
+
+The additional smoke-test process did not stop through the tool's PTY Ctrl+C input and was explicitly terminated by its verified listener PID; port closure was then confirmed. Graceful shutdown passed separately in the automated startup test.
+
+No compiled production build applies to this Flask source application. This local pass does not establish a new remote CI result or close the documented release, E2E and game-model gaps.
 
 ## Verifikation am 08.09.2026
 
