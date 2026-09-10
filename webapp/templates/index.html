@@ -34,14 +34,35 @@
           {% endfor %}
         </select>
 
+        <label for="search-mode">Search Mode:</label>
+        <select id="search-mode" name="search_mode" required>
+          {% if selected_search_mode | default('exact') == 'exact' %}
+          <option value="exact" selected>Exact — optimal result or no result at limit</option>
+          {% else %}
+          <option value="exact">Exact — optimal result or no result at limit</option>
+          {% endif %} {% if selected_search_mode | default('exact') == 'fast' %}
+          <option value="fast" selected>Fast — approximate, optimality not guaranteed</option>
+          {% else %}
+          <option value="fast">Fast — approximate, optimality not guaranteed</option>
+          {% endif %}
+        </select>
+
         <button type="submit">Get Best Mix</button>
       </form>
 
       <div id="result">
         {% if error %}
         <div class="error" role="alert">Error: {{ error }}</div>
-        {% endif %} {% if best_modifier %}
+        {% endif %} {% if not error and search and search.status in ['optimal', 'approximate'] %} {%
+        if search.status == 'optimal' %}
+        <p>Optimality proven</p>
+        {% else %}
+        <p>Approximate result — optimality not guaranteed</p>
+        {% endif %} {% if best_modifier %} {% if search.mode == 'fast' %}
+        <h2>Highest modifier found</h2>
+        {% else %}
         <h2>Best Modifier Combination</h2>
+        {% endif %}
         <p>Effects: {{ best_modifier.effects | join(', ') }}</p>
         <p>Ingredients: {{ best_modifier.substances | join(', ') }}</p>
         <p>Modifier: {{ '%.2f' | format(best_modifier.modifier) }}</p>
@@ -50,15 +71,18 @@
         <p>
           Profit: {{ '%.2f' | format(best_modifier.sell_price - best_modifier.substance_cost) }}$
         </p>
-        {% endif %} {% if best_profit %}
+        {% endif %} {% if best_profit %} {% if search.mode == 'fast' %}
+        <h2>Highest profit found</h2>
+        {% else %}
         <h2>Best Profit Combination</h2>
+        {% endif %}
         <p>Effects: {{ best_profit.effects | join(', ') }}</p>
         <p>Ingredients: {{ best_profit.substances | join(', ') }}</p>
         <p>Modifier: {{ '%.2f' | format(best_profit.modifier) }}</p>
         <p>Sell Price: {{ '%.2f' | format(best_profit.sell_price) }}$</p>
         <p>Ingredient Cost: {{ '%.2f' | format(best_profit.substance_cost) }}$</p>
         <p>Profit: {{ '%.2f' | format(best_profit.sell_price - best_profit.substance_cost) }}$</p>
-        {% endif %}
+        {% endif %} {% endif %}
       </div>
     </div>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>

@@ -6,8 +6,8 @@ from flask import Flask, jsonify, render_template, request
 from werkzeug.exceptions import BadRequest
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
-from functionality.calc_modifier import CombinationSearchLimitExceeded, get_best_mix
 from functionality.logging.logging_config import setup_logging
+from src.functionality.mix_search import SearchIncomplete, get_best_mix
 from src.lookup.lookup import level_name_to_int, products
 
 logger = setup_logging()
@@ -75,7 +75,11 @@ def _validate_request_data(data):
     else:
         raise RequestValidationError("Level must be a known level name or integer value.")
 
-    return combination_size, product_name, max_level
+    search_mode = data.get("search_mode", "exact")
+    if not isinstance(search_mode, str) or search_mode not in ("exact", "fast"):
+        raise RequestValidationError("Search mode must be exact or fast.")
+
+    return combination_size, product_name, max_level, search_mode
 
 
 def _serialize_combination(result):
@@ -91,7 +95,16 @@ def _serialize_combination(result):
 
 
 def _template_context(**values):
-    return {"level_name_to_int": level_name_to_int, "products": products, **values}
+    return {
+        "level_name_to_int": level_name_to_int,
+        "products": products,
+        "selected_search_mode": "exact",
+        **values,
+    }
+
+
+def _incomplete_metadata(error):
+    return {"mode": error.mode, "status": "incomplete", "optimality_proven": False}
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -99,10 +112,14 @@ def index():
     if request.method == "GET":
         return render_template("index.html", **_template_context())
 
+    submitted_mode = request.form.get("search_mode", "exact")
+    selected_mode = submitted_mode if submitted_mode in ("exact", "fast") else "exact"
     try:
-        combination_size, product_name, max_level = _validate_request_data(request.form.to_dict())
-        combinations_data, best_modifier, best_profit = get_best_mix(
-            combination_size, product_name, max_level
+        combination_size, product_name, max_level, search_mode = _validate_request_data(
+            request.form.to_dict()
+        )
+        search, best_modifier, best_profit = get_best_mix(
+            combination_size, product_name, max_level, search_mode=search_mode
         )
         _serialize_combination(best_modifier)
         _serialize_combination(best_profit)
@@ -114,18 +131,37 @@ def index():
             **_template_context(
                 best_modifier=best_modifier,
                 best_profit=best_profit,
-                combinations_data=combinations_data,
+                search=search,
+                selected_search_mode=search_mode,
             ),
         )
-    except (RequestValidationError, CombinationSearchLimitExceeded) as error:
+    except SearchIncomplete as error:
         return (
-            render_template("index.html", **_template_context(error=str(error))),
+            render_template(
+                "index.html",
+                **_template_context(
+                    error=str(error),
+                    search=_incomplete_metadata(error),
+                    selected_search_mode=error.mode,
+                ),
+            ),
+            503,
+        )
+    except RequestValidationError as error:
+        return (
+            render_template(
+                "index.html",
+                **_template_context(error=str(error), selected_search_mode=selected_mode),
+            ),
             400,
         )
     except Exception:
         logger.exception("Error while calculating best mix")
         return (
-            render_template("index.html", **_template_context(error=_INTERNAL_ERROR)),
+            render_template(
+                "index.html",
+                **_template_context(error=_INTERNAL_ERROR, selected_search_mode=selected_mode),
+            ),
             500,
         )
 
@@ -142,17 +178,20 @@ def get_best_mix_json():
         except BadRequest as error:
             raise RequestValidationError("Malformed JSON body.") from error
 
-        combination_size, product_name, max_level = _validate_request_data(data)
-        _combinations_data, best_modifier, best_profit = get_best_mix(
-            combination_size, product_name, max_level
+        combination_size, product_name, max_level, search_mode = _validate_request_data(data)
+        search, best_modifier, best_profit = get_best_mix(
+            combination_size, product_name, max_level, search_mode=search_mode
         )
         return jsonify(
             {
                 "best_modifier": _serialize_combination(best_modifier),
                 "best_profit": _serialize_combination(best_profit),
+                "search": search,
             }
         )
-    except (RequestValidationError, CombinationSearchLimitExceeded) as error:
+    except SearchIncomplete as error:
+        return jsonify({"error": str(error), "search": _incomplete_metadata(error)}), 503
+    except RequestValidationError as error:
         return jsonify({"error": str(error)}), 400
     except Exception:
         logger.exception("Error in /get_best_mix")

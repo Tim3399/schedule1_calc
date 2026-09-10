@@ -14,6 +14,7 @@ from functionality.logging import logging_config
 
 with mock.patch.object(logging_config, "setup_logging", return_value=mock.Mock()):
     from functionality import calc_modifier
+    from src.functionality import mix_search
     from webapp.app import app
 
 
@@ -22,26 +23,34 @@ class CalculatorBudgetTests(unittest.TestCase):
         app.config.update(TESTING=True)
         self.client = app.test_client()
 
-    def test_json_endpoint_rejects_size_eight_before_cartesian_enumeration(self):
-        with mock.patch.object(calc_modifier, "itertool_product") as product:
+    def test_json_endpoint_returns_no_winner_when_exact_search_hits_its_limit(self):
+        with (
+            mock.patch.object(calc_modifier, "itertool_product") as product,
+            mock.patch.object(mix_search, "EXACT_OPTIONS", {"frontier_limit": 1}),
+        ):
             response = self.client.post(
                 "/get_best_mix",
                 json={"combination_size": 8, "product_name": "og_kush", "level": "max"},
             )
 
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("too many combinations", response.get_json()["error"])
+        self.assertEqual(response.status_code, 503)
+        self.assertIn("Search incomplete", response.get_json()["error"])
+        self.assertNotIn("best_profit", response.get_json())
         product.assert_not_called()
 
-    def test_html_post_rejects_oversized_search_before_cartesian_enumeration(self):
-        with mock.patch.object(calc_modifier, "itertool_product") as product:
+    def test_html_post_returns_no_winner_when_exact_search_hits_its_limit(self):
+        with (
+            mock.patch.object(calc_modifier, "itertool_product") as product,
+            mock.patch.object(mix_search, "EXACT_OPTIONS", {"frontier_limit": 1}),
+        ):
             response = self.client.post(
                 "/",
                 data={"combination_size": "8", "product_name": "og_kush", "level": "max"},
             )
 
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("too many combinations", response.get_data(as_text=True))
+        self.assertEqual(response.status_code, 503)
+        self.assertIn("Search incomplete", response.get_data(as_text=True))
+        self.assertNotIn("Ingredients:", response.get_data(as_text=True))
         product.assert_not_called()
 
     def test_exact_budget_boundary_is_accepted_and_next_size_is_rejected(self):
