@@ -1,0 +1,12 @@
+**
+!Dockerfile
+!requirements-release.lock
+!VERSION
+!src/
+!src/**/*.py
+!webapp/
+!webapp/app.py
+!webapp/static/
+!webapp/static/**
+!webapp/templates/
+!webapp/templates/**

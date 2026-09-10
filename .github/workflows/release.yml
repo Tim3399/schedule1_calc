@@ -1,0 +1,54 @@
+name: Tagged release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tagged-release-${{ github.ref }}
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  quality:
+    name: Quality gates
+    uses: ./.github/workflows/check.yml
+
+  publish:
+    name: Publish verified release
+    needs: quality
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    concurrency:
+      group: schedule1-release-publication
+      cancel-in-progress: false
+      queue: max
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        with:
+          version: "0.12.8"
+          activate-environment: true
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ needs.quality.outputs.artifact_name }}
+          path: dist
+      - name: Publish the verified artifacts without rebuilding
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_VERSION: ${{ needs.quality.outputs.version }}
+          BUILD_RUN_ID: ${{ needs.quality.outputs.build_run_id }}
+        shell: bash
+        run: |
+          python -B tools/publish_release.py --directory dist --revision "$GITHUB_SHA" \
+            --run-id "$BUILD_RUN_ID" --version "$BUILD_VERSION" --repository "$GITHUB_REPOSITORY"

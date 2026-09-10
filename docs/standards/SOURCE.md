@@ -1,24 +1,18 @@
-# Baseline source snapshot
+# Baseline snapshot
 
-Copied on 2026-09-08 from the local Quiltor working tree:
+Adopted by this project on **2026-09-08**.
 
-`C:/Users/timra/git/quiltor/quiltor/docs/standards/`.
+Baseline version: **1.0.0**. The files below form the versioned snapshot adopted by this
+repository. Their hashes record the originally adopted bytes before this documentation cleanup.
 
-Baseline version: **1.0.0**. Quiltor HEAD at inspection was
-`4dec1e9d904d11505554b9a142307cd6a82d14b2`, but this directory was untracked there;
-the HEAD does **not** identify these source bytes. The copied files below are the
-versioned snapshot adopted by this repository. Hashes are recorded before any editing.
-
-These documents describe the portable target; `quiltor.md` is a dated reference,
-not evidence that this repository implements those commands. The actual adoption,
-commands and exceptions are in [the project profile](../PROJECT_PROFILE.md).
+These documents describe the portable target. The actual adoption, commands and exceptions are
+in [the project profile](../PROJECT_PROFILE.md).
 
 The vendored snapshot is excluded from writing formatters to preserve its source bytes.
 Review and version future baseline replacements separately from product changes.
 
 | Source-relative path | SHA-256 |
 | --- | --- |
-| `quiltor.md` | `eb99ef1440b7ab383924b51d1dd9b6898a878e186f5212dd3b0dc66365f4411b` |
 | `README.md` | `c9c0b56fc90b22e89b7bb8a3518b96ad9cfafbabee174d73efafbb7066ef0331` |
 | `templates/agent-instructions.md` | `851a1cfea3777d8fe90af974a1e1a18de031d29deeb84c37e643abe371e90dbe` |
 | `templates/formatting/.editorconfig` | `691db4defc18c33c336338905185c72c0cb3314987572dd4cf9c5d214a217a7f` |

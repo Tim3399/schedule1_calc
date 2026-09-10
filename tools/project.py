@@ -19,6 +19,7 @@ import sys
 import tempfile
 import threading
 import time
+import unittest
 import urllib.error
 import urllib.request
 
@@ -210,6 +211,14 @@ def format_project(write: bool, root: Path = ROOT) -> None:
         raise ProjectError("Formatting failed; inspect the formatter output above.")
 
 
+def run_tests(root: Path = ROOT) -> int:
+    suite = unittest.TestLoader().discover(str(root / "tests"))
+    if suite.countTestCases() == 0:
+        raise ProjectError(f"No tests discovered in {root / 'tests'}.")
+    result = unittest.TextTestRunner(verbosity=2).run(suite)
+    return 0 if result.wasSuccessful() else 1
+
+
 def source_identity(root: Path = ROOT) -> dict[str, str]:
     """Hash maintained runtime inputs; generated files and Git's own metadata are excluded."""
     inputs = [root / "VERSION", root / "requirements.txt", root / "tools/project.py"]
@@ -384,9 +393,7 @@ def main() -> int:
                     "[check] Formatting, toolchains, version consistency and Python syntax passed."
                 )
         elif args.command == "test":
-            return subprocess.call(
-                [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"], cwd=ROOT
-            )
+            return run_tests()
         elif args.command == "check-version":
             print(f"[version] {check_versions()}")
         elif args.command == "set-version":
