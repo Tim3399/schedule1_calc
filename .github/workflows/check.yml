@@ -2,34 +2,122 @@ name: Project checks
 
 on:
   push:
+    branches: ["**"]
   pull_request:
+  workflow_dispatch:
+  workflow_call:
+    outputs:
+      artifact_name:
+        value: ${{ jobs.artifacts.outputs.artifact_name }}
+      version:
+        value: ${{ jobs.artifacts.outputs.version }}
+      build_run_id:
+        value: ${{ jobs.artifacts.outputs.build_run_id }}
 
 permissions:
   contents: read
 
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+env:
+  PYTHONDONTWRITEBYTECODE: "1"
+
 jobs:
   check:
+    name: Checks (${{ matrix.os }})
+    timeout-minutes: 15
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-24.04, windows-2025]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          version: "0.12.8"
-          activate-environment: true
-      - uses: actions/setup-node@v4
+          persist-credentials: false
+      - uses: ./.github/actions/setup-project
+      - name: Check formatting, pins, version consistency and Python syntax
+        run: python -B tools/project.py check
+      - name: Run nonempty project and delivery tests
+        run: python -B tools/project.py test
+
+  artifacts:
+    name: Source and container
+    needs: check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    outputs:
+      artifact_name: ${{ steps.identity.outputs.artifact_name }}
+      version: ${{ steps.identity.outputs.version }}
+      build_run_id: ${{ steps.identity.outputs.build_run_id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version-file: .node-version
-          cache: npm
-      - name: Install pinned tools and application dependencies
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup-project
+      - name: Identify the exact build
+        id: identity
         shell: bash
         run: |
-          npm install --global "npm@$(node -p 'require("./tools/toolchains.json").npm')"
-          npm ci --ignore-scripts --no-audit --no-fund
-          uv pip install -r requirements-dev.txt
-      - name: Check formatting, pins, version consistency and Python syntax
-        run: python tools/project.py check
-      - name: Test project tooling
-        run: python tools/project.py test
+          echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
+          echo "build_run_id=$GITHUB_RUN_ID.$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+          echo "artifact_name=release-inputs-$GITHUB_SHA-$GITHUB_RUN_ID.$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+      - name: Validate the release tag
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          python -B tools/release.py validate-tag --tag "$GITHUB_REF_NAME" --revision "$GITHUB_SHA"
+          git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main
+      - name: Build and smoke-test the container
+        env:
+          BUILD_VERSION: ${{ steps.identity.outputs.version }}
+        shell: bash
+        run: |
+          mkdir -p dist
+          docker build --platform linux/amd64 --build-arg BUILD_VERSION="$BUILD_VERSION" \
+            --build-arg BUILD_REVISION="$GITHUB_SHA" --iidfile "$RUNNER_TEMP/schedule1-image-id" \
+            --tag "schedule1-ci:$GITHUB_SHA" .
+          python -B tools/container_smoke.py --image "schedule1-ci:$GITHUB_SHA" \
+            --version "$BUILD_VERSION" --revision "$GITHUB_SHA"
+          docker save --output dist/schedule1_calc-image.tar "schedule1-ci:$GITHUB_SHA"
+      - name: Package and verify the exact source and image
+        env:
+          BUILD_VERSION: ${{ steps.identity.outputs.version }}
+          BUILD_RUN_ID: ${{ steps.identity.outputs.build_run_id }}
+        shell: bash
+        run: |
+          python -B tools/release.py build --output dist --revision "$GITHUB_SHA" \
+            --run-id "$BUILD_RUN_ID" --image dist/schedule1_calc-image.tar \
+            --image-id "$(cat "$RUNNER_TEMP/schedule1-image-id")"
+          python -B tools/release.py verify --directory dist --revision "$GITHUB_SHA" \
+            --run-id "$BUILD_RUN_ID" --version "$BUILD_VERSION"
+          python -B tools/source_smoke.py --archive "dist/schedule1_calc-$BUILD_VERSION-source.zip" \
+            --version "$BUILD_VERSION"
+      - name: Retain verified release inputs
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.identity.outputs.artifact_name }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+          archive: true
+
+  required:
+    name: Project checks
+    needs: [check, artifacts]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Require every quality and artifact gate
+        env:
+          CHECK_RESULT: ${{ needs.check.result }}
+          ARTIFACT_RESULT: ${{ needs.artifacts.result }}
+        shell: bash
+        run: |
+          test "$CHECK_RESULT" = success
+          test "$ARTIFACT_RESULT" = success

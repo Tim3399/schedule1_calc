@@ -9,10 +9,10 @@ Its template filename prevents Biome from treating this documentation folder as 
 active project root. The other configuration files keep their names at the target root.
 The schema path resolves against the target project's installed Biome package.
 
-The settings are derived from Quiltor on 2026-09-08. Its reference tool versions were
-Biome 2.5.7, Prettier 3.9.6, Ruff 0.16.4 and Rust 1.98.0. These are a reproducible source
-snapshot, not permanent versions required of every project. Pin the versions chosen for
-each project, commit its lockfiles, and upgrade them through a reviewed change.
+Illustrative tool versions for these templates are Biome 2.5.7, Prettier 3.9.6, Ruff 0.16.4
+and Rust 1.98.0. They are examples, not verified latest releases or permanent requirements.
+Select compatible versions for the project, pin them, commit its lockfiles, and upgrade them
+through a reviewed change.
 
 ## Ownership
 
@@ -102,7 +102,7 @@ The runtime minimum and release build interpreter can differ. A formatter must n
 introduce syntax unsupported by the runtime minimum. Markdown is explicitly excluded
 from Ruff so documentation stays with Prettier.
 
-For repositories using an interpreter resolver such as Quiltor's:
+For repositories using a compatible interpreter resolver:
 
 ```json
 {

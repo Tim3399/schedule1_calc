@@ -2,7 +2,7 @@
 
 Python-Rechner für Zutatenkombinationen im Spiel Schedule I mit einer Flask-Oberfläche. Die Spieldaten stehen in `src/lookup/lookup.py`; SQLite dient dem optionalen Export vorberechneter Ergebnisse.
 
-Regeln für Formatierung, lokale Starts und Versionierung stammen aus Quiltor und wurden an Flask angepasst. Befehle, Ausnahmen und Prüfgrenzen stehen im [Projektprofil](docs/PROJECT_PROFILE.md), die versionierte Vorlage unter [docs/standards](docs/standards/README.md).
+Gemeinsame Regeln für Formatierung, lokale Starts und Versionierung sind an diese Flask-Anwendung angepasst. Befehle, Ausnahmen und Prüfgrenzen stehen im [Projektprofil](docs/PROJECT_PROFILE.md), die versionierte Vorlage unter [docs/standards](docs/standards/README.md).
 
 ## Einrichtung unter Windows / PowerShell
 
@@ -46,6 +46,23 @@ Alternativ ist `SCHEDULE1_PORT` möglich; `--port` hat Vorrang. Für parallele C
 
 Python gehört Ruff, JavaScript/JSON/CSS Biome, Markdown/YAML/HTML Prettier. Gemeinsame Regeln: UTF-8, LF, Breite 100, zwei Leerzeichen; Python vier Leerzeichen. Weitere Details und Ausschlüsse stehen im [Projektprofil](docs/PROJECT_PROFILE.md).
 
+## CI und Releases
+
+Die [CI](.github/workflows/check.yml) prüft Formatierung, Pins und eine nicht leere
+Testsuite unter Ubuntu und Windows. Zusätzlich baut sie ein Quell-ZIP und einen
+Linux/amd64-Container und führt Anwendungstests gegen beide Pakete aus. Der stabile
+Gesamtcheck heißt **Project checks**.
+
+Ein kanonischer Tag `vMAJOR.MINOR.PATCH` auf einem Commit aus `main` löst nach
+Versionsabgleich dieselben vollständigen Prüfungen aus. Danach veröffentlicht die
+[Release-Pipeline](.github/workflows/release.yml) das geprüfte Quellpaket über GitHub
+Releases und dasselbe Container-Image unter `ghcr.io/tim3399/schedule1_calc:vVERSION`.
+Manifeste und Prüfsummen verbinden Commit, Version, Build-Lauf und Artefakte.
+Der Versionsbefehl selbst legt weiterhin keinen Tag an.
+
+Unterstützter Lieferumfang, Berechtigungen, Wiederherstellung und tatsächlicher
+Prüfstand stehen im [CI/CD-Profil](docs/CI_CD_PROFILE.md).
+
 ## Version ändern
 
 `VERSION` ist die maßgebliche stabile Produktversion. Der Änderungsbefehl synchronisiert `package.json` und beide Versionsfelder in `package-lock.json` und verlangt einen sauberen Git-Arbeitsbaum.
@@ -55,7 +72,7 @@ Python gehört Ruff, JavaScript/JSON/CSS Biome, Markdown/YAML/HTML Prettier. Gem
 .\.venv\Scripts\python.exe tools\project.py set-version patch
 ```
 
-Statt `patch` sind `minor`, `major` oder eine höhere explizite Version wie `1.1.0` möglich. Danach Diff prüfen, formatieren und `check`/`test` ausführen. Der Befehl erstellt keinen Commit, Tag oder Release und pusht nichts. Noch nicht eingerichtete Veröffentlichungsprüfungen stehen im Projektprofil.
+Statt `patch` sind `minor`, `major` oder eine höhere explizite Version wie `1.1.0` möglich. Danach Diff prüfen, formatieren und `check`/`test` ausführen. Der Befehl erstellt keinen Commit, Tag oder Release und pusht nichts. Der Ablauf für getaggte Quellpaket- und Container-Releases steht im [CI/CD-Profil](docs/CI_CD_PROFILE.md).
 
 ## Optional: Lookup-Datenbank anlegen
 
