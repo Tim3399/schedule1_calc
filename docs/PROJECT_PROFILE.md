@@ -21,13 +21,13 @@ Test-/Paketierungswerkzeuge. Die bisherige Baseline und historische Prüfergebni
 bleiben erhalten. Die genaue Delivery-Konfiguration und verbleibende Verifikation
 stehen im [CI/CD-Profil](CI_CD_PROFILE.md).
 
-| Bereich                     | Bisher übernommen                  | Ziel  | Stand                                                                 |
-| --------------------------- | ---------------------------------- | ----- | --------------------------------------------------------------------- |
-| Agent-Regeln / Formatierung | 1.0.0                              | 1.0.0 | Beibehalten; Profilverweis um CI/CD ergänzt                           |
-| Bisherige Sprachprofile     | 1.0.0                              | 1.0.0 | Runtimes und Entwicklungspins beibehalten                             |
-| Container-Sprachprofil      | Unbekannt / bisher nicht vorhanden | 1.3.0 | Neu, eigener Produktions-Lock; Validierung siehe CI/CD-Profil         |
-| Tooling                     | 1.0.0, teilweise                   | 1.3.0 | Nur Testentdeckung und Delivery-Helfer aktualisiert                   |
-| CI/CD                       | Unbekannt / noch nicht bewertet    | 1.3.0 | Teilweise; Pipeline, Artefakte und Veröffentlichung unter Validierung |
+| Bereich                     | Bisher übernommen                  | Ziel  | Stand                                                                   |
+| --------------------------- | ---------------------------------- | ----- | ----------------------------------------------------------------------- |
+| Agent-Regeln / Formatierung | 1.0.0                              | 1.0.0 | Beibehalten; Profilverweis um CI/CD ergänzt                             |
+| Bisherige Sprachprofile     | 1.0.0                              | 1.0.0 | Runtimes und Entwicklungspins beibehalten                               |
+| Container-Sprachprofil      | Unbekannt / bisher nicht vorhanden | 1.3.0 | Neu, eigener Produktions-Lock; Validierung siehe CI/CD-Profil           |
+| Tooling                     | 1.0.0, teilweise                   | 1.3.0 | Nur Testentdeckung und Delivery-Helfer aktualisiert                     |
+| CI/CD                       | Unbekannt / noch nicht bewertet    | 1.3.0 | Teilweise; CI/Artefakte geprüft, Branch-Schutz aktiv, Publikation offen |
 
 ## Formatierung und Toolchains
 
@@ -52,22 +52,22 @@ Generierte Dateien, `node_modules`, virtuelle Umgebungen, Caches, Builds und Log
 
 `PY` steht für `.venv\Scripts\python.exe` unter Windows beziehungsweise `.venv/bin/python` unter POSIX. Kommandos werden im Repository ausgeführt. Python ist der Befehlsverteiler; npm verwaltet Webformatierer. Dies entspricht projektspezifisch der npm-Oberfläche aus der Baseline.
 
-| Aufgabe                         | Befehl                                                | Umfang                                                          |
-| ------------------------------- | ----------------------------------------------------- | --------------------------------------------------------------- |
-| App-Pakete installieren         | `PY -m pip install -r requirements.txt`               | App ohne Formatierer                                            |
-| Entwicklung installieren        | `PY -m pip install -r requirements-dev.txt`, `npm ci` | Gepinnte Pakete                                                 |
-| Doctor                          | `PY tools/project.py doctor`                          | Exakte Runtimes, Pakete, Versionen                              |
-| Vollständiger Start             | `PY tools/project.py start`                           | Frontend und API gemeinsam                                      |
-| Entwicklung                     | `PY tools/project.py dev`                             | Startalias; kein Hot Reload                                     |
-| Formatieren                     | `PY tools/project.py format`                          | Ruff/Biome/Prettier; schreibt                                   |
-| Format prüfen                   | `PY tools/project.py check-format`                    | Dieselben Bereiche; schreibt nicht                              |
-| Statische Checks                | `PY tools/project.py check`                           | Doctor, Formatchecks, Python-Syntax mittels AST                 |
-| Tests                           | `PY tools/project.py test`                            | `unittest discover -s tests -v`; getrennt von `check`           |
-| Version prüfen                  | `PY tools/project.py check-version`                   | VERSION/Manifest/Lock stimmen überein                           |
-| Version vorbereiten             | `PY tools/project.py set-version patch`               | Auch minor, major oder höhere stabile Version                   |
-| Produktions-Build               | Nicht vorhanden                                       | Flask liefert gepflegte Quellen direkt aus                      |
-| Ende-zu-Ende-Suite              | Offen                                                 | Keine vollständige Browser-/Fachsuite                           |
-| Release-Preflight / Publikation | `tools/release.py` und `tools/publish_release.py`     | Tag-/Quell-/Artefaktvertrag; Aufruf und Grenzen im CI/CD-Profil |
+| Aufgabe                         | Befehl                                                | Umfang                                                                          |
+| ------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------- |
+| App-Pakete installieren         | `PY -m pip install -r requirements.txt`               | App ohne Formatierer                                                            |
+| Entwicklung installieren        | `PY -m pip install -r requirements-dev.txt`, `npm ci` | Gepinnte Pakete                                                                 |
+| Doctor                          | `PY tools/project.py doctor`                          | Exakte Runtimes, Pakete, Versionen                                              |
+| Vollständiger Start             | `PY tools/project.py start`                           | Frontend und API gemeinsam                                                      |
+| Entwicklung                     | `PY tools/project.py dev`                             | Startalias; kein Hot Reload                                                     |
+| Formatieren                     | `PY tools/project.py format`                          | Ruff/Biome/Prettier; schreibt                                                   |
+| Format prüfen                   | `PY tools/project.py check-format`                    | Dieselben Bereiche; schreibt nicht                                              |
+| Statische Checks                | `PY tools/project.py check`                           | Doctor, Formatchecks, Python-Syntax mittels AST                                 |
+| Tests                           | `PY tools/project.py test`                            | Einmalige unittest-Entdeckung; leere Suite ist ein Fehler; getrennt von `check` |
+| Version prüfen                  | `PY tools/project.py check-version`                   | VERSION/Manifest/Lock stimmen überein                                           |
+| Version vorbereiten             | `PY tools/project.py set-version patch`               | Auch minor, major oder höhere stabile Version                                   |
+| Produktions-Build               | `tools/release.py build`, `docker build`              | Quell-ZIP und Linux/amd64-Image; genaue Aufrufe im CI/CD-Workflow               |
+| Ende-zu-Ende-Suite              | Offen                                                 | Keine vollständige Browser-/Fachsuite                                           |
+| Release-Preflight / Publikation | `tools/release.py` und `tools/publish_release.py`     | Tag-/Quell-/Artefaktvertrag; Aufruf und Grenzen im CI/CD-Profil                 |
 
 `check` ist weder ein Testlauf noch ein Linter-/Typechecker-Lauf oder Release-Gate. Isolierte npm-Skripte `format:web`, `check:format:web`, `format:docs` und `check:format:docs` prüfen nur ihren Teilbereich. Die Python-Sammelbefehle sind für den gesamten Bestand maßgeblich. `.github/workflows/check.yml` installiert die Pins und führt `check` sowie `test` getrennt aus; eine vorhandene Konfiguration ist kein Nachweis eines bereits ausgeführten Remote-CI-Laufs.
 

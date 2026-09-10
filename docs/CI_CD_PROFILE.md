@@ -6,8 +6,12 @@ their adopted baseline **1.0.0**. The test-runner change is the explicitly inclu
 tooling dependency; existing local runtime, version-update and formatter contracts
 remain in [PROJECT_PROFILE.md](PROJECT_PROFILE.md).
 
-Scope status: **partial, implementation under validation**. A passing branch CI
-does not prove a completed production publication or remotely enforced branch rules.
+Scope status: **partial; CI and artifacts verified, publication pending**. GitHub
+[run 34475505106](https://github.com/Tim3399/schedule1_calc/actions/runs/34475505106)
+passed all 42 tests on each platform, both packaged application smokes and the
+aggregate gate for commit `92c8a8d11ba8036c36e0318e9850073ba105a030`.
+Branch protection was enabled and read back on 2026-09-10. A passing CI run does
+not prove a completed production publication.
 
 ## Continuous integration
 
@@ -25,6 +29,11 @@ The test command discovers once and fails when no tests are found. Failed tests 
 discovery import errors remain failures. Both matrix platforms complete independently.
 The aggregate runs even after failures and rejects skipped or cancelled dependencies.
 No path-filtered workflow can leave its required result permanently pending.
+
+`main` requires **Project checks**, bound to the GitHub Actions application, and
+an up-to-date branch before merging. These rules apply to administrators as well.
+Force pushes and deletion of `main` are disabled. No additional review-count
+requirement is configured.
 
 The shared setup action uses the existing exact Python/Node/npm and dependency pins.
 Every external action is pinned to a verified commit; checkout/setup-node and
@@ -112,8 +121,8 @@ Declared exceptions and remaining evidence:
 - Container signing is not currently required by this project's distribution policy;
   digests and trusted producer identity are verified. Introducing signing is a
   separate profile change and must not gain an unsigned fallback.
-- Branch protection was read on 2026-09-10: `main` had no protection and no rulesets.
-  The intended required check is **Project checks**. Remote enforcement is pending.
+- Remote branch protection was enabled and verified on 2026-09-10 as described
+  above. No version tag or production publication was created for the CI migration.
 - Local actionlint 1.7.12 does not yet recognize GitHub's documented `queue` key.
   Validation suppresses only that exact unsupported-key diagnostic; hosted execution
   and the official concurrency documentation are separate evidence.
