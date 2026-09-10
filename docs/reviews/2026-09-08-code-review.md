@@ -2,7 +2,9 @@
 
 Ausgangspunkt ist Commit `8639d74`. Geprüft wurde die vorhandene Fachlogik von `schedule1_calc`, einschließlich Flask-Routen, tatsächlich eingebundenem JavaScript, Jinja-Template, CLI, Lookup-Modellen und sämtlichen SQLite-Helfern. Die Stellenangaben beziehen sich auf den Arbeitsstand nach der mechanischen Formatierung vom 08.09.2026. Dieser Bericht verändert keine Fachlogik. Die parallel übernommenen Quiltor-Konventionen und das neue Tooling wurden zusätzlich unabhängig geprüft; das Ergebnis steht am Ende.
 
-Die wesentlichen Probleme sind eine unbeschränkte Vollsuche im HTTP-Request, ein im Frontend verborgenes profitableres Ergebnis, falsche Erfolgsmeldungen für ungültige Eingaben sowie Such- und Datenbankpfade, die vorhandene Lösungen beziehungsweise aktualisierte Stammdaten nicht korrekt berücksichtigen.
+Die ursprünglichen wesentlichen Probleme waren eine unbeschränkte Vollsuche im HTTP-Request, ein im Frontend verborgenes profitableres Ergebnis, falsche Erfolgsmeldungen für ungültige Eingaben sowie Such- und Datenbankpfade, die vorhandene Lösungen beziehungsweise aktualisierte Stammdaten nicht korrekt berücksichtigen.
+
+**Nachtrag vom 10.09.2026:** F01 (P1), F02/F03/F04 (P2) und F12 (P3) sind im lokalen Arbeitsstand behoben. Die übrigen sieben Befunde bleiben offen beziehungsweise teilweise bearbeitet. Die folgenden ursprünglichen Nachweise beschreiben den Stand vom 08.09.2026; Änderungen sind beim jeweiligen Befund vermerkt. Der Wiki-Abgleich wurde durch diesen Patch nicht verändert.
 
 ## Vorgehen und Aussagegrenzen
 
@@ -19,6 +21,10 @@ Die wesentlichen Probleme sind eine unbeschränkte Vollsuche im HTTP-Request, ei
 
 ### F01 · P1 · Eine zulässige Formulareingabe löst Milliarden Berechnungen im Request aus
 
+**Status am 10.09.2026: behoben.** Der übernommene Patch prüft vor der Enumeration ein Limit von 200.000 Kombinationen je Rezeptlänge mit begrenzter Multiplikation. Bei 16 Zutaten wird ab Länge fünf abgewiesen; Länge vier durchsucht einschließlich kürzerer Rezepte insgesamt 69.904 Kombinationen. Die JSON-Route liefert für die Budgetüberschreitung HTTP 400 mit einer Erklärung. Standardmäßig werden nur die beiden Gewinner gehalten; `collect_all_combinations=True` aktiviert die vollständige Sammlung für den Datenbankexport. Auch der HTML-POST verwendet die begrenzte Suche; im Zuge von F03/F12 wurden HTTP 400 und eine sichtbare Fehlermeldung ergänzt. Das Limit ist kein Gesamtbudget über alle Längen oder parallelen Requests.
+
+**Regressionstests:** `tests/test_calculator_budget.py` prüft die Ablehnung vor der Enumeration für JSON und HTML, die exakte Budgetgrenze, extrem große Größenangaben, identische Gewinner mit und ohne vollständige Sammlung sowie die ausdrückliche Sammlung beim Export. Die Flask-Requests und zulässigen kleinen Berechnungen laufen gegen die echte Anwendung; überschrittene Budgets werden ohne Ausführung der teuren Enumeration geprüft.
+
 **Stelle:** [calc_modifier.py](C:/Users/timra/git/schedule1_calc/src/functionality/calc_modifier.py:165), `_find_best_combinations`, Zeilen 165–170; anschließend wird jedes Ergebnis in `combinations_data` behalten.
 
 **Auslöser:** `POST /get_best_mix` mit `{"combination_size":8,"product_name":"og_kush","level":"max"}`. Acht ist auch über das normale Zahlenfeld zulässig. Die einzige obere Prüfung erlaubt bis zu 16, weil 16 Zutaten verfügbar sind.
@@ -30,6 +36,10 @@ Die wesentlichen Probleme sind eine unbeschränkte Vollsuche im HTTP-Request, ei
 **Mögliche Korrektur:** Vor dem Start den Suchraum begrenzen und eine verständliche 4xx-Antwort zurückgeben; für die interaktive Suche Gewinner laufend vergleichen, anstatt alle Rezepte zu sammeln. Eine umfassendere Suche benötigt eine geeignete Zustands-/Pruning-Strategie oder einen begrenzten Hintergrundjob. Eine reine HTML-Obergrenze reicht als serverseitiger Schutz nicht aus.
 
 ### F02 · P2 · Das Frontend zeigt das profitabelste berechnete Rezept nicht an
+
+**Status am 10.09.2026: behoben.** Die Weboberfläche zeigt beide Optimierungsziele mit getrennten Überschriften und vollständigen Rezeptangaben. Das gilt sowohl für die AJAX-Antwort als auch für den HTML-POST ohne JavaScript. Verkaufspreis, Zutatenkosten und Gewinn werden mit zwei Nachkommastellen angezeigt. Auch bei identischen Gewinnern bleiben beide Ziele sichtbar. Die Berechnung und die Definition des Gewinns wurden nicht geändert. Die folgenden Angaben dokumentieren den ursprünglichen Befund.
+
+**Nachprüfung:** Zwei Flask-Regressionstests in `tests/test_result_rendering.py` sichern den HTML-POST für unterschiedliche und identische Gewinner ab. Im echten Browser wurde zusätzlich der JavaScript-Pfad mit dem untenstehenden Beispiel (69,40 gegenüber 72,30 Gewinn), einem identischen Gewinner und einer anschließenden Budgetüberschreitung geprüft. Wiederholte Anfragen ersetzen die bisherigen Ergebnisse; die Budgetfehlermeldung bleibt sichtbar. API-Werte und Fehlertexte werden im JavaScript über `textContent` eingefügt.
 
 **Stelle:** [script.js](C:/Users/timra/git/schedule1_calc/webapp/static/js/script.js:28), Ergebnis-Rendering, Zeilen 28–35; gleicher Sachverhalt im [Template](C:/Users/timra/git/schedule1_calc/webapp/templates/index.html:34), Zeilen 34–41.
 
@@ -49,6 +59,10 @@ Auch bei Rundung der Verkaufspreise auf ganze Dollar bleibt das zweite Rezept um
 **Mögliche Korrektur:** `best_profit` zusätzlich sichtbar rendern und beide Optimierungsziele eindeutig beschriften, oder Gewinn als voreingestelltes Ziel verwenden. Auch den HTML-POST-Pfad berücksichtigen.
 
 ### F03 · P2 · Ungültige Größen erzeugen erfolgreiche Nullrezepte; andere Eingabefehler werden zu HTTP 500
+
+**Status am 10.09.2026: behoben.** JSON- und Formularanfragen validieren Pflichtfelder, Typen und bekannte Produkte/Ränge vor der Berechnung. Positive Ganzzahlen und ganzzahlige Zeichenfolgen bleiben zulässig; Boolean-Werte, Dezimalzahlen, nichtpositive Größen und unbekannte Angaben werden mit HTTP 400 abgewiesen. Die JSON-Route verlangt ein JSON-Objekt; fehlerhafte JSON-Syntax liefert 400, ein ungeeigneter Content-Type 415. Unerwartete interne Fehler bleiben HTTP 500 mit einer allgemeinen Meldung. Der Serializer erzeugt aus fehlenden Gewinnern keine künstlichen Nullrezepte mehr. Die zunächst beibehaltene Zutatenanzahl-Grenze wurde anschließend im Rahmen von F04 entfernt; das P1-Budget bleibt maßgeblich. Die nachstehende Tabelle dokumentiert den ursprünglichen Stand.
+
+**Nachprüfung:** Zwölf Regressionstests in `tests/test_request_validation.py` prüfen unter anderem Typ-/Wertefehler vor der Berechnung, 5.000-stellige Größenangaben, gültige normalisierte Namen und numerische Ränge, JSON-Syntax und Content-Type sowie interne Fehler und fehlende Gewinner. Formularmeldungen werden escaped innerhalb des Ergebniscontainers ausgegeben. Im echten Browser wurden die Mindestgröße, eine Budgetfehlermeldung und anschließend wieder die korrekten beiden Gewinner geprüft.
 
 **Stelle:** [app.py](C:/Users/timra/git/schedule1_calc/webapp/app.py:64), `get_best_mix_json`, Zeilen 64–70 sowie der Fallback in Zeilen 82–89. Im HTML-Pfad steht die Konvertierung bereits vor dem `try`, Zeilen 16–21.
 
@@ -71,6 +85,12 @@ Auch bei Rundung der Verkaufspreise auf ganze Dollar bleibt das zweite Rezept um
 
 ### F04 · P2 · Die Anzahl unterschiedlicher Zutaten begrenzt fälschlich die Rezeptlänge
 
+**Status am 10.09.2026: behoben.** Die Best-Mix-Suche, die Minimumsuche und die gemeinsame Webvalidierung begrenzen Rezeptlängen nicht mehr durch die Anzahl unterschiedlicher Zutaten. Wiederholungen bleiben geordnet; die Suche berücksichtigt weiterhin alle kürzeren Rezeptlängen. Die maximal berechenbare Länge wird vor der Enumeration aus dem Budget bestimmt, ohne eine Potenz mit einem beliebig großen Exponenten auszurechnen. Der Schutz gilt auch für die Minimumsuche. Die folgende Beschreibung dokumentiert den ursprünglichen Befund.
+
+**Budgetgrenzen:** Bei mindestens zwei verfügbaren Zutaten gilt unverändert das Kombinationslimit je Rezeptlänge. Für genau eine Zutat begrenzt dasselbe Budget stattdessen die Summe der verarbeiteten Zutaten über alle Rezeptlängen (`1 + 2 + ... + n`); damit bleibt auch dieser Sonderfall endlich. Eine leere Zutatenmenge wird vor der Enumeration abgewiesen. Diese Schutzregeln ändern keine Spieldaten.
+
+**Nachprüfung:** `tests/test_repeated_ingredients.py` prüft echte Berechnungen einschließlich der vollständigen Sammlung aller 1.024 Fünf-Schritt-Folgen auf Level eins, beide HTTP-Routen und das bekannte Minimalrezept. Weitere Fälle sichern leere und einzelne Zutaten sowie extrem große Größenangaben ohne proportional lange Vorprüfung ab.
+
 **Stelle:** [calc_modifier.py](C:/Users/timra/git/schedule1_calc/src/functionality/calc_modifier.py:148), `_find_best_combinations`, Zeilen 148–151, und `find_min_substances_for_effect`, Zeile 300.
 
 **Auslöser:** Auf Level eins sind vier Zutaten verfügbar. `get_best_mix(5, "og_kush", 1)` wirft `Not enough substances available`, obwohl die eigentliche Enumeration ausdrücklich Wiederholungen mit `product(..., repeat=size)` erlaubt.
@@ -82,6 +102,8 @@ Auch bei Rundung der Verkaufspreise auf ganze Dollar bleibt das zweite Rezept um
 **Mögliche Korrektur:** Rezeptlänge unabhängig von der Anzahl unterschiedlicher Zutaten validieren; stattdessen ein explizites Suchbudget verwenden. Das Budgetproblem aus F01 bleibt dabei getrennt zu lösen.
 
 ### F05 · P2 · Eine aus Budgetgründen ausgelassene Suche wird als erfolglose vollständige Suche ausgegeben
+
+**Weiterhin offen nach F04:** Die Minimumsuche begrenzt ihre Schleife jetzt vorab auf budgetkonforme Längen. Ein erfolgloser, aber unvollständiger Suchlauf liefert weiterhin `(0, [])`; das Ergebnis unterscheidet ein Budgetende noch nicht von einem vollständigen Negativnachweis.
 
 **Stelle:** [calc_modifier.py](C:/Users/timra/git/schedule1_calc/src/functionality/calc_modifier.py:302), `find_min_substances_for_effect`, Zeilen 302–307 und 339–341.
 
@@ -171,6 +193,8 @@ Die Funktion liefert neun Effekte und Modifikator 3,16: `spicy`, `sneaky`, `bald
 **Mögliche Korrektur:** Einmal am Eingang normalisieren und den kanonischen Namen weiterreichen; fehlende Produkte explizit behandeln und Verbindungen auch bei Ausnahmen schließen.
 
 ### F12 · P3 · Der HTML-POST-Pfad verschweigt berechenbare Eingabefehler
+
+**Status am 10.09.2026: zusammen mit F03 behoben.** Das Template zeigt Formularfehler sichtbar und HTML-escaped an. Ungültige Eingaben und Budgetüberschreitungen liefern HTTP 400, interne Fehler eine allgemeine Meldung mit HTTP 500. Die folgenden Angaben dokumentieren den ursprünglichen Befund.
 
 **Stelle:** [index.html](C:/Users/timra/git/schedule1_calc/webapp/templates/index.html:33), Ergebnisbereich Zeilen 33–42; `index()` übergibt bei Fehlern zwar `error`, das Template liest diesen Wert jedoch nirgends.
 
