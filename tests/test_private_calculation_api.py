@@ -127,7 +127,7 @@ class PrivateCalculationApiTests(unittest.TestCase):
         self.assertEqual(json_response.status_code, 200)
         self.assertEqual(html_response.status_code, 200)
         self.assertEqual(json_response.get_json()["best_profit"]["substances"], ["cuke"])
-        self.assertIn("cuke", html_response.get_data(as_text=True))
+        self.assertIn("Cuke", html_response.get_data(as_text=True))
         self.assertEqual(calculate.call_count, 2)
 
 

@@ -15,10 +15,87 @@ document.addEventListener("DOMContentLoaded", function () {
     parent.appendChild(element);
   }
 
-  function renderCombination(title, combination) {
+  function humanizeIdentifier(identifier) {
+    const overrides = {
+      high_quality_pesudo: "High Quality Pseudo",
+      low_quality_pesudo: "Low Quality Pseudo",
+    };
+    if (Object.hasOwn(overrides, identifier)) {
+      return overrides[identifier];
+    }
+    const romanRanks = new Set(["i", "ii", "iii", "iv", "v"]);
+    return identifier
+      .split("_")
+      .map((word) => {
+        const suffix = word.endsWith("+") ? "+" : "";
+        const base = suffix ? word.slice(0, -1) : word;
+        if (base === "og" || romanRanks.has(base)) {
+          return `${base.toUpperCase()}${suffix}`;
+        }
+        return `${base.charAt(0).toUpperCase()}${base.slice(1)}${suffix}`;
+      })
+      .join(" ");
+  }
+
+  function displayName(catalog, collectionName, identifier) {
+    const collection = catalog?.[collectionName];
+    const item = Array.isArray(collection)
+      ? collection.find(
+          (entry) => entry !== null && typeof entry === "object" && entry.name === identifier,
+        )
+      : undefined;
+    return typeof item?.display_name === "string" && item.display_name
+      ? item.display_name
+      : humanizeIdentifier(identifier);
+  }
+
+  function readableMessage(message, catalog) {
+    let readable = message;
+    const entries = [];
+    const levelNames = catalog?.level_display_names;
+    if (levelNames !== null && typeof levelNames === "object" && !Array.isArray(levelNames)) {
+      entries.push(...Object.entries(levelNames));
+    }
+    for (const collectionName of ["effects", "products", "substances"]) {
+      const collection = catalog?.[collectionName];
+      if (!Array.isArray(collection)) {
+        continue;
+      }
+      for (const item of collection) {
+        if (item !== null && typeof item === "object") {
+          entries.push([item.name, item.display_name]);
+        }
+      }
+    }
+    const validEntries = entries
+      .filter(
+        ([identifier, label]) =>
+          typeof identifier === "string" &&
+          identifier.length > 0 &&
+          typeof label === "string" &&
+          label.length > 0,
+      )
+      .sort(([left], [right]) => right.length - left.length);
+    for (const [identifier, label] of validEntries) {
+      const escaped = identifier.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const token = new RegExp(`(^|[^a-z0-9_+])${escaped}(?=$|[^a-z0-9_+])`, "g");
+      readable = readable.replace(token, (match, prefix) => `${prefix}${label}`);
+    }
+    return readable.replace(/\b[a-z0-9]+(?:_[a-z0-9+]+)+\b/g, humanizeIdentifier);
+  }
+
+  function renderCombination(title, combination, catalog) {
     appendTextElement(resultDiv, "h2", title);
-    appendTextElement(resultDiv, "p", `Effects: ${combination.effects.join(", ")}`);
-    appendTextElement(resultDiv, "p", `Ingredients: ${combination.substances.join(", ")}`);
+    appendTextElement(
+      resultDiv,
+      "p",
+      `Effects: ${combination.effects.map((name) => displayName(catalog, "effects", name)).join(", ")}`,
+    );
+    appendTextElement(
+      resultDiv,
+      "p",
+      `Ingredients: ${combination.substances.map((name) => displayName(catalog, "substances", name)).join(", ")}`,
+    );
     appendTextElement(resultDiv, "p", `Modifier: ${combination.modifier.toFixed(2)}`);
     appendTextElement(resultDiv, "p", `Sell Price: ${combination.sell_price.toFixed(2)}$`);
     appendTextElement(resultDiv, "p", `Ingredient Cost: ${combination.substance_cost.toFixed(2)}$`);
@@ -65,7 +142,9 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
     stopRun(run);
-    renderMessage(`${message} No result was produced.`, { error: true });
+    renderMessage(`${readableMessage(message, run.catalog)} No result was produced.`, {
+      error: true,
+    });
   }
 
   function isCombination(combination) {
@@ -104,16 +183,16 @@ document.addEventListener("DOMContentLoaded", function () {
     );
   }
 
-  function renderResult(result, requestedMode) {
+  function renderResult(result, requestedMode, catalog) {
     resultDiv.replaceChildren();
     if (requestedMode === "exact") {
       appendTextElement(resultDiv, "p", "Optimality proven");
-      renderCombination("Best Modifier Combination", result.best_modifier);
-      renderCombination("Best Profit Combination", result.best_profit);
+      renderCombination("Best Modifier Combination", result.best_modifier, catalog);
+      renderCombination("Best Profit Combination", result.best_profit, catalog);
     } else {
       appendTextElement(resultDiv, "p", "Approximate result — optimality not guaranteed");
-      renderCombination("Highest modifier found", result.best_modifier);
-      renderCombination("Highest profit found", result.best_profit);
+      renderCombination("Highest modifier found", result.best_modifier, catalog);
+      renderCombination("Highest profit found", result.best_profit, catalog);
     }
   }
 
@@ -165,6 +244,7 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
     const worker = new Worker(workerUrl);
+    run.catalog = catalog;
     run.worker = worker;
     worker.addEventListener("message", function (event) {
       const message = event.data;
@@ -182,7 +262,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
         const result = message.result;
         stopRun(run);
-        renderResult(result, run.mode);
+        renderResult(result, run.mode, catalog);
         return;
       }
       if (message.type === "error") {
@@ -238,12 +318,13 @@ document.addEventListener("DOMContentLoaded", function () {
       abortController: new AbortController(),
       worker: null,
       watchdog: null,
+      catalog: null,
     };
     nextRequestId += 1;
     activeRun = run;
     setBusy(true);
     renderMessage("Loading search data for local computation…");
-    const timeout = mode === "exact" ? 95_000 : 20_000;
+    const timeout = mode === "exact" ? 305_000 : 20_000;
     run.watchdog = setTimeout(function () {
       failRun(run, "The local search timed out.");
     }, timeout);

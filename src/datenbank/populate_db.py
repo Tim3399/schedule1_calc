@@ -28,13 +28,13 @@ def _lookup_data():
     for product in products:
         if product.name in products_by_name:
             raise ValueError(f"Doppeltes Produkt im Lookup: {product.name}")
-        if product.level not in levels_by_id:
+        if product.level is not None and product.level not in levels_by_id:
             raise ValueError(
                 f"Produkt {product.name!r} verweist auf unbekanntes Level {product.level!r}"
             )
         products_by_name[product.name] = (
             float(product.base_sell_price),
-            float(product.buy_price),
+            float(product.buy_price) if product.buy_price is not None else None,
             product.level,
         )
         for effect_name in product.effects or []:

@@ -51,7 +51,7 @@ class DatabaseEntryTests(unittest.TestCase):
                     "side_effect_replacements",
                 }.issubset(tables)
             )
-            expected_counts = {"effects": 34, "products": 8, "substances": 16}
+            expected_counts = {"effects": 34, "products": 9, "substances": 16}
             for table, expected_count in expected_counts.items():
                 with self.subTest(table=table):
                     count = connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]

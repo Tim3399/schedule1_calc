@@ -56,6 +56,49 @@ assert.deepEqual(fast.best_modifier.substances, ["expensive", "expensive"]);
 assert.deepEqual(fast.best_profit.substances, ["cheap"]);
 assert.equal(fast.search.optimality_proven, false);
 
+// A deeper exact search may exceed the old 90-second budget, while preserving
+// both recipe tie rules and the optimum certificate after streaming two layers.
+let deepClock = 0;
+const deepRequest = { ...request, combination_size: 7 };
+const deepExact = engine.search(tieCatalog, deepRequest, {
+  now: () => deepClock,
+  onProgress: ({ phase }) => {
+    if (phase === "complete") deepClock = 120000;
+  },
+});
+assert.equal(deepExact.stats.frontier_depth, 5);
+assert.equal(deepExact.search.optimality_proven, true);
+assert.deepEqual(deepExact.best_modifier.substances, Array(7).fill("expensive"));
+assert.deepEqual(deepExact.best_profit.substances, ["cheap"]);
+const oneLayer = engine.search(tieCatalog, deepRequest, { tail_depth: 1 });
+assert.equal(oneLayer.stats.frontier_depth, 6);
+assert.deepEqual(deepExact.best_modifier, oneLayer.best_modifier);
+assert.deepEqual(deepExact.best_profit, oneLayer.best_profit);
+
+for (const [searchMode, deadline] of [
+  ["exact", 300000],
+  ["fast", 15000],
+]) {
+  let clock = 0;
+  assert.throws(
+    () =>
+      engine.search(
+        tieCatalog,
+        { ...deepRequest, search_mode: searchMode },
+        {
+          now: () => clock,
+          onProgress: ({ phase }) => {
+            if (phase === "complete") clock = deadline;
+          },
+        },
+      ),
+    (error) =>
+      error.reason === "time_limit" &&
+      error.best_modifier === undefined &&
+      error.best_profit === undefined,
+  );
+}
+
 const transitionCatalog = catalog(
   [
     { name: "a", modifier: 0.1, modifier_units: 10 },

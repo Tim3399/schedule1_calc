@@ -43,14 +43,14 @@ class ResultRenderingTests(unittest.TestCase):
         profit_result = html[profit_heading:]
 
         self.assertIn("Effects:", modifier_result)
-        self.assertIn("Ingredients: horse_semen, mega_bean", modifier_result)
+        self.assertIn("Ingredients: Horse Semen, Mega Bean", modifier_result)
         self.assertIn("Modifier:", modifier_result)
         self.assertIn("Sell Price: 85.40$", modifier_result)
         self.assertIn("Ingredient Cost: 16.00$", modifier_result)
         self.assertIn("Profit: 69.40$", modifier_result)
 
         self.assertIn("Effects:", profit_result)
-        self.assertIn("Ingredients: viagra, mega_bean", profit_result)
+        self.assertIn("Ingredients: Viagra, Mega Bean", profit_result)
         self.assertIn("Modifier:", profit_result)
         self.assertIn("Sell Price: 83.30$", profit_result)
         self.assertIn("Ingredient Cost: 11.00$", profit_result)
@@ -63,7 +63,25 @@ class ResultRenderingTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertEqual(html.count("<h2>Best Modifier Combination</h2>"), 1)
         self.assertEqual(html.count("<h2>Best Profit Combination</h2>"), 1)
-        self.assertEqual(html.count("Ingredients: mega_bean"), 2)
+        self.assertEqual(html.count("Ingredients: Mega Bean"), 2)
+
+    def test_get_renders_readable_product_and_level_names_with_stable_values(self):
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn('<option value="og_kush">OG Kush</option>', html)
+        self.assertIn('<option value="green_crack">Green Crack</option>', html)
+        self.assertIn('<option value="street_rat_i">Street Rat I</option>', html)
+        self.assertIn("up to 5 minutes", html)
+
+    def test_html_validation_error_does_not_show_a_raw_identifier(self):
+        response = self.post_mix(1, "motor_oil", "street_rat_i")
+
+        self.assertEqual(response.status_code, 400)
+        html = response.get_data(as_text=True)
+        self.assertIn("Unknown product: Motor Oil.", html)
+        self.assertNotIn("Unknown product: motor_oil.", html)
 
 
 if __name__ == "__main__":

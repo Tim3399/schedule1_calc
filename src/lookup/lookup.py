@@ -143,6 +143,7 @@ products: List[Product] = [
     # meth
     Product(
         name="low_quality_pesudo",
+        display_name="Meth (Low-Quality Pseudo)",
         base_sell_price=Decimal("70.00"),
         buy_price=Decimal("60.00"),
         level=level_name_to_int["hoodium_i"],
@@ -151,6 +152,7 @@ products: List[Product] = [
     ),
     Product(
         name="pseudo",
+        display_name="Meth (Pseudo)",
         base_sell_price=Decimal("70.00"),
         buy_price=Decimal("80.00"),
         level=level_name_to_int["hustler_iii"],
@@ -159,6 +161,7 @@ products: List[Product] = [
     ),
     Product(
         name="high_quality_pesudo",
+        display_name="Meth (High-Quality Pseudo)",
         base_sell_price=Decimal("70.00"),
         buy_price=Decimal("110.00"),
         level=level_name_to_int["bagman_v"],
@@ -171,6 +174,16 @@ products: List[Product] = [
         base_sell_price=Decimal("150.00"),
         buy_price=Decimal("0.00"),
         level=level_name_to_int["enforcer_i"],
+        effects=[],
+        quality=quality_name_to_int["n_a"],
+    ),
+    # shrooms
+    Product(
+        name="shroom",
+        display_name="Shrooms",
+        base_sell_price=Decimal("65.00"),
+        buy_price=None,
+        level=None,
         effects=[],
         quality=quality_name_to_int["n_a"],
     ),

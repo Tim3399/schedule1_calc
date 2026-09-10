@@ -8,9 +8,9 @@
   const EXACT_DEFAULTS = Object.freeze({
     tail_depth: 1,
     cache_limit: 32768,
-    work_limit: 20000000,
+    work_limit: 200000000,
     frontier_limit: 300000,
-    time_limit_seconds: 90,
+    time_limit_seconds: 300,
   });
   const FAST_DEFAULTS = Object.freeze({
     beam_width: 1024,
@@ -728,7 +728,12 @@
     }
     const available = model.substances.filter((substance) => substance.level <= level);
     if (available.length === 0) throw new TypeError("no substances are available at this level");
-    const defaults = request.search_mode === "exact" ? EXACT_DEFAULTS : FAST_DEFAULTS;
+    // Stream two final layers for deeper exact searches instead of retaining the
+    // much larger penultimate frontier. Explicit test/tool options still win.
+    const defaults =
+      request.search_mode === "exact"
+        ? { ...EXACT_DEFAULTS, tail_depth: size >= 7 ? 2 : 1 }
+        : FAST_DEFAULTS;
     const options = { ...defaults, ...suppliedOptions };
     requireInteger(options.work_limit, "work_limit", 1);
     requirePositiveNumber(options.time_limit_seconds, "time_limit_seconds");

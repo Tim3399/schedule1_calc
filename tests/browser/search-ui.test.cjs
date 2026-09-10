@@ -52,11 +52,12 @@ function successfulResult(mode = "exact") {
   };
 }
 
-function loadUi() {
+function loadUi(catalog = {}, mode = "exact") {
   const domReady = [];
   const fetchCalls = [];
   const workers = [];
   let nextTimer = 1;
+  const timers = [];
   const submitButton = element({ disabled: true });
   const cancelButton = element({ hidden: true });
   const result = element();
@@ -73,7 +74,7 @@ function loadUi() {
     level: element({ value: "street_rat_i" }),
     "combination-size": element({ value: "2" }),
     "product-name": element({ value: "og_kush" }),
-    "search-mode": element({ value: "exact" }),
+    "search-mode": element({ value: mode }),
   };
 
   class FakeWorker {
@@ -114,11 +115,12 @@ function loadUi() {
     },
     fetch: async (url, options) => {
       fetchCalls.push({ url: url, options: options });
-      return { ok: true, json: async () => ({ version: "test" }) };
+      return { ok: true, json: async () => catalog };
     },
-    setTimeout() {
+    setTimeout(callback, delay) {
       const timer = nextTimer;
       nextTimer += 1;
+      timers.push({ callback: callback, delay: delay });
       return timer;
     },
     clearTimeout() {},
@@ -134,6 +136,7 @@ function loadUi() {
     form,
     result,
     submitButton,
+    timers,
     workers,
   };
 }
@@ -207,4 +210,74 @@ test("a result carrying an error never renders otherwise valid winners", async (
   assert.match(resultText(ui), /invalid or incomplete response/);
   assert.doesNotMatch(resultText(ui), /Best Profit Combination/);
   assert.equal(worker.terminateCalls, 1);
+});
+
+test("result IDs render with catalog display names and readable unknown fallbacks", async () => {
+  const ui = loadUi({
+    effects: [{ name: "energizing", display_name: "Energizing" }],
+    substances: [{ name: "cuke", display_name: "Cuke" }],
+  });
+  await ui.form.listeners.submit(submitEvent());
+  const worker = ui.workers[0];
+  const result = successfulResult();
+  result.best_profit = {
+    ...result.best_profit,
+    effects: ["bright_eyed"],
+    substances: ["motor_oil", "constructor"],
+  };
+
+  worker.emit({ type: "result", request_id: worker.sent[0].request_id, result: result });
+
+  assert.match(resultText(ui), /Effects: Energizing/);
+  assert.match(resultText(ui), /Ingredients: Cuke/);
+  assert.match(resultText(ui), /Effects: Bright Eyed/);
+  assert.match(resultText(ui), /Ingredients: Motor Oil, Constructor/);
+  assert.doesNotMatch(resultText(ui), /bright_eyed|motor_oil/);
+});
+
+test("exact and fast searches keep their distinct watchdog budgets", async () => {
+  const exactUi = loadUi();
+  await exactUi.form.listeners.submit(submitEvent());
+  assert.equal(exactUi.timers[0].delay, 305_000);
+
+  const fastUi = loadUi({}, "fast");
+  await fastUi.form.listeners.submit(submitEvent());
+  assert.equal(fastUi.timers[0].delay, 20_000);
+});
+
+test("worker errors use readable catalog names at the display boundary", async () => {
+  const ui = loadUi({
+    level_display_names: { street_rat_i: "Street Rat I" },
+    substances: [{ name: "motor_oil", display_name: "Motor Oil" }],
+  });
+  await ui.form.listeners.submit(submitEvent());
+  const worker = ui.workers[0];
+
+  worker.emit({
+    type: "error",
+    request_id: worker.sent[0].request_id,
+    error: "motor_oilspill differs from motor_oil at street_rat_i",
+    search: { mode: "exact", status: "error", optimality_proven: false },
+  });
+
+  assert.match(resultText(ui), /Motor Oilspill differs from Motor Oil at Street Rat I/);
+  assert.doesNotMatch(resultText(ui), /motor_oil|street_rat_i/);
+});
+
+test("malformed catalog data cannot suppress a worker error", async () => {
+  const ui = loadUi({ effects: {}, substances: [null] });
+  await ui.form.listeners.submit(submitEvent());
+  const worker = ui.workers[0];
+
+  worker.emit({
+    type: "error",
+    request_id: worker.sent[0].request_id,
+    error: "catalog.effects must be an array",
+    search: { mode: "exact", status: "error", optimality_proven: false },
+  });
+
+  assert.match(resultText(ui), /catalog\.effects must be an array/);
+  assert.match(resultText(ui), /No result was produced/);
+  assert.equal(worker.terminateCalls, 1);
+  assert.equal(ui.submitButton.disabled, false);
 });

@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 from src.lookup import lookup
+from src.util.display_names import humanize_identifier, object_display_name
 
 MAX_SAFE_INTEGER = 2**53 - 1
 
@@ -30,9 +31,13 @@ def build_catalog():
         "effect_scale": 100,
         "money_scale": 100,
         "levels": dict(lookup.level_name_to_int),
+        "level_display_names": {
+            name: humanize_identifier(name) for name in lookup.level_name_to_int
+        },
         "effects": [
             {
                 "name": effect.name,
+                "display_name": object_display_name(effect),
                 "modifier": effect.modificator,
                 "modifier_units": _hundredths(effect.modificator),
             }
@@ -41,6 +46,7 @@ def build_catalog():
         "products": [
             {
                 "name": product.name,
+                "display_name": object_display_name(product),
                 "base_price_cents": _hundredths(product.base_sell_price),
                 "effects": list(product.effects or ()),
             }
@@ -49,6 +55,7 @@ def build_catalog():
         "substances": [
             {
                 "name": substance.name,
+                "display_name": object_display_name(substance),
                 "price_cents": _hundredths(substance.price),
                 "level": substance.level,
                 "resulting_effect": substance.resulting_effect,

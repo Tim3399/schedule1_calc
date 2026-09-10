@@ -20,7 +20,7 @@
         <label for="level">Level:</label>
         <select id="level" name="level" required>
           {% for level_name, level_id in level_name_to_int.items() %}
-          <option value="{{ level_name }}">{{ level_name }}</option>
+          <option value="{{ level_name }}">{{ display_lookup_name(level_name) }}</option>
           {% endfor %}
         </select>
 
@@ -37,16 +37,20 @@
         <label for="product-name">Product Name:</label>
         <select id="product-name" name="product_name" required>
           {% for product in products %}
-          <option value="{{ product.name }}">{{ product.name }}</option>
+          <option value="{{ product.name }}">{{ display_lookup_name(product.name) }}</option>
           {% endfor %}
         </select>
 
         <label for="search-mode">Search Mode:</label>
         <select id="search-mode" name="search_mode" required>
           {% if selected_search_mode | default('exact') == 'exact' %}
-          <option value="exact" selected>Exact — optimal result or no result at limit</option>
+          <option value="exact" selected>
+            Exact — optimal result or no result at limits (up to 5 minutes)
+          </option>
           {% else %}
-          <option value="exact">Exact — optimal result or no result at limit</option>
+          <option value="exact">
+            Exact — optimal result or no result at limits (up to 5 minutes)
+          </option>
           {% endif %} {% if selected_search_mode | default('exact') == 'fast' %}
           <option value="fast" selected>Fast — approximate, optimality not guaranteed</option>
           {% else %}
@@ -75,8 +79,8 @@
         {% else %}
         <h2>Best Modifier Combination</h2>
         {% endif %}
-        <p>Effects: {{ best_modifier.effects | join(', ') }}</p>
-        <p>Ingredients: {{ best_modifier.substances | join(', ') }}</p>
+        <p>Effects: {{ best_modifier.effects | map('display_lookup_name') | join(', ') }}</p>
+        <p>Ingredients: {{ best_modifier.substances | map('display_lookup_name') | join(', ') }}</p>
         <p>Modifier: {{ '%.2f' | format(best_modifier.modifier) }}</p>
         <p>Sell Price: {{ '%.2f' | format(best_modifier.sell_price) }}$</p>
         <p>Ingredient Cost: {{ '%.2f' | format(best_modifier.substance_cost) }}$</p>
@@ -88,8 +92,8 @@
         {% else %}
         <h2>Best Profit Combination</h2>
         {% endif %}
-        <p>Effects: {{ best_profit.effects | join(', ') }}</p>
-        <p>Ingredients: {{ best_profit.substances | join(', ') }}</p>
+        <p>Effects: {{ best_profit.effects | map('display_lookup_name') | join(', ') }}</p>
+        <p>Ingredients: {{ best_profit.substances | map('display_lookup_name') | join(', ') }}</p>
         <p>Modifier: {{ '%.2f' | format(best_profit.modifier) }}</p>
         <p>Sell Price: {{ '%.2f' | format(best_profit.sell_price) }}$</p>
         <p>Ingredient Cost: {{ '%.2f' | format(best_profit.substance_cost) }}$</p>

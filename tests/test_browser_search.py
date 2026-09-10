@@ -125,6 +125,20 @@ class BrowserSearchTests(unittest.TestCase):
                     },
                 }
             )
+        # Small ingredient pools keep deep comparisons cheap while exercising the
+        # browser's two-layer tail against Python's independently merged frontier.
+        for size in (7, 16):
+            fixtures.append(
+                {
+                    "label": f"exact:green_crack:street_rat_i:{size}",
+                    "request": {
+                        "combination_size": size,
+                        "product_name": "green_crack",
+                        "level": "street_rat_i",
+                        "search_mode": "exact",
+                    },
+                }
+            )
         for beam_width in (1, 64):
             for lookahead in (0, 1):
                 fixtures.append(

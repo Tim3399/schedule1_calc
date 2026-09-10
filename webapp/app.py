@@ -10,7 +10,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../src"
 from functionality.logging.logging_config import setup_logging
 from src.functionality.browser_catalog import get_catalog
 from src.functionality.mix_search import SearchIncomplete, get_best_mix
-from src.lookup.lookup import level_name_to_int, products
+from src.lookup.lookup import effects, level_name_to_int, products, substances
+from src.util.display_names import humanize_identifier, humanize_message, object_display_name
 
 logger = setup_logging()
 
@@ -53,6 +54,10 @@ _PRODUCT_NAMES = {product.name for product in products}
 _LEVEL_VALUES = set(level_name_to_int.values())
 _DIGITS = re.compile(r"[0-9]+")
 _INTERNAL_ERROR = "An internal error occurred while calculating the best mix."
+_DISPLAY_NAMES = {
+    item.name: object_display_name(item) for item in (*effects, *products, *substances)
+}
+_DISPLAY_NAMES.update({name: humanize_identifier(name) for name in level_name_to_int})
 
 
 def _normalize_name(value):
@@ -124,10 +129,18 @@ def _serialize_combination(result):
     }
 
 
+@app.template_filter("display_lookup_name")
+def _display_lookup_name(name):
+    return _DISPLAY_NAMES.get(name, humanize_identifier(name))
+
+
 def _template_context(**values):
+    if "error" in values:
+        values["error"] = humanize_message(values["error"])
     return {
         "level_name_to_int": level_name_to_int,
         "products": products,
+        "display_lookup_name": _display_lookup_name,
         "selected_search_mode": "exact",
         **values,
     }

@@ -116,6 +116,23 @@ class DatabaseSyncTests(unittest.TestCase):
         self.assertEqual(cached_effects, [(combination_id,)])
         self.assertEqual(level_51, ("kingpin_i+",))
 
+    def test_product_with_unknown_cost_and_unlock_stays_null_and_idempotent(self):
+        with self.connect() as connection:
+            shroom_before = connection.execute(
+                "SELECT product_id, buy_price, level_id FROM products WHERE name = 'shroom'"
+            ).fetchone()
+
+        populate_db.populate_database(self.db_path)
+
+        with self.connect() as connection:
+            shroom_after = connection.execute(
+                "SELECT product_id, buy_price, level_id FROM products WHERE name = 'shroom'"
+            ).fetchone()
+
+        self.assertIsNotNone(shroom_before)
+        self.assertEqual(shroom_before[1:], (None, None))
+        self.assertEqual(shroom_after, shroom_before)
+
     def test_changed_lookup_updates_full_reference_set_and_invalidates_cache(self):
         combination_id = self.seed_cache()
         effects, substances, products, levels = self.lookup_copy()
@@ -319,6 +336,14 @@ class DatabaseSyncTests(unittest.TestCase):
                 connection.execute("SELECT id FROM calculated_combinations").fetchall(),
                 [(combination_id,)],
             )
+
+    def test_unknown_non_null_product_level_remains_invalid(self):
+        effects, substances, products, levels = self.lookup_copy()
+        next(product for product in products if product.name == "og_kush").level = 999
+
+        with self.patched_lookup(effects, substances, products, levels):
+            with self.assertRaisesRegex(ValueError, "unbekanntes Level 999"):
+                populate_db.populate_database(self.db_path)
 
     def test_database_error_rolls_back_prior_changes_and_releases_connection(self):
         combination_id = self.seed_cache()

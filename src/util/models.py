@@ -16,16 +16,18 @@ class CombinationResult:
 class Effect:
     name: str
     modificator: float
+    display_name: str | None = None
 
 
 @dataclass
 class Product:
     name: str
     base_sell_price: Decimal
-    buy_price: Decimal
-    level: int
+    buy_price: Decimal | None
+    level: int | None
     effects: List[str] = None
     quality: int = -1
+    display_name: str | None = None
 
 
 @dataclass
@@ -35,3 +37,4 @@ class Substance:
     level: int
     resulting_effect: str
     side_effect_replacements: Dict[str, str]
+    display_name: str | None = None

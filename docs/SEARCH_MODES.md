@@ -4,11 +4,13 @@ Die Weboberfläche und `POST /get_best_mix` bieten die Modi `exact` und `fast`. 
 
 ## Berechnung auf dem Gerät des Besuchers
 
-Die Website lädt einmal die Regeln und Preise über `GET /search-data`. Jede Suche läuft anschließend in einem eigenen Browser-Worker aus `webapp/static/js/search-engine.js`; sie sendet keine Rechenanfrage an den Server. Die Seite bleibt bedienbar und zeigt Suchphase, Tiefe und Arbeitszähler. **Cancel search** beendet den Worker und verwirft alle Kandidaten. Ein neuer Lauf startet unabhängig; verspätete Nachrichten alter Läufe werden ignoriert.
+Die Website lädt einmal die Regeln und Preise über `GET /search-data`. Jede Suche läuft anschließend in einem eigenen Browser-Worker aus `webapp/static/js/search-engine.js`; sie sendet keine Rechenanfrage an den Server. Die Seite bleibt bedienbar und zeigt Tiefe und Arbeitszähler. **Cancel search** beendet den Worker und verwirft alle Kandidaten. Ein neuer Lauf startet unabhängig; verspätete Nachrichten alter Läufe werden ignoriert.
 
 Die Laufzeit und verfügbare Speichermenge hängen vom Gerät ab. JavaScript und Web Workers sind erforderlich; fehlende Unterstützung, Ladefehler, Abbruch und Zeitlimits lösen keinen Server-Fallback aus. Ohne JavaScript bleibt die Rechenschaltfläche gesperrt. Worker-Auslagerung und unmittelbares Beenden verwenden die [Web-Worker-API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers).
 
 Der Server erzeugt das schreibgeschützte Modell aus `src/lookup/lookup.py`, einschließlich geordneter Ersetzungsregeln und eines Modellhashs. Es gibt keine zweite manuell gepflegte Spieldatenliste. Die Skalen sind 100 Effektpunkte und 100 Cent pro Dollar. Geldwerte und Profitvergleiche verwenden exakt darstellbare ganzzahlige Zehntausendstel-Dollar; nicht darstellbare zukünftige Daten werden abgelehnt statt gerundet. Der Effekt-Multiplikator und sein Ranking behalten die kompensierte Float-Summierung von [CPython 3.12.14](https://github.com/python/cpython/blob/v3.12.14/Python/bltinmodule.c#L2464-L2497). Ein mathematisch gleicher Effektzuschlag darf dadurch weiterhin einen historisch unterschiedlichen Float-Gleichstand haben.
+
+Technische Kennungen bleiben in Anfragen, Suchregeln und gespeicherten Rezepten stabil. Ein eigener `display_name` bezeichnet Produkte, Zutaten und Effekte in der Oberfläche; die Rangnamen kommen aus `level_display_names`. So zeigt die Website beispielsweise „Motor Oil“ und „OG Kush“, während die API weiter `motor_oil` und `og_kush` verwendet. Der [Produktdaten-Audit](reviews/2026-09-10-product-catalog-update.md) dokumentiert die ergänzten Shrooms und die Grenzen des zugrunde liegenden Preismodells.
 
 ## Private Server-API
 
@@ -69,14 +71,17 @@ Die Felder `best_modifier` und `best_profit` fehlen dann vollständig. Ungültig
 
 ## Ressourcen und Rechenmodell
 
-Die Browser-Engine übernimmt die Suchgrenzen der Python-API aus `src/functionality/mix_search.py`:
+Die Browser-Suche erhält für den exakten Modus ein größeres Budget. Die private Python-API behält ihre bisherigen Grenzen aus `src/functionality/mix_search.py`; der Schnellmodus bleibt auf beiden Seiten unverändert:
 
-| Modus   |                                               Sucharbeit |        Zeit | Zustände                                                       |
-| ------- | -------------------------------------------------------: | ----------: | -------------------------------------------------------------- |
-| Exakt   |                           20 Millionen Übergangsanfragen | 90 Sekunden | 300.000 pro Präfixschicht, zwei Caches mit je 32.768 Einträgen |
-| Schnell | 2 Millionen Übergangsanfragen einschließlich Vorausblick | 15 Sekunden | Beam-Breite 1.024, temporäre Nachfolger zusätzlich             |
+| Modus              |                                               Sucharbeit |         Zeit | Zustände                                                       |
+| ------------------ | -------------------------------------------------------: | -----------: | -------------------------------------------------------------- |
+| Exakt, Browser     |                          200 Millionen Übergangsanfragen | 300 Sekunden | 300.000 pro Präfixschicht, zwei Caches mit je 32.768 Einträgen |
+| Exakt, private API |                           20 Millionen Übergangsanfragen |  90 Sekunden | 300.000 pro Präfixschicht, zwei Caches mit je 32.768 Einträgen |
+| Schnell, beide     | 2 Millionen Übergangsanfragen einschließlich Vorausblick |  15 Sekunden | Beam-Breite 1.024, temporäre Nachfolger zusätzlich             |
 
-Mehr als 16 Schritte überschreiten die derzeit unterstützte Größe und führen ebenfalls zu `incomplete`. Die exakte Suche streamt die letzte Schicht vollständig. Zeitkontrollen sind kooperativ: Python prüft im exakten Modus alle 1.024 Übergangsanfragen, die Browser-Engine vor jedem Übergang; beide prüfen zusätzlich vor Rückgabe. Die Oberfläche beendet einen hängenden Worker spätestens bei ihrer nächsten Zeitkontrolle nach 95 Sekunden (exakt) beziehungsweise 20 Sekunden (schnell), einschließlich Ladezeit. Hintergrund-Tabs können Browser-Timer verzögern. Dies sind Grenzen für Sucharbeit und Datenstrukturen, kein harter Betriebssystemschutz in Bytes. Der separate historische Messrunner hat zusätzlich einen Prozess-Speicherwächter; die Webanwendung übernimmt diesen Windows-spezifischen Wächter nicht.
+Mehr als 16 Schritte überschreiten die derzeit unterstützte Größe und führen ebenfalls zu `incomplete`. Die exakte Browser-Suche streamt ab sieben angeforderten Schritten die letzten zwei Schichten vollständig, bei kleineren Anfragen weiterhin nur die letzte. Dadurch entfällt die Speicherung der besonders großen vorletzten Schicht, allerdings werden mehr Übergänge erneut berechnet. Die Zustandsgrenze wird nicht erhöht. Das garantiert keine vollständige Suche für jede unterstützte Tiefe: Noch größere Präfixschichten können weiterhin das Zustandslimit erreichen. Die private API streamt unverändert eine letzte Schicht.
+
+Zeitkontrollen sind kooperativ: Python prüft im exakten Modus alle 1.024 Übergangsanfragen, die Browser-Engine vor jedem Übergang; beide prüfen zusätzlich vor Rückgabe. Die Oberfläche beendet einen hängenden Worker spätestens bei ihrer nächsten Zeitkontrolle nach 305 Sekunden (exakt) beziehungsweise 20 Sekunden (schnell), einschließlich Ladezeit. Hintergrund-Tabs können Browser-Timer verzögern. Dies sind Grenzen für Sucharbeit und Datenstrukturen, kein harter Betriebssystemschutz in Bytes. Der separate historische Messrunner hat zusätzlich einen Prozess-Speicherwächter; die Webanwendung übernimmt diesen Windows-spezifischen Wächter nicht.
 
 Die beiden Python-Engines erhalten die zentrale Preisberechnung als Pflichtfunktion. Diese berechnet Preise aus den einzelnen Effektwerten dezimal; die Float-Berechnung des angezeigten Multiplikators bleibt erhalten. Die Browser-Engine bildet diese Zahlenwerte mit den oben beschriebenen Ganzzahlen und der kompensierten Float-Summe nach. Unbelegte Rundung auf ganze Dollar wird nicht angenommen. Die alten Experimente und JSON-Messdaten dokumentieren ausdrücklich das damalige Float-Preismodell. Ihre Differentialtests und Messwerkzeuge verwenden `experiments/legacy_pricing.py`; die produktiven Suchmodi importieren keine Experimente. Alte Profittabellen sind daher keine neue Referenz für geänderte Preise oder Gleichstände.
 
