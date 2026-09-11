@@ -84,23 +84,27 @@ document.addEventListener("DOMContentLoaded", function () {
     return readable.replace(/\b[a-z0-9]+(?:_[a-z0-9+]+)+\b/g, humanizeIdentifier);
   }
 
-  function renderCombination(title, combination, catalog) {
-    appendTextElement(resultDiv, "h2", title);
+  function renderCombination(title, combination, catalog, destination = resultDiv) {
+    appendTextElement(destination, "h2", title);
     appendTextElement(
-      resultDiv,
+      destination,
       "p",
-      `Effects: ${combination.effects.map((name) => displayName(catalog, "effects", name)).join(", ")}`,
+      `Effects: ${combination.effects.map((name) => displayName(catalog, "effects", name)).join(", ") || "None"}`,
     );
     appendTextElement(
-      resultDiv,
+      destination,
       "p",
-      `Ingredients: ${combination.substances.map((name) => displayName(catalog, "substances", name)).join(", ")}`,
+      `Ingredients: ${combination.substances.map((name) => displayName(catalog, "substances", name)).join(", ") || "None"}`,
     );
-    appendTextElement(resultDiv, "p", `Modifier: ${combination.modifier.toFixed(2)}`);
-    appendTextElement(resultDiv, "p", `Sell Price: ${combination.sell_price.toFixed(2)}$`);
-    appendTextElement(resultDiv, "p", `Ingredient Cost: ${combination.substance_cost.toFixed(2)}$`);
+    appendTextElement(destination, "p", `Modifier: ${combination.modifier.toFixed(2)}`);
+    appendTextElement(destination, "p", `Sell Price: ${combination.sell_price.toFixed(2)}$`);
     appendTextElement(
-      resultDiv,
+      destination,
+      "p",
+      `Ingredient Cost: ${combination.substance_cost.toFixed(2)}$`,
+    );
+    appendTextElement(
+      destination,
       "p",
       `Profit: ${(combination.sell_price - combination.substance_cost).toFixed(2)}$`,
     );
@@ -347,6 +351,213 @@ document.addEventListener("DOMContentLoaded", function () {
     stopRun(run);
     renderMessage("Search cancelled. No result was produced.", { error: true });
   });
+
+  function initializeRecipeTab() {
+    const recipeForm = document.getElementById("recipe-form");
+    if (!recipeForm) {
+      return;
+    }
+    const tabs = [document.getElementById("search-tab"), document.getElementById("recipe-tab")];
+    const panels = [
+      document.getElementById("search-panel"),
+      document.getElementById("recipe-panel"),
+    ];
+    const product = document.getElementById("recipe-product");
+    const ingredient = document.getElementById("recipe-ingredient");
+    const addButton = document.getElementById("add-ingredient");
+    const clearButton = document.getElementById("clear-recipe");
+    const retryButton = document.getElementById("retry-recipe");
+    const steps = document.getElementById("recipe-steps");
+    const count = document.getElementById("recipe-count");
+    const empty = document.getElementById("recipe-empty");
+    const output = document.getElementById("recipe-result");
+    const recipe = [];
+    let catalog = null;
+    let loading = false;
+    let loadController = null;
+
+    function renderRecipe() {
+      output.replaceChildren();
+      try {
+        const result = window.Schedule1Search.evaluateRecipe(catalog, {
+          product_name: product.value,
+          substances: recipe,
+        });
+        renderCombination("Your Recipe Result", result, catalog, output);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Could not calculate this recipe.";
+        appendTextElement(output, "p", readableMessage(message, catalog));
+      }
+    }
+
+    function fillIngredients(select, selected) {
+      select.replaceChildren();
+      for (const substance of catalog.substances) {
+        const option = document.createElement("option");
+        option.value = substance.name;
+        option.textContent = `${displayName(catalog, "substances", substance.name)} — ${(substance.price_cents / 100).toFixed(2)}$`;
+        select.appendChild(option);
+      }
+      if (selected) {
+        select.value = selected;
+      }
+    }
+
+    function renderSteps(focusIndex = null, focusAction = "ingredient") {
+      steps.replaceChildren();
+      const focusTargets = [];
+      recipe.forEach((name, index) => {
+        const row = document.createElement("li");
+        const select = document.createElement("select");
+        select.setAttribute("aria-label", `Ingredient ${index + 1}`);
+        fillIngredients(select, name);
+        select.addEventListener("change", function () {
+          recipe[index] = select.value;
+          renderRecipe();
+        });
+        row.appendChild(select);
+        const controls = document.createElement("div");
+        controls.className = "recipe-step-controls";
+        const targets = { ingredient: select };
+        for (const [action, label, disabled] of [
+          ["up", "Move Up", index === 0],
+          ["down", "Move Down", index === recipe.length - 1],
+          ["remove", "Remove", false],
+        ]) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = label;
+          button.disabled = disabled;
+          button.setAttribute("aria-label", `${label} ingredient ${index + 1}`);
+          button.addEventListener("click", function () {
+            if (action === "remove") {
+              recipe.splice(index, 1);
+              renderSteps(Math.min(index, recipe.length - 1));
+            } else {
+              const next = index + (action === "up" ? -1 : 1);
+              [recipe[index], recipe[next]] = [recipe[next], recipe[index]];
+              renderSteps(next, action);
+            }
+            renderRecipe();
+          });
+          controls.appendChild(button);
+          targets[action] = button;
+        }
+        row.appendChild(controls);
+        steps.appendChild(row);
+        focusTargets.push(targets);
+      });
+      count.textContent = `(${recipe.length} ${recipe.length === 1 ? "ingredient" : "ingredients"})`;
+      clearButton.disabled = recipe.length === 0;
+      empty.hidden = recipe.length !== 0;
+      if (focusIndex !== null) {
+        const target = focusTargets[focusIndex]?.[focusAction];
+        (target && !target.disabled
+          ? target
+          : focusTargets[focusIndex]?.ingredient || ingredient
+        ).focus();
+      }
+    }
+
+    async function prepareRecipe() {
+      if (catalog || loading) {
+        return;
+      }
+      loading = true;
+      let loadTimeout = null;
+      retryButton.hidden = true;
+      output.replaceChildren();
+      appendTextElement(output, "p", "Loading recipe data for local computation…");
+      try {
+        if (typeof window.Schedule1Search?.evaluateRecipe !== "function") {
+          throw new Error("The recipe calculator could not load. Reload the page to try again.");
+        }
+        loadController = new AbortController();
+        loadTimeout = setTimeout(() => loadController.abort(), 15_000);
+        const loaded = await loadCatalog({ abortController: loadController });
+        window.Schedule1Search.validateCatalog(loaded, 0);
+        catalog = loaded;
+        fillIngredients(ingredient);
+        product.disabled = false;
+        ingredient.disabled = false;
+        addButton.disabled = false;
+        renderRecipe();
+      } catch (error) {
+        catalogCache = null;
+        output.replaceChildren();
+        const message =
+          error?.name === "AbortError"
+            ? "Loading recipe data was interrupted. Please try again."
+            : error instanceof Error
+              ? error.message
+              : "Could not load recipe data.";
+        appendTextElement(output, "p", readableMessage(message, catalog));
+        retryButton.hidden = false;
+      } finally {
+        clearTimeout(loadTimeout);
+        loading = false;
+      }
+    }
+
+    function selectTab(index, focus = false) {
+      tabs.forEach((tab, tabIndex) => {
+        const selected = index === tabIndex;
+        tab.setAttribute("aria-selected", String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+        panels[tabIndex].hidden = !selected;
+      });
+      if (focus) {
+        tabs[index].focus();
+      }
+      if (index === 1) {
+        if (activeRun) {
+          stopRun(activeRun);
+          renderMessage("Search cancelled when switching to Your Recipe. No result was produced.");
+        }
+        return prepareRecipe();
+      }
+    }
+
+    tabs.forEach((tab, index) => {
+      tab.addEventListener("click", () => selectTab(index));
+      tab.addEventListener("keydown", (event) => {
+        let next;
+        if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+          next = 1 - index;
+        } else if (event.key === "Home") {
+          next = 0;
+        } else if (event.key === "End") {
+          next = 1;
+        } else {
+          return;
+        }
+        event.preventDefault();
+        selectTab(next, true);
+      });
+    });
+    recipeForm.addEventListener("submit", function (event) {
+      event.preventDefault();
+      if (!catalog) {
+        return;
+      }
+      recipe.push(ingredient.value);
+      renderSteps();
+      renderRecipe();
+    });
+    product.addEventListener("change", renderRecipe);
+    clearButton.addEventListener("click", function () {
+      recipe.length = 0;
+      renderSteps();
+      renderRecipe();
+      ingredient.focus();
+    });
+    retryButton.addEventListener("click", prepareRecipe);
+    window.addEventListener("pagehide", function () {
+      loadController?.abort();
+    });
+  }
+
+  initializeRecipeTab();
 
   window.addEventListener("pagehide", function () {
     if (activeRun) {

@@ -51,7 +51,14 @@ def probe_application(base_url, *, timeout=2):
     root_status, _, root_body = _request(f"{base_url}/", timeout=timeout)
     if root_status != 200 or any(
         marker not in root_body
-        for marker in (b"Best Mix Calculator", b"data-worker-url", b"data-search-data-url")
+        for marker in (
+            b"Best Mix Calculator",
+            b"data-worker-url",
+            b"data-search-data-url",
+            b'id="recipe-tab"',
+            b'id="recipe-form"',
+            b"js/search-engine.js",
+        )
     ):
         raise SmokeError("GET / did not render the calculator")
 
@@ -77,7 +84,7 @@ def probe_application(base_url, *, timeout=2):
         raise SmokeError("browser search model is missing or incompatible")
 
     for filename, marker in (
-        ("search-engine.js", b"Schedule1Search"),
+        ("search-engine.js", b"evaluateRecipe"),
         ("search-worker.js", b"search-engine.js"),
         ("script.js", b"Worker"),
     ):

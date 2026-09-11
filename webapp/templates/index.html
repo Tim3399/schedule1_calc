@@ -10,97 +10,160 @@
     <div class="container">
       <h1>Best Mix Calculator</h1>
       <p>All mix calculations run locally on this device.</p>
-      <form
-        id="best-mix-form"
-        method="GET"
-        action="/"
-        data-search-data-url="{{ url_for('search_data_json') }}"
-        data-worker-url="{{ url_for('static', filename='js/search-worker.js') }}"
-      >
-        <label for="level">Level:</label>
-        <select id="level" name="level" required>
-          {% for level_name, level_id in level_name_to_int.items() %}
-          <option value="{{ level_name }}">{{ display_lookup_name(level_name) }}</option>
-          {% endfor %}
-        </select>
-
-        <label for="combination-size">Combination Size:</label>
-        <input
-          type="number"
-          id="combination-size"
-          name="combination_size"
-          min="1"
-          step="1"
-          required
-        />
-
-        <label for="product-name">Product Name:</label>
-        <select id="product-name" name="product_name" required>
-          {% for product in products %}
-          <option value="{{ product.name }}">{{ display_lookup_name(product.name) }}</option>
-          {% endfor %}
-        </select>
-
-        <label for="search-mode">Search Mode:</label>
-        <select id="search-mode" name="search_mode" required>
-          {% if selected_search_mode | default('exact') == 'exact' %}
-          <option value="exact" selected>
-            Exact — optimal result or no result at limits (up to 5 minutes)
-          </option>
-          {% else %}
-          <option value="exact">
-            Exact — optimal result or no result at limits (up to 5 minutes)
-          </option>
-          {% endif %} {% if selected_search_mode | default('exact') == 'fast' %}
-          <option value="fast" selected>Fast — approximate, optimality not guaranteed</option>
-          {% else %}
-          <option value="fast">Fast — approximate, optimality not guaranteed</option>
-          {% endif %}
-        </select>
-
-        <button type="submit" disabled>Get Best Mix</button>
-        <button type="button" id="cancel-search" hidden>Cancel Search</button>
-      </form>
-
-      <noscript>
-        <p>This calculator needs JavaScript to run the search on your device.</p>
-      </noscript>
-
-      <div id="result">
-        {% if error %}
-        <div class="error" role="alert">Error: {{ error }}</div>
-        {% endif %} {% if not error and search and search.status in ['optimal', 'approximate'] %} {%
-        if search.status == 'optimal' %}
-        <p>Optimality proven</p>
-        {% else %}
-        <p>Approximate result — optimality not guaranteed</p>
-        {% endif %} {% if best_modifier %} {% if search.mode == 'fast' %}
-        <h2>Highest modifier found</h2>
-        {% else %}
-        <h2>Best Modifier Combination</h2>
-        {% endif %}
-        <p>Effects: {{ best_modifier.effects | map('display_lookup_name') | join(', ') }}</p>
-        <p>Ingredients: {{ best_modifier.substances | map('display_lookup_name') | join(', ') }}</p>
-        <p>Modifier: {{ '%.2f' | format(best_modifier.modifier) }}</p>
-        <p>Sell Price: {{ '%.2f' | format(best_modifier.sell_price) }}$</p>
-        <p>Ingredient Cost: {{ '%.2f' | format(best_modifier.substance_cost) }}$</p>
-        <p>
-          Profit: {{ '%.2f' | format(best_modifier.sell_price - best_modifier.substance_cost) }}$
-        </p>
-        {% endif %} {% if best_profit %} {% if search.mode == 'fast' %}
-        <h2>Highest profit found</h2>
-        {% else %}
-        <h2>Best Profit Combination</h2>
-        {% endif %}
-        <p>Effects: {{ best_profit.effects | map('display_lookup_name') | join(', ') }}</p>
-        <p>Ingredients: {{ best_profit.substances | map('display_lookup_name') | join(', ') }}</p>
-        <p>Modifier: {{ '%.2f' | format(best_profit.modifier) }}</p>
-        <p>Sell Price: {{ '%.2f' | format(best_profit.sell_price) }}$</p>
-        <p>Ingredient Cost: {{ '%.2f' | format(best_profit.substance_cost) }}$</p>
-        <p>Profit: {{ '%.2f' | format(best_profit.sell_price - best_profit.substance_cost) }}$</p>
-        {% endif %} {% endif %}
+      <div class="calculator-tabs" role="tablist" aria-label="Calculator">
+        <button
+          type="button"
+          id="search-tab"
+          role="tab"
+          aria-controls="search-panel"
+          aria-selected="true"
+        >
+          Find Best Mix
+        </button>
+        <button
+          type="button"
+          id="recipe-tab"
+          role="tab"
+          aria-controls="recipe-panel"
+          aria-selected="false"
+          tabindex="-1"
+        >
+          Your Recipe
+        </button>
       </div>
+      <section id="search-panel" role="tabpanel" aria-labelledby="search-tab">
+        <form
+          id="best-mix-form"
+          method="GET"
+          action="/"
+          data-search-data-url="{{ url_for('search_data_json') }}"
+          data-worker-url="{{ url_for('static', filename='js/search-worker.js') }}"
+        >
+          <label for="level">Level:</label>
+          <select id="level" name="level" required>
+            {% for level_name, level_id in level_name_to_int.items() %}
+            <option value="{{ level_name }}">{{ display_lookup_name(level_name) }}</option>
+            {% endfor %}
+          </select>
+
+          <label for="combination-size">Combination Size:</label>
+          <input
+            type="number"
+            id="combination-size"
+            name="combination_size"
+            min="1"
+            step="1"
+            required
+          />
+
+          <label for="product-name">Product Name:</label>
+          <select id="product-name" name="product_name" required>
+            {% for product in products %}
+            <option value="{{ product.name }}">{{ display_lookup_name(product.name) }}</option>
+            {% endfor %}
+          </select>
+
+          <label for="search-mode">Search Mode:</label>
+          <select id="search-mode" name="search_mode" required>
+            {% if selected_search_mode | default('exact') == 'exact' %}
+            <option value="exact" selected>
+              Exact — optimal result or no result at limits (up to 5 minutes)
+            </option>
+            {% else %}
+            <option value="exact">
+              Exact — optimal result or no result at limits (up to 5 minutes)
+            </option>
+            {% endif %} {% if selected_search_mode | default('exact') == 'fast' %}
+            <option value="fast" selected>Fast — approximate, optimality not guaranteed</option>
+            {% else %}
+            <option value="fast">Fast — approximate, optimality not guaranteed</option>
+            {% endif %}
+          </select>
+
+          <button type="submit" disabled>Get Best Mix</button>
+          <button type="button" id="cancel-search" hidden>Cancel Search</button>
+        </form>
+
+        <noscript>
+          <p>This calculator needs JavaScript to run the search on your device.</p>
+        </noscript>
+
+        <div id="result">
+          {% if error %}
+          <div class="error" role="alert">Error: {{ error }}</div>
+          {% endif %} {% if not error and search and search.status in ['optimal', 'approximate'] %}
+          {% if search.status == 'optimal' %}
+          <p>Optimality proven</p>
+          {% else %}
+          <p>Approximate result — optimality not guaranteed</p>
+          {% endif %} {% if best_modifier %} {% if search.mode == 'fast' %}
+          <h2>Highest modifier found</h2>
+          {% else %}
+          <h2>Best Modifier Combination</h2>
+          {% endif %}
+          <p>Effects: {{ best_modifier.effects | map('display_lookup_name') | join(', ') }}</p>
+          <p>
+            Ingredients: {{ best_modifier.substances | map('display_lookup_name') | join(', ') }}
+          </p>
+          <p>Modifier: {{ '%.2f' | format(best_modifier.modifier) }}</p>
+          <p>Sell Price: {{ '%.2f' | format(best_modifier.sell_price) }}$</p>
+          <p>Ingredient Cost: {{ '%.2f' | format(best_modifier.substance_cost) }}$</p>
+          <p>
+            Profit: {{ '%.2f' | format(best_modifier.sell_price - best_modifier.substance_cost) }}$
+          </p>
+          {% endif %} {% if best_profit %} {% if search.mode == 'fast' %}
+          <h2>Highest profit found</h2>
+          {% else %}
+          <h2>Best Profit Combination</h2>
+          {% endif %}
+          <p>Effects: {{ best_profit.effects | map('display_lookup_name') | join(', ') }}</p>
+          <p>Ingredients: {{ best_profit.substances | map('display_lookup_name') | join(', ') }}</p>
+          <p>Modifier: {{ '%.2f' | format(best_profit.modifier) }}</p>
+          <p>Sell Price: {{ '%.2f' | format(best_profit.sell_price) }}$</p>
+          <p>Ingredient Cost: {{ '%.2f' | format(best_profit.substance_cost) }}$</p>
+          <p>Profit: {{ '%.2f' | format(best_profit.sell_price - best_profit.substance_cost) }}$</p>
+          {% endif %} {% endif %}
+        </div>
+      </section>
+      <section id="recipe-panel" role="tabpanel" aria-labelledby="recipe-tab" hidden>
+        <p>
+          Choose a base product and add ingredients in mixing order. You can use an ingredient more
+          than once. The result updates immediately after each change.
+        </p>
+        <div class="recipe-layout">
+          <form id="recipe-form" method="GET" action="/">
+            <label for="recipe-product">Base Product:</label>
+            <select id="recipe-product" disabled>
+              {% for product in products %}
+              <option value="{{ product.name }}">{{ display_lookup_name(product.name) }}</option>
+              {% endfor %}
+            </select>
+            <label for="recipe-ingredient">Ingredient:</label>
+            <div class="ingredient-picker">
+              <select id="recipe-ingredient" disabled></select>
+              <button type="submit" id="add-ingredient" disabled>Add Ingredient</button>
+            </div>
+            <h2>Mixing order <span id="recipe-count">(0 ingredients)</span></h2>
+            <p id="recipe-empty">No ingredients yet. The result shows the base product.</p>
+            <ol id="recipe-steps" aria-label="Ingredients in mixing order"></ol>
+            <button type="button" id="clear-recipe" disabled>Clear Recipe</button>
+          </form>
+          <div>
+            <div
+              id="recipe-result"
+              class="results"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              <p>Select this tab to load the recipe calculator.</p>
+            </div>
+            <button type="button" id="retry-recipe" hidden>Retry Loading</button>
+          </div>
+        </div>
+      </section>
     </div>
+    <script src="{{ url_for('static', filename='js/search-engine.js') }}"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
   </body>
 </html>

@@ -698,6 +698,46 @@
     return recipe.reduce((total, index) => total + available[index].priceCents * 100, 0);
   }
 
+  function evaluateRecipe(catalog, request) {
+    if (!isObject(request)) throw new TypeError("request must be an object");
+    if (typeof request.product_name !== "string" || !request.product_name.trim()) {
+      throw new TypeError("product_name must be a non-empty string");
+    }
+    if (!Array.isArray(request.substances)) {
+      throw new TypeError("substances must be an array");
+    }
+
+    const model = validateCatalog(catalog, request.substances.length);
+    const product = model.products.get(normalize(request.product_name));
+    if (product === undefined) throw new TypeError("unknown product_name");
+    const substanceIndexes = new Map(
+      model.substances.map((substance, index) => [substance.name, index]),
+    );
+    // Resolve the complete recipe before applying any transitions. Invalid input
+    // therefore cannot produce a partially evaluated result.
+    const recipe = request.substances.map((name, index) => {
+      if (typeof name !== "string" || !name.trim()) {
+        throw new TypeError(`substances[${index}] must be a non-empty string`);
+      }
+      const ingredientIndex = substanceIndexes.get(normalize(name));
+      if (ingredientIndex === undefined) {
+        throw new TypeError(`unknown substance: ${name}`);
+      }
+      return ingredientIndex;
+    });
+
+    const runtime = makeRuntime(model, product, model.substances, {
+      now: () => 0,
+      time_limit_seconds: 1,
+    });
+    let state = product.effects;
+    for (const ingredientIndex of recipe) {
+      state = runtime.transition(state, ingredientIndex);
+    }
+    const evaluation = runtime.evaluate(state);
+    return runtime.result(state, recipe, recipeCost(recipe, model.substances), evaluation);
+  }
+
   function search(catalog, request, suppliedOptions = {}) {
     if (!isObject(request)) throw new TypeError("request must be an object");
     const size = request.combination_size;
@@ -761,5 +801,5 @@
     };
   }
 
-  return { search, SearchLimitExceeded, cpythonFloatSum, validateCatalog };
+  return { search, evaluateRecipe, SearchLimitExceeded, cpythonFloatSum, validateCatalog };
 });

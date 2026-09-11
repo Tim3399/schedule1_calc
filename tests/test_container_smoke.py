@@ -40,9 +40,14 @@ class ContainerSmokeTests(unittest.TestCase):
             "substances": [{"name": "cuke"}],
         }
         return [
-            (200, {}, b"Best Mix Calculator data-worker-url data-search-data-url"),
+            (
+                200,
+                {},
+                b'Best Mix Calculator data-worker-url data-search-data-url id="recipe-tab" '
+                b'id="recipe-form" js/search-engine.js',
+            ),
             (200, {"Content-Type": "application/json"}, json.dumps(catalog).encode()),
-            (200, {}, b"Schedule1Search"),
+            (200, {}, b"Schedule1Search evaluateRecipe"),
             (200, {}, b"search-engine.js"),
             (200, {}, b"Worker"),
         ]

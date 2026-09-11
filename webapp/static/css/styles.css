@@ -28,6 +28,7 @@ form {
 form input[type="text"],
 form input[type="number"],
 form select {
+  box-sizing: border-box;
   width: 100%;
   padding: 10px;
   margin: 10px 0;
@@ -58,4 +59,106 @@ form input[type="submit"]:hover {
 
 .results h2 {
   margin-top: 0;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+button {
+  padding: 10px 14px;
+  border: 1px solid #b8c1c6;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #26363f;
+  cursor: pointer;
+  font: inherit;
+}
+
+button:hover:not(:disabled) {
+  background: #e8eef1;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button:focus-visible,
+select:focus-visible {
+  outline: 3px solid #1769aa;
+  outline-offset: 2px;
+}
+
+.calculator-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 24px 0 16px;
+}
+
+.calculator-tabs [aria-selected="true"] {
+  background: #35424a;
+  color: #ffffff;
+  border-color: #35424a;
+}
+
+.recipe-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  align-items: start;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.recipe-layout .results {
+  margin-top: 0;
+  overflow-wrap: anywhere;
+}
+
+.ingredient-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ingredient-picker select {
+  min-width: 0;
+  flex: 1;
+}
+
+#recipe-count {
+  font-size: 0.8em;
+  font-weight: normal;
+}
+
+#recipe-steps {
+  padding-left: 24px;
+}
+
+#recipe-steps li {
+  padding: 4px 0 12px;
+}
+
+.recipe-step-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.recipe-step-controls button {
+  padding: 6px 10px;
+}
+
+.error {
+  color: #9d2020;
+}
+
+@media (max-width: 760px) {
+  .container {
+    width: 94%;
+  }
+
+  .recipe-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

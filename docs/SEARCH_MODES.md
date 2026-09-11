@@ -12,6 +12,16 @@ Der Server erzeugt das schreibgeschützte Modell aus `src/lookup/lookup.py`, ein
 
 Technische Kennungen bleiben in Anfragen, Suchregeln und gespeicherten Rezepten stabil. Ein eigener `display_name` bezeichnet Produkte, Zutaten und Effekte in der Oberfläche; die Rangnamen kommen aus `level_display_names`. So zeigt die Website beispielsweise „Motor Oil“ und „OG Kush“, während die API weiter `motor_oil` und `og_kush` verwendet. Der [Produktdaten-Audit](reviews/2026-09-10-product-catalog-update.md) dokumentiert die ergänzten Shrooms und die Grenzen des zugrunde liegenden Preismodells.
 
+## Eigenes Rezept
+
+Der Reiter **Your Recipe** berechnet genau die ausgewählte Zutatenfolge. Nach Auswahl des Basisprodukts können Zutaten einzeln angefügt, geändert, nach oben oder unten verschoben und entfernt werden. Wiederholungen zählen als eigene Mischschritte und werden jedes Mal berechnet und bezahlt. Ohne Zutaten erscheint das Basisprodukt mit seinen anfänglichen Effekten und ohne Zutatenkosten. Die Anzeige enthält Effekte, Zutatenfolge, Multiplikator, Verkaufspreis, Zutatenkosten und Profit nach dem bestehenden Preismodell.
+
+Jede Änderung aktualisiert das Ergebnis unmittelbar im Browser. `Schedule1Search.evaluateRecipe(catalog, { product_name, substances })` verwendet dieselben geordneten Effektübergänge und dieselbe Preisberechnung wie die Suche. Es werden keine alternativen Kombinationen durchsucht; deshalb gilt die Suchgrenze von 16 Schritten hier nicht. Auch 14 oder mehr ausdrücklich ausgewählte Zutaten sind möglich. Alle Zutaten stehen unabhängig vom Spielerrang zur Auswahl. Die Berechnung prüft Eingaben und sichere Ganzzahlarithmetik anhand der tatsächlichen Rezeptlänge und liefert bei ungültigen Daten kein Teilergebnis. Sie macht keine Aussage über globale Optimalität.
+
+Beide Reiter teilen erfolgreich geladene Modelldaten. Beim Wechsel zu **Your Recipe** wird eine noch laufende Optimierung abgebrochen; deren verspätete Ergebnisse bleiben verworfen. Einstellungen und eigenes Rezept bleiben beim Wechsel zwischen den Reitern erhalten. Ladefehler können erneut versucht werden. Es entsteht kein neuer Server-Rechenweg. Die direkte Auswertung benötigt JavaScript, aber keinen Web Worker; diese bleiben für die Optimierung erforderlich.
+
+`tests/test_browser_recipe.py` vergleicht unter anderem ein Rezept mit 14 unterschiedlichen Zutaten gegen die bestehende Python-Berechnung. Die Node-Tests prüfen zusätzlich Reihenfolge, Wiederholungen, mehr als 16 Schritte, Eingabefehler und die Bedienung des neuen Reiters.
+
 ## Private Server-API
 
 Die Python-Suche bleibt für vertrauenswürdige Programme erhalten. Ohne serverseitig gesetztes `SCHEDULE1_API_TOKEN` sind **beide** Rechenwege (`POST /get_best_mix` und der bisherige `POST /`) deaktiviert und liefern HTTP 404 ohne Berechnung. Ist ein geheimes zufälliges Token konfiguriert, muss der Client `Authorization: Bearer <token>` über einen vertrauenswürdigen lokalen oder TLS-Transport senden; fehlende oder falsche Zugangsdaten liefern HTTP 401, bevor Eingaben verarbeitet oder Suchläufe begonnen werden. URL-Parameter und Cookies schalten die API nicht frei. Das Token gehört weder in den Browser noch in den öffentlichen Modellendpunkt.
