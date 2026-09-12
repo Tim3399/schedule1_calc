@@ -61,6 +61,14 @@ Status sauber getrennt.
 
 ## 5. Themes
 
+Effekt-Chips verwenden zusätzlich die belegten Label-Farben aus den Spieldaten: ein Farbpunkt
+in der Originalfarbe und eine dezente Tönung von Fläche und Kontur. Der lesbare Name bleibt in
+`--text-primary`, damit auch sehr helle oder dunkle Spielfarben in beiden Themes funktionieren.
+Diese Farben sind fachliche Metadaten in `src/lookup/lookup.py`, keine zweite Designpalette.
+`tokens.css` bleibt die Quelle für Oberflächen, Text und alle übrigen Gestaltungsrollen.
+Quelle, Abgleich mit dem Wiki und Grenzen stehen im
+[Farbabgleich vom 12.09.2026](../../docs/reviews/2026-09-12-effect-colors.md).
+
 Dunkel ist der Standard (`:root`). Hell überschreibt dieselben semantischen Rollen — eine
 Komponente, zwei Wertesätze, keine parallele Implementierung. Auflösung:
 
@@ -76,11 +84,12 @@ deshalb ein dunkles Blattgrün mit weißer Schrift. Die Rolle bleibt, der Wert w
 
 ## 6. Zustände
 
-| Ablauf          | Umgesetzte Zustände                                                                                                                                                                                                                |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Suche           | Leer (erklärt exact vs. fast) · Katalog lädt · Suche läuft (Fortschrittstext mit Tiefe/Operationen, Fortschrittsbalken, `Cancel Search`) · Ergebnis bewiesen · Ergebnis approximativ · Abgebrochen · Fehler · Browser ohne Worker. |
-| Rezept          | Tab noch nicht geöffnet · Daten laden · geladen mit leerem Rezept (zeigt das Basisprodukt) · Ergebnis · Rechenfehler · Ladefehler mit `Retry Loading`.                                                                             |
-| Nicht anwendbar | Kein Login, keine Berechtigungen, kein Autosave, keine destruktiven Serveraktionen. `Clear Recipe` ist lokal; `Undo clear` stellt die zuletzt geleerte Folge einschließlich Wiederholungen wieder her.                             |
+| Ablauf          | Umgesetzte Zustände                                                                                                                                                                                                                           |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Suche           | Leer (erklärt exact vs. fast) · Katalog lädt · Suche läuft (Fortschrittstext mit Tiefe/Operationen, Fortschrittsbalken, `Cancel Search`) · Ergebnis bewiesen · Ergebnis approximativ · Abgebrochen · Fehler · Browser ohne Worker.            |
+| Rezept          | Tab noch nicht geöffnet · Daten laden · geladen mit leerem Rezept (zeigt das Basisprodukt) · Ergebnis · Rechenfehler · Ladefehler mit `Retry Loading`.                                                                                        |
+| Wunscheffekte   | Katalog laden · Filter ohne Treffer · leere/erhaltene Auswahl · Suche läuft/Abbruch · exakt passendes Rezept · bewiesen kein Rezept innerhalb der Einstellungen · Fast ohne Treffer, ohne Unmöglichkeitsbeweis · Ressourcenlimit ohne Rezept. |
+| Nicht anwendbar | Kein Login, keine Berechtigungen, kein Autosave, keine destruktiven Serveraktionen. `Clear Recipe` ist lokal; `Undo clear` stellt die zuletzt geleerte Folge einschließlich Wiederholungen wieder her.                                        |
 
 Eingaben bleiben in **jedem** Fehlerfall erhalten; `#result` ist eine `aria-live="polite"`-Region,
 Fehler tragen zusätzlich `role="alert"`.
@@ -292,3 +301,40 @@ in der geöffneten Liste vollständig lesbar. Es gibt keinen horizontalen Seiten
 Die Mischfolge ohne Preise wurde erneut gezogen; die Browserkonsole meldete keine Fehler
 oder Warnungen. Touchgeräte, Screenreader und die native Fallback-Liste in einem Browser
 ohne `base-select` wurden nicht separat geprüft.
+
+## 13. Wunscheffekte und Beschreibungen
+
+**Match Effects** ist der dritte gleichrangige Reiter. Jede Effektkarte trägt Spielfarbe,
+Name, kurze Erklärung und einen kompakten Dreierschalter **Want / Neutral / Avoid**. Native
+Radiogruppen erhalten die Tastaturbedienung; die sichtbaren Segmente ersetzen die einzelnen
+Checkboxen. Gewünscht verwendet die vorhandene Aktionsfarbe, ausgeschlossen die vorhandene
+Gefahrenfarbe; Text und markiertes Segment machen den Zustand auch ohne Farberkennung klar.
+Die Karte selbst schaltet keinen Zustand durch, damit ein Klick immer eine eindeutige Wahl trifft.
+
+**Recipe match** steht direkt über der Auswahl: **Only these** verlangt genau die Wunscheffekte,
+**Allow extras** erlaubt weitere neutrale Effekte. Ausgeschlossene Effekte fehlen in beiden
+Fällen im Ergebnis. Ein Textfilter reduziert die Liste, ohne ausgeblendete Auswahlen zu löschen.
+Unter der Liste bleiben Wunsch-/Ausschlussanzahl und einzeln entfernbare Auswahlchips sichtbar.
+Ein Moduswechsel bewahrt diese Präferenzen, verwirft jedoch ein veraltetes Ergebnis und beendet
+eine laufende Suche. Bei **Allow extras** ist auch eine reine Ausschlussliste gültig.
+
+Das Ranking steht bei den Rezepteinstellungen: möglichst wenige Schritte, danach niedrige Kosten.
+**Exact / Fast** bleibt davon getrennt. Ein Fast-Treffer erfüllt immer die Effektbedingungen,
+garantiert jedoch nicht das kürzeste oder günstigste Rezept. Die Resultate bewahren dieselbe
+Kartenstruktur.
+
+Unter allen Ergebniskarten stehen Beschreibungen in einem nativen `details`-Element
+„What these effects do“. Der geschlossene Zustand hält das Rezept kompakt; Erklärungen sind
+per Klick, Touch und Tastatur erreichbar und nicht an Hover gebunden. Unbekannte Metadaten
+erzeugen keine leeren Erklärungszeilen. Die Quellen sind im
+[Beschreibungsabgleich](../../docs/reviews/2026-09-12-effect-descriptions.md) dokumentiert.
+
+Am Desktop steht die Effektauswahl zuerst links, Einstellungen und Ergebnis stehen rechts.
+Auf schmalen Bildschirmen folgt dieselbe Reihenfolge untereinander. Die filterbare Liste hat
+eine begrenzte Scrollhöhe mit ruhiger vertiefter Fläche und einer schmalen, themengerechten
+nativen Scrollleiste. Fokus, Tastatur-Scrollen und das automatische Sichtbarwerden fokussierter
+Controls bleiben erhalten. Auswahltext, Chips und Clear bleiben außerhalb dieser Liste. Die drei Tabs
+bleiben auch bei 320 px in einer Zeile mit gegebenenfalls mehrzeiligem Label.
+
+Die Abnahme einschließlich Tastaturbedienung, Light/Dark, 320 px und 175 bestandener Tests ist
+im [Suchvertrag](../../docs/SEARCH_MODES.md#verifikation-der-effektsuche-am-12092026) dokumentiert.

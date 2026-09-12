@@ -62,9 +62,17 @@ The container supports **Linux/amd64**. Its Python 3.12.14 base is pinned by man
 digest. `requirements-container.txt` declares direct production dependencies;
 `requirements-release.lock` fixes the entire eight-package wheel graph with SHA-256
 hashes for this platform. Review both together and verify the hashes against PyPI
-when deliberately updating this graph. Existing development requirements stay separate.
-Waitress 3.0.2 serves the application on port 8080 as UID/GID 10001. The image records
-OCI version, source revision and repository labels and validates the copied `VERSION`.
+when deliberately updating this graph. Existing development requirements stay separate, except
+that their Waitress 3.0.2 pin enables real production-server tests on both CI platforms. Waitress
+serves the application through `python -m webapp.serve` on port 8080 as UID/GID 10001. This wrapper
+applies the bounded production HTTP settings documented in
+[HTTP_DELIVERY.md](HTTP_DELIVERY.md). The container smoke checks normal HEAD delivery plus
+representative header and body rejection over a real socket. The image records OCI version, source
+revision and repository labels and validates the copied `VERSION`.
+
+The container sets `SCHEDULE1_LOG_STDOUT_ONLY=1`; application logs therefore use standard streams.
+Host-side rotation and retention remain deployment-infrastructure work and are not configured by
+this image.
 
 Example for an already published version, preferably using its receipt's digest:
 

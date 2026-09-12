@@ -182,6 +182,12 @@ function loadUi({ fetchOutcomes = [catalog()], evaluateRecipe = engine.evaluateR
     "cancel-search": element({ hidden: true, tagName: "button" }),
     "clear-recipe": element({ disabled: true, tagName: "button" }),
     "combination-size": element({ value: "2" }),
+    "effect-panel": element({ hidden: true, tagName: "section" }),
+    "effect-tab": element({
+      attributes: { "aria-selected": "false" },
+      tabIndex: -1,
+      tagName: "button",
+    }),
     "ingredient-shelf": element({ tagName: "div" }),
     level: element({ value: "max" }),
     "product-name": element({ value: "og_kush" }),
@@ -384,6 +390,23 @@ test("renders the catalog shelf and repeated clicks append readable duplicate st
   assert.match(ui.elements["recipe-announcement"].textContent, /Added Cuke as step 2/);
 });
 
+test("manual recipe results use catalog effect colors including the unmixed base product", async () => {
+  const data = catalog();
+  data.effects[0].color = "#fed09b";
+  const ui = loadUi({ fetchOutcomes: [data] });
+  await openRecipe(ui);
+  const descendants = (node) => [node, ...node.children.flatMap(descendants)];
+  for (const withIngredient of [false, true]) {
+    if (withIngredient) addIngredient(ui, "cuke");
+    const chips = descendants(ui.elements["recipe-result"]).filter(
+      (node) => node.className === "effect-chip",
+    );
+    assert.equal(chips.length, 1);
+    assert.equal(chips[0].textContent, "Calm");
+    assert.equal(chips[0].attributes.style, "--effect-color: #fed09b");
+  }
+});
+
 test("clear and undo restore a 14-step sequence and its selected-row focus", async () => {
   const ui = loadUi();
   await openRecipe(ui);
@@ -509,8 +532,8 @@ test("pointer dragging inserts at every boundary and commits exactly once", asyn
   const ui = loadUi();
   await openRecipe(ui);
 
-  let evaluationCount = ui.evaluations.length;
-  let tile = beginShelfDrag(ui, "cuke");
+  const evaluationCount = ui.evaluations.length;
+  const tile = beginShelfDrag(ui, "cuke");
   movePointer(ui, { clientX: 200, clientY: 300 });
   assert.equal(ui.evaluations.length, evaluationCount, "hover must not recalculate");
   releasePointer(ui, { clientX: 200, clientY: 300 });
@@ -725,7 +748,7 @@ test("switching to manual cancels search and ignores a stale winner", async () =
   await openRecipe(ui);
   assert.equal(worker.terminateCalls, 1);
   assert.equal(ui.elements["best-mix-form"].attributes["aria-busy"], "false");
-  assert.match(textOf(ui.elements.result), /Search cancelled when switching to Your Recipe/);
+  assert.match(textOf(ui.elements.result), /Search cancelled when switching tabs/);
   assert.equal(ui.fetchCalls.length, 1, "the loaded catalog should be reused by both modes");
 
   worker.emit({
@@ -738,7 +761,7 @@ test("switching to manual cancels search and ignores a stale winner", async () =
     type: "result",
   });
   assert.doesNotMatch(textOf(ui.elements.result), /Best Modifier Combination/);
-  assert.match(textOf(ui.elements.result), /Search cancelled when switching to Your Recipe/);
+  assert.match(textOf(ui.elements.result), /Search cancelled when switching tabs/);
   assert.match(textOf(ui.elements["recipe-result"]), /Your Recipe Result/);
 });
 
@@ -764,6 +787,7 @@ test("load failure exposes Retry and evaluation failure removes the stale result
   await openRecipe(ui);
   assert.equal(ui.elements["retry-recipe"].hidden, false);
   assert.match(textOf(ui.elements["recipe-result"]), /HTTP 503/);
+  assert.match(textOf(ui.elements["recipe-result"]), /Reload the page and try again/);
   assert.equal(ui.elements["recipe-result"].children[0].attributes.role, "alert");
   assert.equal(ui.elements["recipe-product"].disabled, true);
 
@@ -784,4 +808,45 @@ test("load failure exposes Retry and evaluation failure removes the stale result
   assert.match(failure, /Motor Oil cannot be mixed into Sour Diesel/);
   assert.doesNotMatch(failure, /Your Recipe Result|Sell Price|Profit/);
   assert.equal(ui.elements["recipe-result"].children[0].attributes.role, "alert");
+});
+
+test("catalog rate limit waits for a manual retry and respects Retry-After", async () => {
+  const ui = loadUi({
+    fetchOutcomes: [
+      {
+        response: {
+          headers: { get: (name) => (name === "Retry-After" ? "17" : null) },
+          json: async () => ({}),
+          ok: false,
+          status: 429,
+        },
+      },
+      catalog(),
+    ],
+  });
+
+  await openRecipe(ui);
+  assert.equal(ui.fetchCalls.length, 1);
+  assert.match(textOf(ui.elements["recipe-result"]), /Wait 17 seconds, then try again/);
+  assert.doesNotMatch(textOf(ui.elements["recipe-result"]), /Reload the page/);
+
+  await ui.elements["retry-recipe"].listeners.click();
+  assert.equal(ui.fetchCalls.length, 2);
+  assert.equal(ui.elements["retry-recipe"].hidden, true);
+
+  const boundedUi = loadUi({
+    fetchOutcomes: [
+      {
+        response: {
+          headers: { get: () => "999" },
+          json: async () => ({}),
+          ok: false,
+          status: 429,
+        },
+      },
+    ],
+  });
+  await openRecipe(boundedUi);
+  assert.equal(boundedUi.fetchCalls.length, 1);
+  assert.match(textOf(boundedUi.elements["recipe-result"]), /Wait 300 seconds/);
 });

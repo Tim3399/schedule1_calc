@@ -1,6 +1,7 @@
 """Regression tests for rendering both calculator winners."""
 
 from pathlib import Path
+from html import unescape
 import sys
 import unittest
 from unittest import mock
@@ -124,6 +125,55 @@ class ResultRenderingTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertIn("Unknown product: Motor Oil.", html)
         self.assertNotIn("Unknown product: motor_oil.", html)
+
+    def test_effect_colors_render_from_lookup_in_both_winners(self):
+        from src.lookup.lookup import effects
+
+        with app.test_request_context():
+            combination = {
+                "sell_price": 50,
+                "substance_cost": 2,
+                "modifier": 0.22,
+                "substances": ["cuke"],
+                "effects": [effect.name for effect in effects] + ["unknown_effect"],
+            }
+            from webapp.app import _template_context
+            from flask import render_template
+
+            html = render_template(
+                "index.html",
+                **_template_context(
+                    best_profit=combination,
+                    best_modifier=combination,
+                    search={"status": "optimal", "mode": "exact", "optimality_proven": True},
+                ),
+            )
+        for effect in effects:
+            self.assertEqual(html.count(f"--effect-color: {effect.color}"), 4)
+            self.assertGreaterEqual(unescape(html).count(effect.description), 2)
+        self.assertEqual(html.count('class="effect-chip"'), 2 * len(effects))
+        self.assertEqual(html.count("What these effects do"), 2)
+        self.assertIn("Unknown Effect", html)
+
+    def test_effect_tab_starts_without_submitting_a_server_calculation(self):
+        html = self.client.get("/").get_data(as_text=True)
+        self.assertRegex(html, r'id="effect-tab"[\s\S]*?aria-controls="effect-panel"')
+        self.assertRegex(html, r'<section[^>]+id="effect-panel"[^>]+hidden')
+        self.assertRegex(html, r'<button[^>]+id="find-effects"[^>]+disabled')
+        self.assertIn('id="effect-filter"', html)
+        self.assertIn('id="effect-options"', html)
+        self.assertIn("Only wanted effects. All other effects are excluded.", html)
+        self.assertIn("Fewest steps, then lowest cost.", html)
+        self.assertRegex(html, r'name="effect_match_mode"[^>]*value="exact"[^>]*checked')
+        self.assertRegex(html, r'name="effect_match_mode"[^>]*value="contains"')
+        self.assertIn('id="effect-selection-summary"', html)
+
+    def test_unknown_or_malformed_effect_color_has_a_neutral_fallback(self):
+        from webapp.app import _EFFECT_COLORS, _effect_color
+
+        self.assertIsNone(_effect_color("unknown_effect"))
+        with mock.patch.dict(_EFFECT_COLORS, {"energizing": "#9afe6d; color: red"}):
+            self.assertIsNone(_effect_color("energizing"))
 
 
 if __name__ == "__main__":

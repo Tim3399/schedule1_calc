@@ -4,7 +4,9 @@ Die Weboberfläche und `POST /get_best_mix` bieten die Modi `exact` und `fast`. 
 
 ## Berechnung auf dem Gerät des Besuchers
 
-Die Website lädt einmal die Regeln und Preise über `GET /search-data`. Jede Suche läuft anschließend in einem eigenen Browser-Worker aus `webapp/static/js/search-engine.js`; sie sendet keine Rechenanfrage an den Server. Die Seite bleibt bedienbar und zeigt Tiefe und Arbeitszähler. **Cancel search** beendet den Worker und verwirft alle Kandidaten. Ein neuer Lauf startet unabhängig; verspätete Nachrichten alter Läufe werden ignoriert.
+Die Website lädt die Regeln und Preise über `GET /browser/<revision>/search-data`. Diese URL und alle CSS-/JS-URLs enthalten einen gemeinsamen Inhalts-Hash und dürfen langfristig im Browser-Cache bleiben. Alle drei Reiter teilen die geladenen Modelldaten. Der kompatible Endpunkt `GET /search-data` bleibt mit erneuter Cache-Validierung erreichbar. Die [HTTP-Auslieferung](HTTP_DELIVERY.md) beschreibt Cache-Vertrag und Request-Limits.
+
+Jede Suche läuft anschließend in einem eigenen Browser-Worker aus `webapp/static/js/search-engine.js`; sie sendet keine Rechenanfrage an den Server. Die Seite bleibt bedienbar und zeigt Tiefe und Arbeitszähler. **Cancel search** beendet den Worker und verwirft alle Kandidaten. Ein neuer Lauf startet unabhängig; verspätete Nachrichten alter Läufe werden ignoriert.
 
 Die Laufzeit und verfügbare Speichermenge hängen vom Gerät ab. JavaScript und Web Workers sind erforderlich; fehlende Unterstützung, Ladefehler, Abbruch und Zeitlimits lösen keinen Server-Fallback aus. Ohne JavaScript bleibt die Rechenschaltfläche gesperrt. Worker-Auslagerung und unmittelbares Beenden verwenden die [Web-Worker-API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers).
 
@@ -24,9 +26,116 @@ Während des Ziehens bleiben Rezept und Ergebnis unverändert, bis die Zutat gü
 Alt + Pfeil hoch/runter verschiebt einen fokussierten Schritt per Tastatur. Clear lässt sich mit
 Undo clear einschließlich aller Wiederholungen zurücknehmen.
 
-Beide Reiter teilen erfolgreich geladene Modelldaten. Beim Wechsel zu **Your Recipe** wird eine noch laufende Optimierung abgebrochen; deren verspätete Ergebnisse bleiben verworfen. Einstellungen und eigenes Rezept bleiben beim Wechsel zwischen den Reitern erhalten. Ladefehler können erneut versucht werden. Es entsteht kein neuer Server-Rechenweg. Die direkte Auswertung benötigt JavaScript, aber keinen Web Worker; diese bleiben für die Optimierung erforderlich.
+Alle drei Reiter teilen erfolgreich geladene Modelldaten. Beim Verlassen eines Suchreiters wird
+seine laufende Optimierung abgebrochen; verspätete Ergebnisse bleiben verworfen. Einstellungen,
+Wunscheffekte und eigenes Rezept bleiben beim Wechsel erhalten. Ladefehler können erneut versucht
+werden. Es entsteht kein neuer Server-Rechenweg. Die direkte Rezeptauswertung benötigt JavaScript,
+aber keinen Web Worker; die Optimierungen benötigen weiterhin einen Worker.
 
 `tests/test_browser_recipe.py` vergleicht unter anderem ein Rezept mit 14 unterschiedlichen Zutaten gegen die bestehende Python-Berechnung. Die Node-Tests prüfen zusätzlich Reihenfolge, Wiederholungen, mehr als 16 Schritte, Eingabefehler und die Bedienung des neuen Reiters.
+
+## Gewünschte und ausgeschlossene Effekte
+
+**Match Effects** bietet zwei voneinander getrennte Entscheidungen: `match_mode` bestimmt die
+zulässigen Endeffekte, `search_mode` weiterhin die Genauigkeit der Suche. **Only these**
+(`match_mode: "exact"`, Standard) verlangt genau die gewünschten Effekte. **Allow extras**
+(`match_mode: "contains"`) verlangt alle gewünschten Effekte und verbietet alle ausgeschlossenen;
+weitere neutrale Effekte dürfen vorkommen. Die Reihenfolge der Zielauswahl ist bedeutungslos.
+Zwischenzustände und Mischschritte behalten jedoch ihre vollständige Reihenfolge. Vorübergehend
+sind auch ausgeschlossene Effekte erlaubt, weil spätere Zutaten sie entfernen oder umwandeln können.
+
+Der Nutzer wählt Basisprodukt, Rang, maximale Zutatenzahl und markiert Effekte mit **Want**,
+**Neutral** oder **Avoid**. Ein Effekt kann nicht gleichzeitig gewünscht und ausgeschlossen sein.
+Mindestens ein Wunscheffekt ist erforderlich; bei **Allow extras** genügt auch ein Ausschluss
+ohne Wunscheffekte. Eine komplett leere Vorgabe ist ungültig. Die Suche
+berücksichtigt das unveränderte Basisprodukt mit null Zusätzen bis zur maximalen Zutatenzahl.
+Das Ranking lautet: **wenigste Mischschritte**, dann **geringste Zutatenkosten**, schließlich
+Lookup-Reihenfolge. Die Garantie bezieht sich auf diese Einstellungen und das vorhandene Spielmodell.
+
+`Schedule1Search.searchEffects(catalog, request, options)` verwendet dieselben Übergangs- und
+Preisfunktionen wie die anderen Browser-Rechner. `request` enthält `product_name`, `level`,
+`combination_size` (0 bis 16), `search_mode` und `target_effects` als Array technischer IDs.
+Optional sind `match_mode` (Standard `exact`) und `excluded_effects` (Standard leeres Array).
+Unbekannte Modi, unbekannte/doppelte Effekte und überlappende Wunsch-/Ausschlusslisten werden
+abgelehnt. Die Worker-Nachricht trägt `type: "search_effects"`.
+
+Exact durchsucht die Tiefen der Reihe nach. Die erste vollständig geprüfte Treffertiefe beweist
+die geringste Schrittzahl; unter ihren Treffern entscheidet der Preis. Identische geordnete
+Zwischenzustände werden verlustfrei zusammengefasst. Erschöpfte Suche ohne Treffer liefert
+`not_found` mit Beweis nur für die angeforderten Grenzen. Ein Zeit-, Arbeits-, Zustands- oder
+Größenlimit liefert dagegen `incomplete` **ohne Rezept und ohne Unmöglichkeitsbehauptung**.
+
+Die letzte angeforderte Schicht wird vollständig ausgewertet, aber nicht mehr gespeichert.
+Ein Frontier-Limit für danach ungenutzte Zustände verhindert deshalb dort keinen Beweis.
+
+Fast verwendet eine begrenzte, auf die Ziele gerichtete Beam-Suche. Auch dieser Modus zeigt
+ausschließlich Rezepte, die alle gewählten Effektbedingungen erfüllen. Im Modus **Allow extras**
+zählen erlaubte zusätzliche Effekte nicht als Abweichung in der Beam-Bewertung. Ein Treffer belegt
+damit die Effekte, aber nicht das beste Ranking; er bleibt `approximate`. `not_found` im Schnellmodus ist
+kein Beweis, dass die Kombination unerreichbar ist. Fast wechselt nicht heimlich zu Exact.
+
+Ergebnis: `search` mit Modus/Status/Beweisflag, `recipe` (oder `null`), `match_mode`, `target_effects`,
+`excluded_effects` und `stats`. Die Oberfläche prüft diese Angaben gegen die gestartete Anfrage
+und wertet die Zutatenfolge erneut aus, bevor sie das Ergebnis anzeigt.
+Abbruch und verspätete Worker-Antworten werden wie in der Profitsuche behandelt. Die bestehenden
+Arbeits-/Zeitbudgets bleiben maßgeblich. Es gibt keinen neuen öffentlichen oder privaten
+Server-Rechenendpunkt für die Effektsuche.
+
+Alle 34 Effekte tragen kurze Beschreibungen aus dem dokumentierten
+[Wiki-Abgleich](reviews/2026-09-12-effect-descriptions.md). Sie stehen direkt in der Zielauswahl
+und aufklappbar unter den Ergebnissen aller Reiter. Farbe und Beschreibung sind optionale
+Metadaten aus der zentralen Lookup-Liste; sie beeinflussen keine Mischregel.
+
+### Verifikation der Effektsuche am 12.09.2026
+
+- `tools/project.py check`: bestanden.
+- `tools/project.py test`: 175 Tests bestanden (29,868 Sekunden). Ein erster Gesamtlauf fand
+  ein Importproblem des neuen Python-Vergleichstests bei Testentdeckung; der Test verwendet nun
+  denselben expliziten Projektpfad wie die übrigen Browser-Tests. Der komplette Wiederholungslauf
+  war erfolgreich.
+- `tests/test_browser_effect_search.py`: unabhängige vollständige Python-Enumeration für alle
+  neun Basisprodukte, ein Null-Schritt-Rezept, einen unerreichbaren Einzeleffekt und die bekannte
+  Shrooms-Kombination mit sechs Effekten. Die vollständigen Gewinner einschließlich Geldwerten
+  und Reihenfolge stimmen mit der neuen Browser-Suche überein.
+- Gezielte Node-UI-Suiten: 27/27 bestanden. Engine-Tests prüfen Zwischenzustände, Zielmengen,
+  Ranking, Null-Schritt-Treffer, Abschlusszeit und Frontier-/Arbeitsgrenzen. Ein unabhängiges
+  Code-Review fand keine Verletzung der Exact-/Fast-Garantien.
+- Echter Browser auf Port 42765, Quelldigest
+  `85bcb48228464d2f178c7a233d56aa30a80cee77a534dcc7fc5a6f1288408323`:
+  OG Kush mit nur Calming liefert null Zutaten; Sneaky/Thought Provoking/Gingeritis liefern
+  Cuke und Banana für 4 Dollar Zutatenkosten. Beide Suchmodi getestet. Maximal null Zutaten
+  mit diesen drei Zielen zeigt im Exact-Modus einen begrenzten Unmöglichkeitsbeweis, im
+  Schnellmodus ausdrücklich keinen solchen Beweis.
+- Abbruch einer tiefen exakten Suche, erhaltene Auswahl beim Filtern/Tabwechsel, Leertaste für
+  Checkboxen, Pfeil-/Home-/End-Tasten zwischen drei Tabs sowie Erklärungen in allen drei Reitern
+  geprüft. Light/Dark bei Desktopbreite und 320 px: kein horizontaler Überlauf und keine
+  Browserfehler oder Warnungen. Screenreader, reale Touchgeräte und separate Textvergrößerung
+  wurden nicht getestet.
+
+Der neue Reiter ist lokal vorbereitet; diese Verifikation ist kein Veröffentlichungsnachweis.
+
+### Erweiterung um Ausschlüsse und zusätzliche Effekte am 12.09.2026
+
+- `tools/project.py check` bestanden; vollständiger `tools/project.py test` mit 175 Tests
+  in 34,958 Sekunden bestanden. Die gezielten Node-Suiten prüfen 31 UI-Fälle und 21 Engine-/
+  Worker-Fälle. Die bestehende Profit-Engine-Suite ist ebenfalls erfolgreich.
+- Die unabhängige Python-Enumeration umfasst jetzt auch erlaubte Zusatzeffekte und reine
+  Ausschlusslisten. Synthetische Fälle prüfen vorübergehend ausgeschlossene Zwischenzustände,
+  Konflikte/Normalisierung der Listen und die Behandlung erlaubter Extras im Fast-Ranking.
+- Browser mit Quelldigest `3d21ed01c178c3701889d9a0411a62ee42f00f45eb83910ea09cf7314ed2a0ca`:
+  „Energizing gewünscht, Toxic ausgeschlossen“ liefert bei OG Kush in beiden Suchmodi Cuke
+  mit Calming und Energizing. Eine reine Toxic-Ausschlussliste erlaubt das unveränderte
+  Basisprodukt. Der Wechsel zu „Only these“ bewahrt die Ausschlüsse und deaktiviert ohne
+  Wunscheffekt die Suche; veraltete Ergebnisse werden entfernt.
+- Native Radiogruppen per Pfeiltasten, Fokusrahmen, Filter mit erhaltener Auswahl, Entfernen
+  einzelner Chips und PageDown im Scrollbereich geprüft. Desktop sowie 320 px in Light/Dark
+  ohne horizontalen Überlauf; „Neutral“ bleibt bei 320 px einzeilig. Kleinster gemessener
+  Textkontrast der gewählten Calming-/Toxic-Karten: 5,61:1 in Light, 6,26:1 in Dark.
+- Keine Browserfehler/-warnungen. Screenreader, reale Touchgeräte und separate Textvergrößerung
+  weiterhin nicht geprüft. Keine neue Version oder Veröffentlichung.
+- Abschließende CSS-Korrektur: Ausschlusschips behalten auch bei Hover/Druck die Ausschlussfarbe.
+  Nach Neustart unter `70cf935a159beb24c4f48cda632622242f16ff3b44ad343f5d63b91d4e10260d`
+  wurden die geladene CSS-Regel und die reine Ausschlusssuche im Exact-Modus nochmals geprüft.
 
 ## Private Server-API
 

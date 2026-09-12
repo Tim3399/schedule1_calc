@@ -22,7 +22,11 @@ class PrivateCalculationApiTests(unittest.TestCase):
     def setUp(self):
         configuration = mock.patch.dict(
             app_module.app.config,
-            {"TESTING": True, "SERVER_CALCULATION_TOKEN": self.token},
+            {
+                "TESTING": True,
+                "SERVER_CALCULATION_TOKEN": self.token,
+                "HTTP_RATE_LIMIT_ENABLED": False,
+            },
         )
         configuration.start()
         self.addCleanup(configuration.stop)

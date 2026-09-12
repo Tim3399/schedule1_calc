@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Best Mix Calculator</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+    <link rel="stylesheet" href="{{ browser_asset_url('css/tokens.css') }}" />
+    <link rel="stylesheet" href="{{ browser_asset_url('css/styles.css') }}" />
     <script>
       (function () {
         try {
@@ -66,14 +66,35 @@
         <span class="chips-label">Effects</span>
         {% if combination.effects %}
         <ul class="chips">
-          {% for effect in combination.effects %}
-          <li>{{ effect | display_lookup_name }}</li>
+          {% for effect in combination.effects %} {% set color = effect | effect_color %}
+          <li {% if color %}class="effect-chip" style="--effect-color: {{ color }}" {% endif %}>
+            {{ effect | display_lookup_name }}
+          </li>
           {% endfor %}
         </ul>
         {% else %}
         <span class="chips__empty">None</span>
         {% endif %}
       </div>
+      {% set described_effects = combination.effects | effect_descriptions %} {% if
+      described_effects %}
+      <details class="effect-guide">
+        <summary>What these effects do</summary>
+        <dl class="effect-guide__list">
+          {% for effect, description in described_effects %} {% set color = effect | effect_color %}
+          <dt>
+            {% if color %}<span
+              class="effect-swatch"
+              style="--effect-color: {{ color }}"
+              aria-hidden="true"
+            ></span
+            >{% endif %} {{ effect | display_lookup_name }}
+          </dt>
+          <dd>{{ description }}</dd>
+          {% endfor %}
+        </dl>
+      </details>
+      {% endif %}
     </article>
     {% endmacro %}
 
@@ -140,6 +161,16 @@
           >
             Your Recipe
           </button>
+          <button
+            type="button"
+            id="effect-tab"
+            role="tab"
+            aria-controls="effect-panel"
+            aria-selected="false"
+            tabindex="-1"
+          >
+            Match Effects
+          </button>
         </div>
 
         <section id="search-panel" role="tabpanel" aria-labelledby="search-tab">
@@ -150,8 +181,8 @@
                 class="card"
                 method="GET"
                 action="/"
-                data-search-data-url="{{ url_for('search_data_json') }}"
-                data-worker-url="{{ url_for('static', filename='js/search-worker.js') }}"
+                data-search-data-url="{{ browser_catalog_url() }}"
+                data-worker-url="{{ browser_asset_url('js/search-worker.js') }}"
               >
                 <h2 class="card__title">Set up your mix</h2>
 
@@ -372,11 +403,148 @@
             </div>
           </div>
         </section>
+        <section id="effect-panel" role="tabpanel" aria-labelledby="effect-tab" hidden>
+          <form id="effect-form" class="panel-grid panel-grid--effects" method="GET" action="/">
+            <div class="panel-column">
+              <div class="card">
+                <h2 class="card__title">Choose your effects</h2>
+                <fieldset class="field search-mode-field" aria-describedby="effect-match-hint">
+                  <legend class="field-label">Recipe match</legend>
+                  <div class="mode-switch">
+                    <label class="mode-switch__option">
+                      <input type="radio" name="effect_match_mode" value="exact" checked />
+                      <span>Only these</span>
+                    </label>
+                    <label class="mode-switch__option">
+                      <input type="radio" name="effect_match_mode" value="contains" />
+                      <span>Allow extras</span>
+                    </label>
+                  </div>
+                  <p class="field__hint" id="effect-match-hint">
+                    Only wanted effects. All other effects are excluded.
+                  </p>
+                </fieldset>
+                <fieldset class="effect-picker" aria-describedby="effect-match-hint">
+                  <legend class="visually-hidden">Effect preferences</legend>
+                  <div class="field">
+                    <label for="effect-filter">Filter effects</label>
+                    <input
+                      id="effect-filter"
+                      type="search"
+                      placeholder="Name or description"
+                      autocomplete="off"
+                    />
+                  </div>
+                  <div
+                    id="effect-options"
+                    class="effect-options"
+                    role="region"
+                    aria-label="Available effects"
+                    tabindex="0"
+                  ></div>
+                  <div class="effect-selection-toolbar">
+                    <p
+                      id="effect-selection-count"
+                      class="effect-selection-count"
+                      aria-live="polite"
+                    >
+                      0 wanted · 0 avoided
+                    </p>
+                    <button id="clear-effects" type="button">Clear all</button>
+                  </div>
+                  <div id="effect-selection-summary" class="effect-selection-summary"></div>
+                </fieldset>
+              </div>
+            </div>
+            <div class="panel-column">
+              <div class="card">
+                <h2 class="card__title">Recipe settings</h2>
+                <p class="field__hint effect-ranking-hint">Fewest steps, then lowest cost.</p>
+                <div class="field">
+                  <label for="effect-product">Base product</label>
+                  <div class="select-control">
+                    <select id="effect-product" required>
+                      <button type="button"><selectedcontent></selectedcontent></button>
+                      {% for product in products %}
+                      <option value="{{ product.name }}">
+                        {{ display_lookup_name(product.name) }}
+                      </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                </div>
+                <div class="field-grid">
+                  <div class="field">
+                    <label for="effect-level">Your rank</label>
+                    <div class="select-control">
+                      <select id="effect-level" required>
+                        <button type="button"><selectedcontent></selectedcontent></button>
+                        {% for level_name in level_name_to_int.keys() %}
+                        <option value="{{ level_name }}">
+                          {{ display_lookup_name(level_name) }}
+                        </option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="effect-max-ingredients">Max ingredients</label>
+                    <input
+                      type="number"
+                      id="effect-max-ingredients"
+                      min="0"
+                      max="16"
+                      value="6"
+                      step="1"
+                      required
+                    />
+                  </div>
+                </div>
+                <fieldset class="field search-mode-field" aria-describedby="effect-mode-hint">
+                  <legend class="field-label">Search mode</legend>
+                  <div class="mode-switch">
+                    <label class="mode-switch__option">
+                      <input
+                        type="radio"
+                        name="effect_search_mode"
+                        value="exact"
+                        checked
+                        required
+                      />
+                      <span>Exact</span>
+                    </label>
+                    <label class="mode-switch__option">
+                      <input type="radio" name="effect_search_mode" value="fast" required />
+                      <span>Fast</span>
+                    </label>
+                  </div>
+                  <p class="field__hint" id="effect-mode-hint">
+                    Exact proves the shortest recipe or no match (up to 5 min). Fast searches
+                    quickly; a missed match may still exist.
+                  </p>
+                </fieldset>
+                <div class="form-actions">
+                  <button id="find-effects" type="submit" class="btn--primary" disabled>
+                    Find Recipe
+                  </button>
+                  <button id="cancel-effects" type="button" hidden>Cancel Search</button>
+                </div>
+                <button id="retry-effects" type="button" hidden>Retry Loading</button>
+              </div>
+              <div id="effect-result" class="result-stack" aria-live="polite" tabindex="-1">
+                <div class="empty-state">
+                  <h2>No recipe yet</h2>
+                  <p>Mark the effects you want or want to avoid, then select Find Recipe.</p>
+                </div>
+              </div>
+            </div>
+          </form>
+        </section>
       </main>
     </div>
 
-    <script src="{{ url_for('static', filename='js/theme.js') }}" defer></script>
-    <script src="{{ url_for('static', filename='js/search-engine.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="{{ browser_asset_url('js/theme.js') }}" defer></script>
+    <script src="{{ browser_asset_url('js/search-engine.js') }}"></script>
+    <script src="{{ browser_asset_url('js/script.js') }}"></script>
   </body>
 </html>

@@ -17,6 +17,8 @@ class Effect:
     name: str
     modificator: float
     display_name: str | None = None
+    color: str | None = None
+    description: str | None = None
 
 
 @dataclass

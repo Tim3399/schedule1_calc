@@ -38,7 +38,7 @@ stehen im [CI/CD-Profil](CI_CD_PROFILE.md).
 | Runtime-Manager                  | `.python-version`, `.node-version`         | Müssen der gemeinsamen Quelle entsprechen                                                                                             |
 | npm-Pins                         | `package.json`                             | `packageManager` und `engines` entsprechen der gemeinsamen Quelle                                                                     |
 | JavaScript-Pakete                | `package.json`, `package-lock.json`        | Exakte Versionen; Installation mit `npm ci`                                                                                           |
-| Python-Pakete                    | `requirements.txt`, `requirements-dev.txt` | Exakte Laufzeitpakete und Ruff; Installation mit gewähltem Python                                                                     |
+| Python-Pakete                    | `requirements.txt`, `requirements-dev.txt` | Exakte Laufzeitpakete, Ruff und Waitress 3.0.2 für reale Servertests; Installation mit gewähltem Python                               |
 | Python-Formatierer               | `pyproject.toml`, Ruff 0.16.4              | Vier Leerzeichen, Breite 100, doppelte Anführungszeichen, LF, Syntaxziel py312                                                        |
 | Web-Formatierer                  | `biome.json`, Biome 2.5.7                  | JS/MJS/CJS/JSON/JSONC/CSS; zwei Leerzeichen, Breite 100, doppelte Anführungszeichen, Semikolons, nachgestellte Kommas, Arrow-Klammern |
 | Dokumente/Templates              | `.prettierrc`, Prettier 3.9.6              | MD/YAML/HTML; zwei Leerzeichen, Breite 100, Prosaumbrüche erhalten; eingebettete Sprachen nicht umformatieren                         |
@@ -46,6 +46,10 @@ stehen im [CI/CD-Profil](CI_CD_PROFILE.md).
 | Pinprüfung                       | `tools/project.py doctor`                  | Tatsächliche Runtimes, Runtime-Kopien, installierte Pins und Produktversionskopien                                                    |
 
 Der Anwendungsstart benötigt Python **ab 3.12** und die exakten Pakete aus `requirements.txt`; Node/npm/Ruff sind dafür nicht erforderlich. Python **3.12.14** ist der geprüfte und für `doctor`/Formatierung/`check` vorgeschriebene Interpreter. Das breitere Startintervall verspricht keine getestete Kompatibilität aller zukünftigen Python-Versionen.
+
+`requirements-dev.txt` enthält zusätzlich Waitress 3.0.2, damit Produktionsserver- und
+Socketgrenzen auf beiden CI-Plattformen real geprüft werden. Der vollständige Produktionsgraph
+bleibt separat in `requirements-release.lock` gesperrt.
 
 Generierte Dateien, `node_modules`, virtuelle Umgebungen, Caches, Builds und Logs gehören nicht zur Formatierung. Die JSON-Berichte unter `docs/reviews/data/` werden von `tools/evaluate_search.py` erzeugt; vorhandene Messausgaben bleiben als datierte Nachweise bytegenau erhalten und werden weder von Biome noch manuell umformatiert. Die versionierte Standardskopie unter `docs/standards/` ist als übernommener Quellenstand ebenfalls von schreibender Formatierung ausgeschlossen; `SOURCE.md` dokumentiert die Originaldateien mit SHA-256. `package-lock.json` gehört npm. Gepflegte Quellen einschließlich `src/util/models.py` bleiben enthalten. TOML-, Requirements- und reine Werkzeugkonfigurationen werden manuell gepflegt und durch ihre Werkzeuge gelesen; für zusätzliche Quellsprachen ist vor Aufnahme in den Sammelcheck ein Formatierer festzulegen.
 
@@ -84,6 +88,10 @@ Die Tests der Browser-Suche starten den gepinnten Node-Interpreter als Unterproz
 
 Der Launcher löst Quellpfade relativ zu `tools/project.py` auf. Er importiert die App und startet einen eigenen Werkzeug-Serverthread. Es gibt keinen Frontend-Proxy, keine zweite API-Adresse und keine Kindprozess-Baumstruktur. Derselbe Port gilt für Frontend, API und Bereitschaftsprobe; die lokale Probe umgeht konfigurierte HTTP-Proxys.
 
+Dieser Entwicklungsserver übernimmt die Anwendungsgrenzen, erzwingt aber nicht die Header-,
+Verbindungs- und Puffergrenzen des Produktionsservers. Der vollständige Vertrag für Waitress,
+Request-Budget und Browser-Caches steht in [HTTP_DELIVERY.md](HTTP_DELIVERY.md).
+
 Ports sind Ganzzahlen von 1 bis 65535. Ein belegter Port führt zu einem Fehler; es gibt keinen Ausweichport und kein Beenden fremder Prozesse. Die HTTP-Bereitschaftsprobe hat zehn Sekunden Frist. Danach prüft der Root-Rendercheck HTTP 200; das ersetzt keinen Browser-Funktionstest. Ein Start-Token und Quelldigest verhindern die Verwechslung mit einem fremden Server.
 
 Die Startmeldung gibt URL, Modus `development`, Produktversion, Git-Revision mit gegebenenfalls `-dirty` und Quelldigest aus. Ohne zugängliche Git-Metadaten ist die Revision `unknown`. `/__dev__/identity` sowie `X-Schedule1-Version`/`X-Schedule1-Source` dienen lokaler Diagnostik; absolute Checkout-Pfade und der Start-Token werden dort nicht veröffentlicht. Der Digest bezeichnet Startquellen einer Entwicklungsinstanz, kein Release-Artefakt; seine Eingaben sind in `source_identity` definiert. Nach relevanten Quelländerungen explizit neu starten. `Ctrl+C`/SIGTERM und Startfehler räumen den eigenen Server auf.
@@ -96,7 +104,13 @@ Vollständiges Beispiel für einen alternativen Port unter PowerShell:
 
 Der Launcher installiert nichts, erzeugt keine Datenbank und erhöht keine Version. Die UI berechnet aus Python-Lookups. Optionale SQLite-Dateien und Logs sind lokale Daten. Pro Checkout eigene Verzeichnisse und für Exporte eigene Datenbankpfade verwenden. Verschiedene Ports im selben Checkout isolieren vorhandene Logging-/Datenpfade nicht; diese Art automatischer Datenisolation ist offen.
 
-Öffentliche Besucher rechnen in einem Browser-Worker. `GET /search-data` liefert ausschließlich Lookup-Daten und Skalen. Ohne `SCHEDULE1_API_TOKEN` sind beide alten Rechen-POST-Endpunkte deaktiviert; mit diesem ausschließlich serverseitig hinterlegten Secret verlangen sie den passenden Bearer-Header. Ein Formular ohne JavaScript löst keine Serversuche aus. Der [Suchvertrag](SEARCH_MODES.md) beschreibt Abbruch, numerische Gleichheit und den privaten API-Zugang.
+Öffentliche Besucher rechnen in einem Browser-Worker. Das HTML bindet Browsermodell und Assets über
+einen gemeinsamen, inhaltsadressierten Revisionspfad; die Legacy-Pfade bleiben revalidierbar. Ohne
+`SCHEDULE1_API_TOKEN` sind beide alten Rechen-POST-Endpunkte deaktiviert; mit diesem ausschließlich
+serverseitig hinterlegten Secret verlangen sie den passenden Bearer-Header. Ein Formular ohne
+JavaScript löst keine Serversuche aus. Der [Suchvertrag](SEARCH_MODES.md) beschreibt Abbruch,
+numerische Gleichheit und den privaten API-Zugang; [HTTP_DELIVERY.md](HTTP_DELIVERY.md) beschreibt
+HTTP-Grenzen und Caching.
 
 ## Version und Veröffentlichung
 

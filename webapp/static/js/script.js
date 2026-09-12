@@ -41,13 +41,17 @@ document.addEventListener("DOMContentLoaded", function () {
       .join(" ");
   }
 
-  function displayName(catalog, collectionName, identifier) {
+  function catalogItem(catalog, collectionName, identifier) {
     const collection = catalog?.[collectionName];
-    const item = Array.isArray(collection)
+    return Array.isArray(collection)
       ? collection.find(
           (entry) => entry !== null && typeof entry === "object" && entry.name === identifier,
         )
       : undefined;
+  }
+
+  function displayName(catalog, collectionName, identifier) {
+    const item = catalogItem(catalog, collectionName, identifier);
     return typeof item?.display_name === "string" && item.display_name
       ? item.display_name
       : humanizeIdentifier(identifier);
@@ -88,7 +92,7 @@ document.addEventListener("DOMContentLoaded", function () {
     return readable.replace(/\b[a-z0-9]+(?:_[a-z0-9+]+)+\b/g, humanizeIdentifier);
   }
 
-  function appendChipRow(card, label, names, ordered = false) {
+  function appendChipRow(card, label, names, ordered = false, colors = []) {
     const row = document.createElement("div");
     row.className = "chips-row";
     appendTextElement(row, "span", label, "chips-label");
@@ -97,8 +101,13 @@ document.addEventListener("DOMContentLoaded", function () {
     } else {
       const list = document.createElement(ordered ? "ol" : "ul");
       list.className = ordered ? "chips chips--ordered" : "chips";
-      for (const name of names) {
-        appendTextElement(list, "li", name);
+      for (const [index, name] of names.entries()) {
+        const chip = appendTextElement(list, "li", name);
+        const color = colors[index];
+        if (typeof color === "string" && /^#[0-9a-f]{6}$/i.test(color)) {
+          chip.className = "effect-chip";
+          chip.setAttribute("style", `--effect-color: ${color}`);
+        }
       }
       row.appendChild(list);
     }
@@ -111,6 +120,33 @@ document.addEventListener("DOMContentLoaded", function () {
     appendTextElement(entry, "dt", label);
     appendTextElement(entry, "dd", value);
     stats.appendChild(entry);
+  }
+
+  function appendEffectGuide(card, effectNames, catalog) {
+    const described = effectNames
+      .map((name) => ({ effect: catalogItem(catalog, "effects", name), name }))
+      .filter(({ effect }) => typeof effect?.description === "string" && effect.description);
+    if (!described.length) return;
+    const guide = document.createElement("details");
+    guide.className = "effect-guide";
+    appendTextElement(guide, "summary", "What these effects do");
+    const list = document.createElement("dl");
+    list.className = "effect-guide__list";
+    for (const { effect, name } of described) {
+      const term = document.createElement("dt");
+      const swatch = document.createElement("span");
+      swatch.className = "effect-swatch";
+      swatch.setAttribute("aria-hidden", "true");
+      if (typeof effect.color === "string" && /^#[0-9a-f]{6}$/i.test(effect.color)) {
+        swatch.setAttribute("style", `--effect-color: ${effect.color}`);
+      }
+      term.appendChild(swatch);
+      appendTextElement(term, "span", displayName(catalog, "effects", name));
+      list.appendChild(term);
+      appendTextElement(list, "dd", effect.description);
+    }
+    guide.appendChild(list);
+    card.appendChild(guide);
   }
 
   function renderCombination(title, combination, catalog, destination = resultDiv, status = null) {
@@ -145,7 +181,10 @@ document.addEventListener("DOMContentLoaded", function () {
       card,
       "Effects",
       combination.effects.map((name) => displayName(catalog, "effects", name)),
+      false,
+      combination.effects.map((name) => catalogItem(catalog, "effects", name)?.color),
     );
+    appendEffectGuide(card, combination.effects, catalog);
     destination.appendChild(card);
   }
 
@@ -199,13 +238,13 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  function isCombination(combination) {
+  function isCombination(combination, allowEmpty = false) {
     return (
       combination &&
       Array.isArray(combination.effects) &&
       combination.effects.every((effect) => typeof effect === "string") &&
       Array.isArray(combination.substances) &&
-      combination.substances.length > 0 &&
+      (allowEmpty || combination.substances.length > 0) &&
       combination.substances.every(
         (substance) => typeof substance === "string" && substance.length > 0,
       ) &&
@@ -286,15 +325,35 @@ document.addEventListener("DOMContentLoaded", function () {
     if (catalogCache) {
       return catalogCache;
     }
-    const response = await fetch(searchDataUrl, {
-      method: "GET",
-      headers: { Accept: "application/json" },
-      credentials: "same-origin",
-      cache: "no-cache",
-      signal: run.abortController.signal,
-    });
+    let response;
+    try {
+      response = await fetch(searchDataUrl, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        credentials: "same-origin",
+        signal: run.abortController.signal,
+      });
+    } catch (error) {
+      if (error?.name === "AbortError") throw error;
+      const detail = error instanceof Error && error.message ? `: ${error.message}` : "";
+      throw new Error(`Could not load search data${detail}. Reload the page and try again.`);
+    }
     if (!response.ok) {
-      throw new Error(`Could not load search data (HTTP ${response.status}).`);
+      if (response.status === 429) {
+        const retryAfter = response.headers?.get?.("Retry-After");
+        const parsedRetryAfter = /^\d+$/.test(retryAfter || "") ? Number(retryAfter) : 0;
+        const waitSeconds =
+          Number.isSafeInteger(parsedRetryAfter) && parsedRetryAfter > 0
+            ? Math.min(parsedRetryAfter, 300)
+            : null;
+        const wait = waitSeconds
+          ? ` Wait ${waitSeconds} ${waitSeconds === 1 ? "second" : "seconds"}, then try again.`
+          : " Wait before trying again.";
+        throw new Error(`Search data is temporarily limited (HTTP 429).${wait}`);
+      }
+      throw new Error(
+        `Could not load search data (HTTP ${response.status}). Reload the page and try again.`,
+      );
     }
     const catalog = await response.json();
     if (!catalog || typeof catalog !== "object" || Array.isArray(catalog)) {
@@ -418,13 +477,8 @@ document.addEventListener("DOMContentLoaded", function () {
   function initializeRecipeTab() {
     const recipeForm = document.getElementById("recipe-form");
     if (!recipeForm) {
-      return;
+      return null;
     }
-    const tabs = [document.getElementById("search-tab"), document.getElementById("recipe-tab")];
-    const panels = [
-      document.getElementById("search-panel"),
-      document.getElementById("recipe-panel"),
-    ];
     const product = document.getElementById("recipe-product");
     const shelf = document.getElementById("ingredient-shelf");
     const clearButton = document.getElementById("clear-recipe");
@@ -919,43 +973,6 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }
 
-    function selectTab(index, focus = false) {
-      cancelDrag();
-      tabs.forEach((tab, tabIndex) => {
-        const selected = index === tabIndex;
-        tab.setAttribute("aria-selected", String(selected));
-        tab.tabIndex = selected ? 0 : -1;
-        panels[tabIndex].hidden = !selected;
-      });
-      if (focus) {
-        tabs[index].focus();
-      }
-      if (index === 1) {
-        if (activeRun) {
-          stopRun(activeRun);
-          renderMessage("Search cancelled when switching to Your Recipe. No result was produced.");
-        }
-        return prepareRecipe();
-      }
-    }
-
-    tabs.forEach((tab, index) => {
-      tab.addEventListener("click", () => selectTab(index));
-      tab.addEventListener("keydown", (event) => {
-        let next;
-        if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
-          next = 1 - index;
-        } else if (event.key === "Home") {
-          next = 0;
-        } else if (event.key === "End") {
-          next = 1;
-        } else {
-          return;
-        }
-        event.preventDefault();
-        selectTab(next, true);
-      });
-    });
     recipeForm.addEventListener("submit", (event) => event.preventDefault());
     product.addEventListener("change", function () {
       forgetClearedRecipe();
@@ -1005,9 +1022,590 @@ document.addEventListener("DOMContentLoaded", function () {
       cancelDrag();
       loadController?.abort();
     });
+    return { cancel: cancelDrag, prepare: prepareRecipe };
   }
 
-  initializeRecipeTab();
+  function initializeEffectTab() {
+    const effectForm = document.getElementById("effect-form");
+    if (!effectForm) return null;
+    const product = document.getElementById("effect-product");
+    const level = document.getElementById("effect-level");
+    const maxIngredients = document.getElementById("effect-max-ingredients");
+    const filter = document.getElementById("effect-filter");
+    const options = document.getElementById("effect-options");
+    const selectionCount = document.getElementById("effect-selection-count");
+    const selectionSummary = document.getElementById("effect-selection-summary");
+    const matchHint = document.getElementById("effect-match-hint");
+    const clearButton = document.getElementById("clear-effects");
+    const submitButton = document.getElementById("find-effects");
+    const cancelButton = document.getElementById("cancel-effects");
+    const retryButton = document.getElementById("retry-effects");
+    const output = document.getElementById("effect-result");
+    let catalog = null;
+    let loading = false;
+    let loadController = null;
+    let activeEffectRun = null;
+    let nextEffectRequestId = 1;
+    let optionEntries = [];
+
+    function effectMessage(message, { busy = false, error = false } = {}) {
+      const element = document.createElement("div");
+      element.setAttribute("role", error ? "alert" : "status");
+      if (error) {
+        element.className = "alert alert--error";
+        element.textContent = message;
+      } else if (busy) {
+        element.className = "status-block";
+        appendTextElement(element, "p", message);
+        const track = document.createElement("div");
+        track.className = "progress";
+        track.setAttribute("aria-hidden", "true");
+        track.appendChild(document.createElement("span"));
+        element.appendChild(track);
+      } else {
+        element.className = "status-line";
+        element.textContent = message;
+      }
+      output.replaceChildren(element);
+    }
+
+    function selectedEffects(preference) {
+      return optionEntries
+        .filter((entry) => entry.inputs[preference].checked)
+        .map(({ effect }) => effect.name);
+    }
+
+    function selectedMatchMode() {
+      return effectForm.querySelector('input[name="effect_match_mode"]:checked')?.value;
+    }
+
+    function canSearchEffects() {
+      const wanted = selectedEffects("wanted");
+      const excluded = selectedEffects("excluded");
+      return wanted.length > 0 || (selectedMatchMode() === "contains" && excluded.length > 0);
+    }
+
+    function setEffectBusy(busy) {
+      submitButton.disabled = busy || !canSearchEffects() || !catalog;
+      cancelButton.hidden = !busy;
+      effectForm.setAttribute("aria-busy", String(busy));
+    }
+
+    function updateSelection() {
+      const wanted = selectedEffects("wanted");
+      const excluded = selectedEffects("excluded");
+      selectionCount.textContent = `${wanted.length} wanted · ${excluded.length} avoided`;
+      selectionSummary.replaceChildren();
+      for (const preference of ["wanted", "excluded"]) {
+        for (const name of selectedEffects(preference)) {
+          const entry = optionEntries.find(({ effect }) => effect.name === name);
+          const display = displayName(catalog, "effects", name);
+          const chip = document.createElement("button");
+          chip.type = "button";
+          chip.className = "effect-selection-chip";
+          chip.dataset.preference = preference;
+          appendTextElement(
+            chip,
+            "span",
+            `${preference === "wanted" ? "Want" : "Avoid"}: ${display}`,
+          );
+          const removeMark = appendTextElement(chip, "span", "×");
+          removeMark.setAttribute("aria-hidden", "true");
+          chip.setAttribute(
+            "aria-label",
+            `Remove ${display} from ${preference === "wanted" ? "wanted" : "avoided"} effects`,
+          );
+          chip.addEventListener("click", () => {
+            discardEffectResult();
+            setPreference(entry, "neutral");
+            updateSelection();
+            (entry.fieldset.hidden ? filter : entry.inputs.neutral).focus();
+          });
+          selectionSummary.appendChild(chip);
+        }
+      }
+      clearButton.disabled = wanted.length === 0 && excluded.length === 0;
+      if (!activeEffectRun) setEffectBusy(false);
+    }
+
+    function updateMatchHint() {
+      if (!matchHint) return;
+      matchHint.textContent =
+        selectedMatchMode() === "contains"
+          ? "Wanted effects must be present; avoided effects must be absent. Other effects are allowed."
+          : "Only wanted effects. All other effects are excluded.";
+    }
+
+    function syncPreference(entry) {
+      const preference = Object.entries(entry.inputs).find(([, input]) => input.checked)?.[0];
+      entry.fieldset.dataset.preference = preference || "neutral";
+    }
+
+    function setPreference(entry, preference) {
+      for (const [value, input] of Object.entries(entry.inputs)) {
+        input.checked = value === preference;
+      }
+      syncPreference(entry);
+    }
+
+    function discardEffectResult() {
+      const wasRunning = Boolean(activeEffectRun);
+      if (activeEffectRun) stopEffectRun(activeEffectRun);
+      output.replaceChildren();
+      if (wasRunning) {
+        effectMessage("Effect search cancelled because its settings changed.", { error: true });
+      }
+    }
+
+    function filterOptions() {
+      const query = filter.value.trim().toLocaleLowerCase();
+      let matches = 0;
+      for (const entry of optionEntries) {
+        const searchable =
+          `${entry.displayName} ${entry.effect.description || ""}`.toLocaleLowerCase();
+        entry.fieldset.hidden = Boolean(query) && !searchable.includes(query);
+        if (!entry.fieldset.hidden) matches += 1;
+      }
+      const empty = options.children[options.children.length - 1];
+      if (empty?.className === "effect-options-empty") empty.hidden = matches !== 0;
+    }
+
+    function renderEffectOptions() {
+      options.replaceChildren();
+      optionEntries = [];
+      for (const effect of catalog.effects) {
+        const fieldset = document.createElement("fieldset");
+        fieldset.className = "effect-option";
+        fieldset.dataset.preference = "neutral";
+        const description =
+          typeof effect.description === "string" && effect.description ? effect.description : "";
+        const descriptionId = `effect-description-${effect.name}`;
+        fieldset.setAttribute("aria-describedby", descriptionId);
+        const heading = document.createElement("legend");
+        heading.className = "effect-option__heading";
+        const swatch = document.createElement("span");
+        swatch.className = "effect-swatch";
+        swatch.setAttribute("aria-hidden", "true");
+        if (typeof effect.color === "string" && /^#[0-9a-f]{6}$/i.test(effect.color)) {
+          swatch.setAttribute("style", `--effect-color: ${effect.color}`);
+        }
+        heading.appendChild(swatch);
+        const display = displayName(catalog, "effects", effect.name);
+        appendTextElement(heading, "span", display, "effect-option__name");
+        fieldset.appendChild(heading);
+        const descriptionElement = appendTextElement(
+          fieldset,
+          "p",
+          description,
+          "effect-option__description",
+        );
+        descriptionElement.id = descriptionId;
+        const preference = document.createElement("div");
+        preference.className = "effect-preference";
+        const inputs = {};
+        const entry = { displayName: display, effect, fieldset, inputs };
+        for (const [value, labelText] of [
+          ["wanted", "Want"],
+          ["neutral", "Neutral"],
+          ["excluded", "Avoid"],
+        ]) {
+          const label = document.createElement("label");
+          label.className = "effect-preference__option";
+          const input = document.createElement("input");
+          input.type = "radio";
+          input.name = `effect_preference_${effect.name}`;
+          input.value = value;
+          input.checked = value === "neutral";
+          input.addEventListener("change", () => {
+            if (!input.checked) return;
+            discardEffectResult();
+            syncPreference(entry);
+            updateSelection();
+          });
+          label.appendChild(input);
+          appendTextElement(label, "span", labelText);
+          preference.appendChild(label);
+          inputs[value] = input;
+        }
+        fieldset.appendChild(preference);
+        options.appendChild(fieldset);
+        optionEntries.push(entry);
+      }
+      const noMatches = appendTextElement(
+        options,
+        "p",
+        "No effects match this filter.",
+        "effect-options-empty",
+      );
+      noMatches.hidden = true;
+      updateSelection();
+      filterOptions();
+    }
+
+    function sameUniqueStrings(values, expected) {
+      return (
+        Array.isArray(values) &&
+        values.length === expected.length &&
+        values.every((value) => typeof value === "string") &&
+        new Set(values).size === values.length &&
+        values.every((value) => expected.includes(value))
+      );
+    }
+
+    function validateEffectResult(result, run) {
+      const search = result?.search;
+      const exact = run.mode === "exact";
+      const foundStatus = exact ? "optimal" : "approximate";
+      const validSearch =
+        search?.mode === run.mode &&
+        search.optimality_proven === exact &&
+        (search.status === foundStatus || search.status === "not_found");
+      if (
+        result?.error ||
+        !validSearch ||
+        result.match_mode !== run.matchMode ||
+        !sameUniqueStrings(result.target_effects, run.targetEffects) ||
+        !sameUniqueStrings(result.excluded_effects, run.excludedEffects)
+      ) {
+        return null;
+      }
+      if (search.status === "not_found") {
+        return result.recipe === null ? { notFound: true, recipe: null } : null;
+      }
+      if (!isCombination(result.recipe, true)) return null;
+      if (
+        result.recipe.substances.length > run.request.combination_size ||
+        (run.matchMode === "exact"
+          ? !sameUniqueStrings(result.recipe.effects, run.targetEffects)
+          : !run.targetEffects.every((effect) => result.recipe.effects.includes(effect)) ||
+            run.excludedEffects.some((effect) => result.recipe.effects.includes(effect)))
+      ) {
+        return null;
+      }
+      const maxLevel = catalog.levels?.[run.request.level];
+      if (
+        !Number.isInteger(maxLevel) ||
+        result.recipe.substances.some((name) => {
+          const substance = catalogItem(catalog, "substances", name);
+          return !substance || !Number.isInteger(substance.level) || substance.level > maxLevel;
+        })
+      ) {
+        return null;
+      }
+      try {
+        const evaluated = window.Schedule1Search.evaluateRecipe(catalog, {
+          product_name: run.request.product_name,
+          substances: result.recipe.substances,
+        });
+        if (
+          run.matchMode === "exact"
+            ? !sameUniqueStrings(evaluated.effects, run.targetEffects)
+            : !run.targetEffects.every((effect) => evaluated.effects.includes(effect)) ||
+              run.excludedEffects.some((effect) => evaluated.effects.includes(effect))
+        ) {
+          return null;
+        }
+        return { notFound: false, recipe: evaluated };
+      } catch {
+        return null;
+      }
+    }
+
+    function stopEffectRun(run) {
+      clearTimeout(run.watchdog);
+      run.abortController.abort();
+      if (run.worker) {
+        run.worker.terminate();
+        run.worker = null;
+      }
+      if (activeEffectRun === run) {
+        activeEffectRun = null;
+        setEffectBusy(false);
+      }
+    }
+
+    function failEffectRun(run, message) {
+      if (activeEffectRun !== run) return;
+      stopEffectRun(run);
+      effectMessage(`${readableMessage(message, catalog)} No result was produced.`, {
+        error: true,
+      });
+    }
+
+    function renderEffectResult(result, run) {
+      output.replaceChildren();
+      if (result.notFound) {
+        const proven = run.mode === "exact";
+        effectMessage(
+          run.matchMode === "contains"
+            ? proven
+              ? "No recipe satisfies the wanted and avoided effects within the selected base, rank, and ingredient limit. This is proven for these settings."
+              : "The fast search found no recipe satisfying the wanted and avoided effects. This does not prove that no match exists."
+            : proven
+              ? "No recipe has only the wanted effects within the selected base, rank, and ingredient limit. This is proven for these settings."
+              : "The fast search found no recipe with only the wanted effects. This does not prove that no match exists.",
+        );
+        return;
+      }
+      renderCombination(
+        run.matchMode === "contains"
+          ? run.mode === "exact"
+            ? "Shortest matching recipe"
+            : "Matching recipe found"
+          : run.mode === "exact"
+            ? "Shortest recipe with only wanted effects"
+            : "Recipe with only wanted effects found",
+        result.recipe,
+        catalog,
+        output,
+        run.mode === "exact"
+          ? { label: "Optimality proven", tone: "proven" }
+          : { label: "Approximate search — optimality not guaranteed", tone: "approximate" },
+      );
+    }
+
+    function startEffectWorker(run) {
+      if (activeEffectRun !== run) return;
+      const worker = new Worker(workerUrl);
+      run.worker = worker;
+      worker.addEventListener("message", (event) => {
+        const message = event.data;
+        if (activeEffectRun !== run || message?.request_id !== run.requestId) return;
+        if (message.type === "progress") {
+          effectMessage(progressText(message.progress), { busy: true });
+          return;
+        }
+        if (message.type === "result") {
+          const validated = validateEffectResult(message.result, run);
+          if (!validated) {
+            failEffectRun(
+              run,
+              "The local effect search returned an invalid or incomplete response.",
+            );
+            return;
+          }
+          stopEffectRun(run);
+          renderEffectResult(validated, run);
+          return;
+        }
+        if (message.type === "error") {
+          const metadata = message.search;
+          const validError =
+            metadata?.mode === run.mode &&
+            (metadata.status === "incomplete" || metadata.status === "error") &&
+            metadata.optimality_proven === false;
+          failEffectRun(
+            run,
+            validError && typeof message.error === "string"
+              ? message.error
+              : "The local effect search failed with an invalid response.",
+          );
+          return;
+        }
+        failEffectRun(run, "The local effect search returned an unknown response.");
+      });
+      worker.addEventListener("error", (event) => {
+        event.preventDefault();
+        failEffectRun(run, "The local effect search could not run in this browser.");
+      });
+      worker.addEventListener("messageerror", () => {
+        failEffectRun(run, "The browser could not read the local effect search response.");
+      });
+      worker.postMessage({
+        catalog,
+        request: run.request,
+        request_id: run.requestId,
+        type: "search_effects",
+      });
+    }
+
+    async function prepareEffects() {
+      if (catalog || loading) return;
+      loading = true;
+      retryButton.hidden = true;
+      effectMessage("Loading effect data for local search…");
+      let loadTimeout = null;
+      try {
+        if (
+          typeof Worker !== "function" ||
+          typeof AbortController !== "function" ||
+          typeof window.Schedule1Search?.evaluateRecipe !== "function"
+        ) {
+          throw new Error("This browser cannot run the effect search locally.");
+        }
+        loadController = new AbortController();
+        loadTimeout = setTimeout(() => loadController.abort(), 15_000);
+        const loaded = await loadCatalog({ abortController: loadController });
+        window.Schedule1Search.validateCatalog(loaded, 0);
+        catalog = loaded;
+        renderEffectOptions();
+        updateMatchHint();
+        product.disabled = false;
+        level.disabled = false;
+        maxIngredients.disabled = false;
+        filter.disabled = false;
+        clearButton.disabled = true;
+        effectMessage("Choose the effects you want or want to avoid.");
+      } catch (error) {
+        catalogCache = null;
+        effectMessage(
+          error?.name === "AbortError"
+            ? "Loading effect data was interrupted. Please try again."
+            : error instanceof Error
+              ? error.message
+              : "Could not load effect data.",
+          { error: true },
+        );
+        retryButton.hidden = false;
+      } finally {
+        clearTimeout(loadTimeout);
+        loading = false;
+      }
+    }
+
+    effectForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (activeEffectRun || !catalog) return;
+      const targetEffects = selectedEffects("wanted");
+      const excludedEffects = selectedEffects("excluded");
+      const selectedMode = effectForm.querySelector(
+        'input[name="effect_search_mode"]:checked, input[name="search_mode"]:checked',
+      );
+      const matchMode = selectedMatchMode();
+      if (
+        (!targetEffects.length && !(matchMode === "contains" && excludedEffects.length)) ||
+        !selectedMode
+      )
+        return;
+      const request = {
+        combination_size: Number(maxIngredients.value),
+        excluded_effects: [...excludedEffects],
+        level: level.value,
+        match_mode: matchMode,
+        product_name: product.value,
+        search_mode: selectedMode.value,
+        target_effects: [...targetEffects],
+      };
+      const run = {
+        abortController: new AbortController(),
+        excludedEffects: [...excludedEffects],
+        matchMode,
+        mode: selectedMode.value,
+        request,
+        requestId: nextEffectRequestId,
+        targetEffects: [...targetEffects],
+        watchdog: null,
+        worker: null,
+      };
+      nextEffectRequestId += 1;
+      activeEffectRun = run;
+      setEffectBusy(true);
+      effectMessage("Starting local effect search…", { busy: true });
+      run.watchdog = setTimeout(
+        () => failEffectRun(run, "The local effect search timed out."),
+        run.mode === "exact" ? 305_000 : 20_000,
+      );
+      try {
+        startEffectWorker(run);
+      } catch (error) {
+        failEffectRun(
+          run,
+          error instanceof Error
+            ? `The local effect search could not start: ${error.message}`
+            : "The local effect search could not start in this browser.",
+        );
+      }
+    });
+    filter.addEventListener("input", filterOptions);
+    clearButton.addEventListener("click", () => {
+      discardEffectResult();
+      for (const entry of optionEntries) setPreference(entry, "neutral");
+      updateSelection();
+      const firstVisible = optionEntries.find(({ fieldset }) => !fieldset.hidden);
+      (firstVisible?.inputs.neutral || filter).focus();
+    });
+    product.addEventListener("change", discardEffectResult);
+    level.addEventListener("change", discardEffectResult);
+    maxIngredients.addEventListener("input", discardEffectResult);
+    effectForm.addEventListener("change", (event) => {
+      if (event.target?.name === "effect_search_mode") discardEffectResult();
+      if (event.target?.name === "effect_match_mode") {
+        discardEffectResult();
+        updateMatchHint();
+        updateSelection();
+      }
+    });
+    cancelButton.addEventListener("click", () => {
+      if (!activeEffectRun) return;
+      const run = activeEffectRun;
+      stopEffectRun(run);
+      effectMessage("Effect search cancelled. Your selected effects were kept.", { error: true });
+    });
+    retryButton.addEventListener("click", prepareEffects);
+    window.addEventListener("pagehide", () => {
+      loadController?.abort();
+      if (activeEffectRun) stopEffectRun(activeEffectRun);
+    });
+    return {
+      cancelSearch(message) {
+        if (!activeEffectRun) return;
+        const run = activeEffectRun;
+        stopEffectRun(run);
+        effectMessage(message, { error: true });
+      },
+      prepare: prepareEffects,
+    };
+  }
+
+  function initializeTabs(recipeController, effectController) {
+    const tabs = ["search-tab", "recipe-tab", "effect-tab"].map((id) =>
+      document.getElementById(id),
+    );
+    const panels = ["search-panel", "recipe-panel", "effect-panel"].map((id) =>
+      document.getElementById(id),
+    );
+    if (tabs.some((tab) => !tab) || panels.some((panel) => !panel)) return;
+
+    function selectTab(index, focus = false) {
+      recipeController?.cancel();
+      if (index !== 0 && activeRun) {
+        stopRun(activeRun);
+        renderMessage("Search cancelled when switching tabs. No result was produced.");
+      }
+      if (index !== 2) {
+        effectController?.cancelSearch(
+          "Effect search cancelled when switching tabs. Your selected effects were kept.",
+        );
+      }
+      tabs.forEach((tab, tabIndex) => {
+        const selected = index === tabIndex;
+        tab.setAttribute("aria-selected", String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+        panels[tabIndex].hidden = !selected;
+      });
+      if (focus) tabs[index].focus();
+      if (index === 1) return recipeController?.prepare();
+      if (index === 2) return effectController?.prepare();
+    }
+
+    tabs.forEach((tab, index) => {
+      tab.addEventListener("click", () => selectTab(index));
+      tab.addEventListener("keydown", (event) => {
+        let next;
+        if (event.key === "ArrowRight") next = (index + 1) % tabs.length;
+        else if (event.key === "ArrowLeft") next = (index - 1 + tabs.length) % tabs.length;
+        else if (event.key === "Home") next = 0;
+        else if (event.key === "End") next = tabs.length - 1;
+        else return;
+        event.preventDefault();
+        selectTab(next, true);
+      });
+    });
+  }
+
+  const recipeController = initializeRecipeTab();
+  const effectController = initializeEffectTab();
+  initializeTabs(recipeController, effectController);
 
   window.addEventListener("pagehide", function () {
     if (activeRun) {

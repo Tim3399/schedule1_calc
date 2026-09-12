@@ -10,7 +10,8 @@ LABEL org.opencontainers.image.title="schedule1_calc" \
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app:/app/src
+    PYTHONPATH=/app:/app/src \
+    SCHEDULE1_LOG_STDOUT_ONLY=1
 
 WORKDIR /app
 
@@ -28,11 +29,10 @@ COPY src /app/src
 COPY webapp /app/webapp
 
 RUN test "$(tr -d '\r\n' < /app/VERSION)" = "${BUILD_VERSION}" \
-    && mkdir -p /app/src/functionality/logging/logs \
-    && chown schedule1:schedule1 /app/src/functionality/logging/logs
+    && test -f /app/webapp/serve.py
 
 USER 10001:10001
 
 EXPOSE 8080
 
-CMD ["python", "-m", "waitress", "--listen=0.0.0.0:8080", "webapp.app:app"]
+CMD ["python", "-m", "webapp.serve"]
