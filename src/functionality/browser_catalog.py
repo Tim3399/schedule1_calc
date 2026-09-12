@@ -38,6 +38,8 @@ def build_catalog():
             {
                 "name": effect.name,
                 "display_name": object_display_name(effect),
+                "color": effect.color,
+                "description": effect.description,
                 "modifier": effect.modificator,
                 "modifier_units": _hundredths(effect.modificator),
             }

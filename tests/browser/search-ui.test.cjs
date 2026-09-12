@@ -187,6 +187,7 @@ test("cancel terminates work, ignores stale results, and allows a cached restart
   assert.equal(ui.fetchCalls.length, 1);
   assert.equal(ui.fetchCalls[0].url, "/search-data");
   assert.equal(ui.fetchCalls[0].options.method, "GET");
+  assert.equal(ui.fetchCalls[0].options.cache, undefined);
   assert.equal(ui.workers.length, 1);
   assert.equal(ui.workers[0].url, "/static/js/search-worker.js");
   assert.equal(ui.submitButton.disabled, true);
@@ -323,6 +324,36 @@ test("profit leads and the modifier result stays in a labelled native comparison
     resultText(fastUi).match(/Approximate result — optimality not guaranteed/g)?.length,
     2,
   );
+});
+
+test("both search modes color effects from the catalog and keep invalid or missing colors neutral", async () => {
+  const descendants = (node) => [node, ...node.children.flatMap(descendants)];
+  for (const mode of ["exact", "fast"]) {
+    const ui = loadUi(
+      {
+        effects: [
+          { name: "energizing", color: "#9afe6d" },
+          { name: "toxic", color: "#5f9a31; background: red" },
+        ],
+        substances: [{ name: "cuke", color: "#9afe6d" }],
+      },
+      mode,
+    );
+    await ui.form.listeners.submit(submitEvent());
+    const worker = ui.workers[0];
+    const result = successfulResult(mode);
+    result.best_profit.effects = ["energizing", "toxic", "unknown_effect"];
+    worker.emit({ type: "result", request_id: worker.sent[0].request_id, result });
+    const chips = descendants(ui.result).filter((node) => node.tagName === "li");
+    assert.equal(chips.filter((node) => node.className === "effect-chip").length, 2);
+    for (const chip of chips) {
+      assert.equal(
+        chip.attributes.style,
+        chip.textContent === "Energizing" ? "--effect-color: #9afe6d" : undefined,
+      );
+    }
+    assert.match(resultText(ui), /Unknown Effect/);
+  }
 });
 
 test("search mode uses one static explanation for both radio choices", () => {

@@ -2,9 +2,11 @@
 
 import argparse
 import json
+import socket
 import subprocess
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 
@@ -119,6 +121,62 @@ def probe_application(base_url, *, timeout=2):
             raise SmokeError(f"anonymous server calculation was not blocked at {route}")
 
 
+def _raw_request(base_url, request, *, timeout=2):
+    parsed = urllib.parse.urlsplit(base_url)
+    if parsed.scheme != "http" or parsed.hostname is None or parsed.port is None:
+        raise SmokeError(f"raw HTTP probe requires an explicit HTTP host and port: {base_url}")
+    response = bytearray()
+    try:
+        with socket.create_connection(
+            (parsed.hostname, parsed.port), timeout=timeout
+        ) as connection:
+            connection.settimeout(timeout)
+            connection.sendall(request)
+            while True:
+                try:
+                    block = connection.recv(65_536)
+                except ConnectionResetError:
+                    if response:
+                        break
+                    raise
+                if not block:
+                    break
+                response.extend(block)
+    except OSError as error:
+        raise SmokeError(f"raw HTTP probe failed: {error}") from error
+    try:
+        return int(bytes(response).split(b"\r\n", 1)[0].split()[1])
+    except (IndexError, ValueError) as error:
+        raise SmokeError("raw HTTP probe returned an invalid response") from error
+
+
+def probe_http_bounds(base_url, *, timeout=2):
+    """Prove the production server enforces its header/body limits and supports HEAD."""
+    requests = (
+        (
+            "HEAD",
+            b"HEAD / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n",
+            {200},
+        ),
+        (
+            "declared oversized body",
+            b"POST / HTTP/1.0\r\nHost: localhost\r\nContent-Length: 65537\r\n\r\n",
+            {413},
+        ),
+        (
+            "oversized header",
+            b"GET / HTTP/1.0\r\nHost: localhost\r\nX-Large: " + (b"x" * 16_384) + b"\r\n\r\n",
+            {431},
+        ),
+    )
+    for description, request, expected in requests:
+        status = _raw_request(base_url, request, timeout=timeout)
+        if status not in expected:
+            raise SmokeError(
+                f"production HTTP {description} probe returned {status}, expected {sorted(expected)}"
+            )
+
+
 def wait_for_application(base_url, *, deadline_seconds=20):
     deadline = time.monotonic() + deadline_seconds
     last_error = None
@@ -182,6 +240,7 @@ def smoke_image(image, version, revision):
         port = _host_port(container_name)
         try:
             wait_for_application(f"http://127.0.0.1:{port}")
+            probe_http_bounds(f"http://127.0.0.1:{port}")
         except SmokeError as error:
             logs = docker("logs", container_name, check=False)
             raise SmokeError(f"{error}\ncontainer logs:\n{logs}") from error

@@ -25,9 +25,9 @@ function postSearchError(requestId, mode, error, status) {
   });
 }
 
-globalThis.addEventListener("message", function (event) {
+globalThis.addEventListener("message", (event) => {
   const message = event.data;
-  if (message?.type !== "search") {
+  if (!message || !["search", "search_effects"].includes(message.type)) {
     return;
   }
 
@@ -39,13 +39,14 @@ globalThis.addEventListener("message", function (event) {
   }
 
   const engine = globalThis.Schedule1Search;
-  if (!engine || typeof engine.search !== "function") {
+  const searchMethod = message.type === "search_effects" ? "searchEffects" : "search";
+  if (!engine || typeof engine[searchMethod] !== "function") {
     postSearchError(requestId, mode, new Error("The local search engine is unavailable."), "error");
     return;
   }
 
   try {
-    const result = engine.search(message.catalog, message.request, {
+    const result = engine[searchMethod](message.catalog, message.request, {
       onProgress(progress) {
         globalThis.postMessage({
           type: "progress",

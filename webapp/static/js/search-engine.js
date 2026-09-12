@@ -725,6 +725,321 @@
     return recipe.reduce((total, index) => total + available[index].priceCents * 100, 0);
   }
 
+  function matchesEffectConstraints(state, constraints) {
+    let matchedTargets = 0;
+    for (const effect of state) {
+      if (constraints.excludedSet.has(effect)) return false;
+      if (constraints.targetSet.has(effect)) matchedTargets += 1;
+      else if (constraints.matchMode === "exact") return false;
+    }
+    return matchedTargets === constraints.targetSet.size;
+  }
+
+  function preferEffectRecipe(candidate, current) {
+    return (
+      current === null ||
+      candidate.costUnits < current.costUnits ||
+      (candidate.costUnits === current.costUnits &&
+        compareRecipes(candidate.recipe, current.recipe) < 0)
+    );
+  }
+
+  function effectDistance(state, constraints) {
+    let matched = 0;
+    let forbidden = 0;
+    let extra = 0;
+    for (const effect of state) {
+      if (constraints.targetSet.has(effect)) matched += 1;
+      else if (constraints.excludedSet.has(effect)) forbidden += 1;
+      else if (constraints.matchMode === "exact") extra += 1;
+    }
+    return {
+      mismatch: constraints.targetSet.size - matched + forbidden + extra,
+      missing: constraints.targetSet.size - matched,
+      forbidden,
+      extra,
+    };
+  }
+
+  function finishEffectSearch(runtime, stats, maxSize, recipe) {
+    runtime.progress("complete", maxSize, stats.work_units, true);
+    const completedAt = runtime.checkTime("completion");
+    stats.elapsed_seconds = (completedAt - runtime.started) / 1000;
+    return { recipe, stats };
+  }
+
+  function exactEffectSearch(model, product, available, maxSize, constraints, options) {
+    const runtime = makeRuntime(model, product, available, options);
+    const stats = {
+      mode: "exact",
+      optimality_guaranteed: false,
+      work_units: 0,
+      candidates_by_depth: {},
+      retained_states_by_depth: {},
+      merged_candidates: 0,
+    };
+
+    function transition(state, ingredientIndex, depth) {
+      runtime.checkTime("effect expansion");
+      if (stats.work_units >= options.work_limit) {
+        throw new SearchLimitExceeded("work_limit", "Exact effect search exceeded its work limit.");
+      }
+      stats.work_units += 1;
+      if ((stats.work_units & 1023) === 0) {
+        runtime.progress("effect expansion", depth, stats.work_units);
+      }
+      return runtime.transition(state, ingredientIndex);
+    }
+
+    if (matchesEffectConstraints(product.effects, constraints)) {
+      const evaluation = runtime.evaluate(product.effects);
+      stats.optimality_guaranteed = true;
+      return finishEffectSearch(
+        runtime,
+        stats,
+        maxSize,
+        runtime.result(product.effects, [], 0, evaluation),
+      );
+    }
+
+    let states = new Map([
+      [stateKey(product.effects), { state: product.effects, recipe: [], costUnits: 0 }],
+    ]);
+    for (let depth = 1; depth <= maxSize && states.size > 0; depth += 1) {
+      const nextStates = new Map();
+      let frontierOverflow = false;
+      let winner = null;
+      stats.candidates_by_depth[depth] = 0;
+      for (const representative of states.values()) {
+        for (let ingredientIndex = 0; ingredientIndex < available.length; ingredientIndex += 1) {
+          const ingredient = available[ingredientIndex];
+          const nextState = transition(representative.state, ingredientIndex, depth);
+          stats.candidates_by_depth[depth] += 1;
+          const candidate = {
+            state: nextState,
+            recipe: [...representative.recipe, ingredientIndex],
+            costUnits: representative.costUnits + ingredient.priceCents * 100,
+          };
+          if (
+            matchesEffectConstraints(nextState, constraints) &&
+            preferEffectRecipe(candidate, winner)
+          ) {
+            winner = candidate;
+          }
+          if (depth === maxSize) continue;
+          if (
+            stateKey(nextState) === stateKey(representative.state) &&
+            ingredient.priceCents >= 0
+          ) {
+            continue;
+          }
+          const key = stateKey(nextState);
+          const old = nextStates.get(key);
+          if (old !== undefined) {
+            stats.merged_candidates += 1;
+            if (preferEffectRecipe(candidate, old)) nextStates.set(key, candidate);
+          } else if (nextStates.size < options.frontier_limit) {
+            nextStates.set(key, candidate);
+          } else {
+            frontierOverflow = true;
+          }
+        }
+      }
+      stats.retained_states_by_depth[depth] = nextStates.size;
+      runtime.progress("effect frontier", depth, stats.work_units, true);
+      if (winner !== null) {
+        const evaluation = runtime.evaluate(winner.state);
+        stats.optimality_guaranteed = true;
+        return finishEffectSearch(
+          runtime,
+          stats,
+          maxSize,
+          runtime.result(winner.state, winner.recipe, winner.costUnits, evaluation),
+        );
+      }
+      if (frontierOverflow) {
+        throw new SearchLimitExceeded(
+          "frontier_limit",
+          "Exact effect search exceeded its frontier limit.",
+        );
+      }
+      states = nextStates;
+    }
+    stats.optimality_guaranteed = true;
+    return finishEffectSearch(runtime, stats, maxSize, null);
+  }
+
+  function fastEffectSearch(model, product, available, maxSize, constraints, options) {
+    const runtime = makeRuntime(model, product, available, options);
+    const stats = {
+      mode: "approximate",
+      optimality_guaranteed: false,
+      work_units: 0,
+      generated_candidates: 0,
+      lookahead_candidates: 0,
+      lookahead_transitions: 0,
+      unique_states_by_depth: {},
+      retained_states_by_depth: {},
+      merged_candidates: 0,
+      beam_pruned_states: 0,
+    };
+
+    function transition(state, ingredientIndex, speculative, depth) {
+      runtime.checkTime(speculative ? "effect lookahead" : "effect expansion");
+      if (stats.work_units >= options.work_limit) {
+        throw new SearchLimitExceeded("work_limit", "Fast effect search exceeded its work limit.");
+      }
+      stats.work_units += 1;
+      if (speculative) stats.lookahead_transitions += 1;
+      runtime.progress(
+        speculative ? "effect lookahead" : "effect expansion",
+        depth,
+        stats.work_units,
+      );
+      return runtime.transition(state, ingredientIndex);
+    }
+
+    function completed(candidate) {
+      const evaluation = runtime.evaluate(candidate.state);
+      return finishEffectSearch(
+        runtime,
+        stats,
+        maxSize,
+        runtime.result(candidate.state, candidate.recipe, candidate.costUnits, evaluation),
+      );
+    }
+
+    if (matchesEffectConstraints(product.effects, constraints)) {
+      return completed({ state: product.effects, recipe: [], costUnits: 0 });
+    }
+
+    let states = new Map([
+      [stateKey(product.effects), { state: product.effects, recipe: [], costUnits: 0 }],
+    ]);
+    for (let depth = 1; depth <= maxSize && states.size > 0; depth += 1) {
+      const nextStates = new Map();
+      let winner = null;
+      for (const representative of states.values()) {
+        for (let ingredientIndex = 0; ingredientIndex < available.length; ingredientIndex += 1) {
+          const ingredient = available[ingredientIndex];
+          const nextState = transition(representative.state, ingredientIndex, false, depth);
+          stats.generated_candidates += 1;
+          const candidate = {
+            state: nextState,
+            recipe: [...representative.recipe, ingredientIndex],
+            costUnits: representative.costUnits + ingredient.priceCents * 100,
+          };
+          if (
+            matchesEffectConstraints(nextState, constraints) &&
+            preferEffectRecipe(candidate, winner)
+          ) {
+            winner = candidate;
+          }
+          if (
+            stateKey(nextState) === stateKey(representative.state) &&
+            ingredient.priceCents >= 0
+          ) {
+            continue;
+          }
+          const key = stateKey(nextState);
+          const old = nextStates.get(key);
+          if (old === undefined || preferEffectRecipe(candidate, old)) {
+            if (old !== undefined) stats.merged_candidates += 1;
+            nextStates.set(key, candidate);
+          } else {
+            stats.merged_candidates += 1;
+          }
+        }
+      }
+      stats.unique_states_by_depth[depth] = nextStates.size;
+      if (winner !== null) return completed(winner);
+
+      if (nextStates.size > options.beam_width) {
+        const forecasts = new Map();
+        let lookaheadWinner = null;
+        for (const [key, representative] of nextStates) {
+          let forecast = {
+            ...effectDistance(representative.state, constraints),
+            recipe: representative.recipe,
+            costUnits: representative.costUnits,
+          };
+          if (options.lookahead === 1 && depth < maxSize) {
+            for (
+              let ingredientIndex = 0;
+              ingredientIndex < available.length;
+              ingredientIndex += 1
+            ) {
+              const ingredient = available[ingredientIndex];
+              const forecastState = transition(
+                representative.state,
+                ingredientIndex,
+                true,
+                depth + 1,
+              );
+              stats.lookahead_candidates += 1;
+              const candidate = {
+                state: forecastState,
+                recipe: [...representative.recipe, ingredientIndex],
+                costUnits: representative.costUnits + ingredient.priceCents * 100,
+              };
+              if (
+                matchesEffectConstraints(forecastState, constraints) &&
+                preferEffectRecipe(candidate, lookaheadWinner)
+              ) {
+                lookaheadWinner = candidate;
+              }
+              const distance = effectDistance(forecastState, constraints);
+              if (
+                distance.mismatch < forecast.mismatch ||
+                (distance.mismatch === forecast.mismatch && distance.missing < forecast.missing) ||
+                (distance.mismatch === forecast.mismatch &&
+                  distance.missing === forecast.missing &&
+                  distance.forbidden < forecast.forbidden) ||
+                (distance.mismatch === forecast.mismatch &&
+                  distance.missing === forecast.missing &&
+                  distance.forbidden === forecast.forbidden &&
+                  distance.extra < forecast.extra) ||
+                (distance.mismatch === forecast.mismatch &&
+                  distance.missing === forecast.missing &&
+                  distance.forbidden === forecast.forbidden &&
+                  distance.extra === forecast.extra &&
+                  preferEffectRecipe(candidate, forecast))
+              ) {
+                forecast = {
+                  ...distance,
+                  recipe: candidate.recipe,
+                  costUnits: candidate.costUnits,
+                };
+              }
+            }
+          }
+          forecasts.set(key, forecast);
+        }
+        if (lookaheadWinner !== null) return completed(lookaheadWinner);
+        const ranked = [...nextStates.entries()].sort((left, right) => {
+          const leftForecast = forecasts.get(left[0]);
+          const rightForecast = forecasts.get(right[0]);
+          return (
+            leftForecast.mismatch - rightForecast.mismatch ||
+            leftForecast.missing - rightForecast.missing ||
+            leftForecast.forbidden - rightForecast.forbidden ||
+            leftForecast.extra - rightForecast.extra ||
+            leftForecast.costUnits - rightForecast.costUnits ||
+            compareRecipes(leftForecast.recipe, rightForecast.recipe) ||
+            compareStates(left[1].state, right[1].state, model)
+          );
+        });
+        stats.beam_pruned_states += nextStates.size - options.beam_width;
+        states = new Map(ranked.slice(0, options.beam_width));
+      } else {
+        states = nextStates;
+      }
+      stats.retained_states_by_depth[depth] = states.size;
+      runtime.progress("effect beam", depth, stats.work_units, true);
+    }
+    return finishEffectSearch(runtime, stats, maxSize, null);
+  }
+
   function evaluateRecipe(catalog, request) {
     if (!isObject(request)) throw new TypeError("request must be an object");
     if (typeof request.product_name !== "string" || !request.product_name.trim()) {
@@ -828,5 +1143,124 @@
     };
   }
 
-  return { search, evaluateRecipe, SearchLimitExceeded, cpythonFloatSum, validateCatalog };
+  function searchEffects(catalog, request, suppliedOptions = {}) {
+    if (!isObject(request)) throw new TypeError("request must be an object");
+    const size = request.combination_size;
+    if (!Number.isSafeInteger(size) || size < 0) {
+      throw new TypeError("combination_size must be a non-negative safe integer");
+    }
+    if (size > 16) {
+      throw new SearchLimitExceeded("max_size", "Search sizes larger than 16 are unsupported.");
+    }
+    if (typeof request.product_name !== "string" || !request.product_name.trim()) {
+      throw new TypeError("product_name must be a non-empty string");
+    }
+    if (
+      typeof request.search_mode !== "string" ||
+      !["exact", "fast"].includes(request.search_mode)
+    ) {
+      throw new TypeError("search_mode must be exact or fast");
+    }
+    if (!Array.isArray(request.target_effects)) {
+      throw new TypeError("target_effects must be an array");
+    }
+    const matchMode = request.match_mode === undefined ? "exact" : request.match_mode;
+    if (!["exact", "contains"].includes(matchMode)) {
+      throw new TypeError("match_mode must be exact or contains");
+    }
+    const excludedEffects = request.excluded_effects === undefined ? [] : request.excluded_effects;
+    if (!Array.isArray(excludedEffects)) {
+      throw new TypeError("excluded_effects must be an array");
+    }
+    if (
+      request.target_effects.length === 0 &&
+      (matchMode !== "contains" || excludedEffects.length === 0)
+    ) {
+      throw new TypeError(
+        "target_effects may be empty only for contains mode with excluded effects",
+      );
+    }
+
+    const model = validateCatalog(catalog, size);
+    const product = model.products.get(normalize(request.product_name));
+    if (product === undefined) throw new TypeError("unknown product_name");
+    let level;
+    if (typeof request.level === "string") {
+      level = model.levels.get(normalize(request.level));
+      if (level === undefined) throw new TypeError("unknown level");
+    } else {
+      level = requireInteger(request.level, "level");
+    }
+    const targetNames = [];
+    const targetSet = new Set();
+    for (let index = 0; index < request.target_effects.length; index += 1) {
+      const name = request.target_effects[index];
+      if (typeof name !== "string" || !name.trim()) {
+        throw new TypeError(`target_effects[${index}] must be a non-empty string`);
+      }
+      const normalized = normalize(name);
+      const effectIndex = model.effectIndex.get(normalized);
+      if (effectIndex === undefined) throw new TypeError(`unknown target effect: ${name}`);
+      if (targetSet.has(effectIndex)) throw new TypeError(`duplicate target effect: ${name}`);
+      targetSet.add(effectIndex);
+      targetNames.push(model.effects[effectIndex].name);
+    }
+    const excludedNames = [];
+    const excludedSet = new Set();
+    for (let index = 0; index < excludedEffects.length; index += 1) {
+      const name = excludedEffects[index];
+      if (typeof name !== "string" || !name.trim()) {
+        throw new TypeError(`excluded_effects[${index}] must be a non-empty string`);
+      }
+      const normalized = normalize(name);
+      const effectIndex = model.effectIndex.get(normalized);
+      if (effectIndex === undefined) throw new TypeError(`unknown excluded effect: ${name}`);
+      if (excludedSet.has(effectIndex)) throw new TypeError(`duplicate excluded effect: ${name}`);
+      if (targetSet.has(effectIndex)) {
+        throw new TypeError(`effect cannot be both targeted and excluded: ${name}`);
+      }
+      excludedSet.add(effectIndex);
+      excludedNames.push(model.effects[effectIndex].name);
+    }
+    const constraints = { matchMode, targetSet, excludedSet };
+
+    const available = model.substances.filter((substance) => substance.level <= level);
+    const defaults = request.search_mode === "exact" ? EXACT_DEFAULTS : FAST_DEFAULTS;
+    const options = { ...defaults, ...suppliedOptions };
+    requireInteger(options.work_limit, "work_limit", 1);
+    requirePositiveNumber(options.time_limit_seconds, "time_limit_seconds");
+    if (request.search_mode === "exact") {
+      requireInteger(options.frontier_limit, "frontier_limit", 1);
+    } else {
+      requireInteger(options.beam_width, "beam_width", 1);
+      if (![0, 1].includes(options.lookahead)) throw new TypeError("lookahead must be 0 or 1");
+    }
+    const outcome =
+      request.search_mode === "exact"
+        ? exactEffectSearch(model, product, available, size, constraints, options)
+        : fastEffectSearch(model, product, available, size, constraints, options);
+    const found = outcome.recipe !== null;
+    const exact = request.search_mode === "exact";
+    return {
+      search: {
+        mode: request.search_mode,
+        status: found ? (exact ? "optimal" : "approximate") : "not_found",
+        optimality_proven: exact && outcome.stats.optimality_guaranteed,
+      },
+      recipe: outcome.recipe,
+      match_mode: matchMode,
+      target_effects: targetNames,
+      excluded_effects: excludedNames,
+      stats: outcome.stats,
+    };
+  }
+
+  return {
+    search,
+    searchEffects,
+    evaluateRecipe,
+    SearchLimitExceeded,
+    cpythonFloatSum,
+    validateCatalog,
+  };
 });

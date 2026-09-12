@@ -102,9 +102,12 @@ class ContainerSmokeTests(unittest.TestCase):
             container_smoke.probe_application("http://127.0.0.1:8080")
 
     @mock.patch.object(container_smoke.uuid, "uuid4")
+    @mock.patch.object(container_smoke, "probe_http_bounds")
     @mock.patch.object(container_smoke, "wait_for_application")
     @mock.patch.object(container_smoke, "docker")
-    def test_success_uses_random_loopback_port_nonroot_and_cleans_up(self, docker, wait, uuid4):
+    def test_success_uses_random_loopback_port_nonroot_and_cleans_up(
+        self, docker, wait, probe_bounds, uuid4
+    ):
         uuid4.return_value.hex = "owned"
         docker.side_effect = [image_inspection(), "container-id", "10001", "127.0.0.1:49152", ""]
 
@@ -121,7 +124,23 @@ class ContainerSmokeTests(unittest.TestCase):
             "example:1.2.3",
         )
         wait.assert_called_once_with("http://127.0.0.1:49152")
+        probe_bounds.assert_called_once_with("http://127.0.0.1:49152")
         docker.assert_called_with("rm", "--force", "schedule1-smoke-owned", timeout=10, check=False)
+
+    @mock.patch.object(container_smoke, "_raw_request")
+    def test_production_http_probe_checks_head_and_request_limits(self, raw_request):
+        raw_request.side_effect = [200, 413, 431]
+
+        container_smoke.probe_http_bounds("http://127.0.0.1:8080")
+
+        self.assertEqual(raw_request.call_count, 3)
+
+    @mock.patch.object(container_smoke, "_raw_request")
+    def test_production_http_probe_rejects_missing_body_limit(self, raw_request):
+        raw_request.side_effect = [200, 404]
+
+        with self.assertRaisesRegex(container_smoke.SmokeError, "oversized body"):
+            container_smoke.probe_http_bounds("http://127.0.0.1:8080")
 
     @mock.patch.object(container_smoke.uuid, "uuid4")
     @mock.patch.object(container_smoke, "wait_for_application")
