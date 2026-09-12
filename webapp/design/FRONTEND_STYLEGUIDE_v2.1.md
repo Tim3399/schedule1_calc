@@ -16,27 +16,28 @@ Zuerst diesen Einstieg, Abschnitt 1 und die Definition of Done in Abschnitt 12 l
 
 **Kurzvertrag:** Bestehendes wiederverwenden; Hauptaufgabe und Arbeitskontext schützen; Normal- und relevante Fehlerzustände abdecken; Bewegung begründen; Zugänglichkeit und beide vorhandenen Themes prüfen; nur tatsächlich ausgeführte Prüfungen als Nachweis nennen. Ein Skill ändert weder diese Qualitätsanforderungen noch die Freigabegrenzen des Auftrags.
 
-| Aufgabe | Vertiefend lesen |
-|---|---|
-| Neues Produkt / neue Designrichtung | 2–4, 6 und 12; 7–11 nach betroffenen Abläufen. |
-| Farbe, Typografie, Light/Dark, Materialien | 3, 10, 11. |
+| Aufgabe                                                     | Vertiefend lesen                                           |
+| ----------------------------------------------------------- | ---------------------------------------------------------- |
+| Neues Produkt / neue Designrichtung                         | 2–4, 6 und 12; 7–11 nach betroffenen Abläufen.             |
+| Farbe, Typografie, Light/Dark, Materialien                  | 3, 10, 11.                                                 |
 | Neue Komponente / Design-Dateistruktur / öffentliche UI-API | 7, 10.3–10.6 und 12; bestehende Architekturquellen zuerst. |
-| Navigation, Inspector, Arbeitsbereichwechsel | 4, 7, 8, 11. |
-| Bewegung, Drag, Tooltip, Overlay | 5, 7, 10, 11. |
-| Formulare, Speichern, Fehler, Löschaktionen | 7–9, 11. |
-| Offene Designfrage / Variantenvergleich | 2–4 und Abschnitt 12, Schritt 3. |
-| Umfassender UI-Audit | 1–12; Tiefe nach beauftragtem Umfang. |
+| Navigation, Inspector, Arbeitsbereichwechsel                | 4, 7, 8, 11.                                               |
+| Bewegung, Drag, Tooltip, Overlay                            | 5, 7, 10, 11.                                              |
+| Formulare, Speichern, Fehler, Löschaktionen                 | 7–9, 11.                                                   |
+| Offene Designfrage / Variantenvergleich                     | 2–4 und Abschnitt 12, Schritt 3.                           |
+| Umfassender UI-Audit                                        | 1–12; Tiefe nach beauftragtem Umfang.                      |
 
-| Orientierung | Inhalt |
-|---|---|
-| [1. Priorität](#s01) · [2. Identität](#s02) | Bestehendes schützen; Produktabsicht und Charakter festlegen. |
-| [3. Visuelles System](#s03) · [4. Komposition](#s04) | Typografie, Farben, Materialhierarchie, Navigation und Kontext. |
-| [5. Bewegung](#s05) · [6. Sprache](#s06) | Direkte Reaktion, kontrollierbare Übergänge und konkrete Texte. |
-| [7. Komponenten](#s07) · [8. Zustände](#s08) · [9. Formulare](#s09) | Vollständige Interaktionen und sichere Wiederherstellung. |
-| [10. Umsetzung](#s10) · [11. Zugänglichkeit](#s11) · [12. Agent-Workflow](#s12) | Technische Grenzen, Nachtests, Prototypen und Abnahme. |
-| [Einbindung](#einbindung) · [Übernahmegrenzen und Quellen](#quellen) | Referenz und kleiner Skill; fachliche Einordnung. |
+| Orientierung                                                                    | Inhalt                                                          |
+| ------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| [1. Priorität](#s01) · [2. Identität](#s02)                                     | Bestehendes schützen; Produktabsicht und Charakter festlegen.   |
+| [3. Visuelles System](#s03) · [4. Komposition](#s04)                            | Typografie, Farben, Materialhierarchie, Navigation und Kontext. |
+| [5. Bewegung](#s05) · [6. Sprache](#s06)                                        | Direkte Reaktion, kontrollierbare Übergänge und konkrete Texte. |
+| [7. Komponenten](#s07) · [8. Zustände](#s08) · [9. Formulare](#s09)             | Vollständige Interaktionen und sichere Wiederherstellung.       |
+| [10. Umsetzung](#s10) · [11. Zugänglichkeit](#s11) · [12. Agent-Workflow](#s12) | Technische Grenzen, Nachtests, Prototypen und Abnahme.          |
+| [Einbindung](#einbindung) · [Übernahmegrenzen und Quellen](#quellen)            | Referenz und kleiner Skill; fachliche Einordnung.               |
 
 <a id="s01"></a>
+
 ## 1. Priorität und Schutz bestehender Projekte
 
 **Ein neues Feature ist keine Erlaubnis zum Redesign.** Vor Änderungen MUSS der Agent die tatsächlich verwendeten Designquellen und vergleichbare vorhandene Screens untersuchen. Maßgeblich sind nicht nur Konfigurationsdateien, sondern auch reale Komponentenverwendungen.
@@ -50,6 +51,7 @@ Für Konflikte gilt: notwendige Sicherheit und Zugänglichkeit zuerst; danach au
 **Reines Restyling:** Geschäftslogik, Datenfluss, fachliche Bedeutung der Texte und bestehende Interaktionsverträge bleiben erhalten, sofern die Aufgabe keine Änderung verlangt. Verbesserungsbedarf außerhalb des Auftrags wird separat dokumentiert.
 
 <a id="s02"></a>
+
 ## 2. Produktabsicht und visuelle Identität
 
 Vor dem Entwurf MUSS ein kurzer Designbrief vorliegen: Wer benutzt die Oberfläche? Welche Hauptaufgabe wird erledigt? Wie häufig, auf welchen Geräten und unter welchen Bedingungen? Welcher Fehler wäre besonders teuer? Woran erkennt die Person den erfolgreichen Abschluss?
@@ -58,12 +60,12 @@ Fehlende Informationen werden als Annahmen gekennzeichnet. Ein Feature-Entwurf b
 
 Die Startseite von designmotionhq beschreibt visuellen Charakter über vier Entscheidungsfelder. Daraus übernimmt dieser Guide die Struktur, nicht eine feste Ausprägung.[^D00]
 
-| Feld | Im `DESIGN.md` festlegen |
-|---|---|
-| Typografie | Charakter, Schriftrollen, Lesetext, Bedienoberfläche und Zahlen. |
-| Farbe | Grundstimmung, Akzentrollen, Statusfarben und Themen. |
-| Raum | Informationsdichte, Rhythmus, Inhaltsbreite und Gruppierung. |
-| Ausarbeitung | Radien, Konturen, Tiefe, Symbole und Bewegungscharakter. |
+| Feld         | Im `DESIGN.md` festlegen                                         |
+| ------------ | ---------------------------------------------------------------- |
+| Typografie   | Charakter, Schriftrollen, Lesetext, Bedienoberfläche und Zahlen. |
+| Farbe        | Grundstimmung, Akzentrollen, Statusfarben und Themen.            |
+| Raum         | Informationsdichte, Rhythmus, Inhaltsbreite und Gruppierung.     |
+| Ausarbeitung | Radien, Konturen, Tiefe, Symbole und Bewegungscharakter.         |
 
 **Charakter muss sich in Entscheidungen zeigen.** „Ruhig“ kann weniger konkurrierende Akzente und zurückhaltende Bewegung bedeuten. „Präzise“ kann ausgerichtete Zahlen, klare Zustände und kompakte Tabellen bedeuten. „Warm“ kann durch Typografie und abgestimmte Oberflächen entstehen, ohne jede Fläche beige einzufärben. Diese Übersetzungen sind Entwurfsmöglichkeiten, keine Pflichtrezepte.
 
@@ -86,6 +88,7 @@ Apples Designprinzipien behandeln Einfachheit, Handlungsspielraum, Vertrautheit 
 **Charakter ergibt sich aus dem gesamten Ablauf.** Für ein ruhiges Werkzeug können zuverlässige Wiederaufnahme und klare Rückmeldung wertvoller sein als ein spektakulärer Effekt. Gewünschte Stimmung im `DESIGN.md` nennen und daran auch Fehlerzustände und Bewegung messen, nicht nur den Startbildschirm.
 
 <a id="s03"></a>
+
 ## 3. Visuelles System
 
 ### 3.1 Hierarchie und Informationsgewicht
@@ -102,13 +105,13 @@ Für Texte SOLLEN benannte Rollen existieren: Seitentitel, Abschnittstitel, Flie
 
 Für neue Projekte sind folgende Werte **eigene Startvorschläge**, die mit der gewählten Schrift und echten Inhalten überprüft werden müssen:
 
-| Rolle | Möglicher Startwert | Entscheidungskriterium |
-|---|---|---|
-| Lesetext | `1rem`, Zeilenhöhe etwa `1.5–1.7` | Längeres Lesen ohne gedrängte Zeilen. |
-| Bedien- und Hilfstext | `0.875–1rem` | Dichte, Schriftbild und Zielgruppe. |
-| Abschnittstitel | `1.125–1.5rem` | Sichtbarer Abstand zur nächstkleineren Rolle. |
-| Seitentitel | `1.75–2.5rem` | Inhalt und verfügbare Fläche, nicht bloße Größe. |
-| Lesebreite | ungefähr `60–75ch` | Mit realer Sprache und Schrift prüfen. |
+| Rolle                 | Möglicher Startwert               | Entscheidungskriterium                           |
+| --------------------- | --------------------------------- | ------------------------------------------------ |
+| Lesetext              | `1rem`, Zeilenhöhe etwa `1.5–1.7` | Längeres Lesen ohne gedrängte Zeilen.            |
+| Bedien- und Hilfstext | `0.875–1rem`                      | Dichte, Schriftbild und Zielgruppe.              |
+| Abschnittstitel       | `1.125–1.5rem`                    | Sichtbarer Abstand zur nächstkleineren Rolle.    |
+| Seitentitel           | `1.75–2.5rem`                     | Inhalt und verfügbare Fläche, nicht bloße Größe. |
+| Lesebreite            | ungefähr `60–75ch`                | Mit realer Sprache und Schrift prüfen.           |
 
 Diese Tabelle ist kein Grund, vorhandene Schriftgrößen umzuschreiben. Marken-, System- und Monospace-Schriften werden nach ihrer Aufgabe eingesetzt, nicht nach Trend. Eine zusätzliche Familie braucht einen erkennbaren Nutzen. Zahlenkolonnen können tabellarische Ziffern verwenden; lange deutsche Bezeichnungen und mehrzeilige Buttons müssen im Entwurf vorkommen.[^D17][^D63]
 
@@ -179,6 +182,7 @@ Beispiel einer vermeidbaren Fehlverwendung: Ein als Statusrand ausgelegter Ton w
 Ein Übergang beim Theme-Wechsel ist optional. Er darf weder Eingaben verzögern noch im Zwischenzustand notwendige Information unlesbar machen. Keine globale Farb-Transition nur für den Effekt einführen.
 
 <a id="s04"></a>
+
 ## 4. Komposition, Navigation und Seitentypen
 
 ### 4.1 Aufgaben sichtbar strukturieren
@@ -208,17 +212,18 @@ Beim Wechsel zwischen Bereichen SOLL der relevante Arbeitskontext erhalten bleib
 Fokus nicht während der laufenden Bedienung stehlen. Wird das ursprüngliche Ziel entfernt oder unzugänglich, auf ein nachvollziehbares benachbartes Ziel zurückkehren. Welche Informationen nur in der Sitzung und welche dauerhaft bestehen, wird projektspezifisch festgelegt. Kontextschutz ist keine pauschale Freigabe für zusätzliche Datenspeicherung oder die Wiederöffnung sensibler Inhalte nach Logout.
 
 <a id="s05"></a>
+
 ## 5. Bewegung und wahrgenommene Reaktion
 
 ### 5.1 Zuerst Zweck und Nutzungshäufigkeit
 
 Bewegung SOLL eine Zustandsänderung, räumliche Beziehung oder Rückmeldung erklären. Sie KANN Charakter vermitteln, wenn das zur Aufgabe passt. Vor einer Ergänzung benennen: Was versteht die Person danach besser, und wie oft wird sie diesen Übergang sehen? Ohne Nutzungsdaten die Häufigkeit als Annahme ausweisen.[^D14][^D21][^E01]
 
-| Nutzung | Standard dieses Guides |
-|---|---|
+| Nutzung                                                      | Standard dieses Guides                                                                                               |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
 | Laufende Textarbeit, häufige Navigation, wiederholte Auswahl | Unmittelbare Reaktion; keine zusätzliche räumliche Inszenierung. Kurzes nicht blockierendes Feedback bleibt möglich. |
-| Gelegentliche Overlays oder größere Zustandswechsel | Kurzer Übergang, sofern er Herkunft, Zusammenhang oder Zustand verständlicher macht. |
-| Seltene Einführung oder erklärender Produktmoment | Mehr Ausdruck ist möglich, aber weder Pflicht noch Grund, den Zugang zur Aufgabe aufzuhalten. |
+| Gelegentliche Overlays oder größere Zustandswechsel          | Kurzer Übergang, sofern er Herkunft, Zusammenhang oder Zustand verständlicher macht.                                 |
+| Seltene Einführung oder erklärender Produktmoment            | Mehr Ausdruck ist möglich, aber weder Pflicht noch Grund, den Zugang zur Aufgabe aufzuhalten.                        |
 
 Keine universelle Grenze von 100 Aufrufen pro Tag und kein pauschales Animationsverbot für Tastatureingaben. Entscheidend sind Nutzen, Wiederholung und unverzögerte Bedienbarkeit. Ein Audit SOLL auch festhalten, welche Bereiche bewusst bewegungslos bleiben. Keine neuen Animationen vorzuschlagen ist ein gültiges Ergebnis.[^E02]
 
@@ -234,13 +239,13 @@ Bei dichten Werkzeugleisten SOLLEN Beschriftung, Layout und Trefferfläche stabi
 
 **Eigene Startwerte für neue Projekte:**
 
-| Zweck | Ausgangspunkt | Grenze |
-|---|---|---|
-| Druck- oder lokale Zustandsrückmeldung | Sofortige Reaktion; kurzer Übergang etwa `80–100 ms` | Rückmeldung nicht von Serverantwort oder Animation abhängig machen. |
-| Kleine Farb- und Positionswechsel | Etwa `120–180 ms` | Wiederholte Bedienung nicht sichtbar verzögern. |
-| Eintritt einer größeren Ebene | Etwa `200–300 ms` | Inhalt nicht bis zum Animationsende unbenutzbar machen. |
-| Schließen einer Ebene | Etwa `120–180 ms` | Die Oberfläche zügig freigeben; Fokus und Modalität passend abschließen. |
-| Ergänzender Tooltip | Etwa `300 ms` beim ersten Hover | Weitere Hinweise derselben Gruppe nach Abschnitt 7.1; Fokuszugang gesondert prüfen. |
+| Zweck                                  | Ausgangspunkt                                        | Grenze                                                                              |
+| -------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Druck- oder lokale Zustandsrückmeldung | Sofortige Reaktion; kurzer Übergang etwa `80–100 ms` | Rückmeldung nicht von Serverantwort oder Animation abhängig machen.                 |
+| Kleine Farb- und Positionswechsel      | Etwa `120–180 ms`                                    | Wiederholte Bedienung nicht sichtbar verzögern.                                     |
+| Eintritt einer größeren Ebene          | Etwa `200–300 ms`                                    | Inhalt nicht bis zum Animationsende unbenutzbar machen.                             |
+| Schließen einer Ebene                  | Etwa `120–180 ms`                                    | Die Oberfläche zügig freigeben; Fokus und Modalität passend abschließen.            |
+| Ergänzender Tooltip                    | Etwa `300 ms` beim ersten Hover                      | Weitere Hinweise derselben Gruppe nach Abschnitt 7.1; Fokuszugang gesondert prüfen. |
 
 Diese Werte sind Heuristiken und überschreiben keine bewährten Projekttokens. Eine feste Millisekundengrenze oder bestimmte Easing-Kurve garantiert keine gute UX. Beschleunigender Start kann bei einblendenden Arbeitscontrols zögerlich wirken; deshalb dort oft eine früh reagierende, zum Ende beruhigte Bewegung wählen. Eine andere Kurve ist erst mit einer konkreten Beeinträchtigung ein Befund.[^D18][^E01]
 
@@ -272,12 +277,12 @@ Apples Dämpfungsverhältnis ist nicht derselbe Parameter wie Motions `damping`.
 
 **Unmittelbare Reaktion und Ladeanzeige sind verschiedene Dinge.** Ein Button kann den Beginn einer Aktion sofort zeigen, ohne für eine sehr kurze Anfrage einen flackernden Spinner einzublenden.[^D28]
 
-| Kenntnis über den Vorgang | Geeignetes Muster |
-|---|---|
-| Inhalt und Geometrie bekannt, Daten fehlen | Layoutnahes Skeleton; vorhandene Inhalte beim Aktualisieren möglichst erhalten. |
-| Kurzer Vorgang, Dauer unbekannt | Lokaler Busy-Zustand; bei spürbarem Warten dezenter Spinner und verständlicher Text. |
-| Fortschritt messbar | Tatsächliche Fortschrittsanzeige mit Einheit oder sinnvollem Gesamtumfang. |
-| Langer Vorgang ohne messbare Prozentzahl | Wahrer Phasen- oder Bearbeitungsstatus; Abbruch beziehungsweise Wiederholung nur, wenn unterstützt. |
+| Kenntnis über den Vorgang                  | Geeignetes Muster                                                                                   |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| Inhalt und Geometrie bekannt, Daten fehlen | Layoutnahes Skeleton; vorhandene Inhalte beim Aktualisieren möglichst erhalten.                     |
+| Kurzer Vorgang, Dauer unbekannt            | Lokaler Busy-Zustand; bei spürbarem Warten dezenter Spinner und verständlicher Text.                |
+| Fortschritt messbar                        | Tatsächliche Fortschrittsanzeige mit Einheit oder sinnvollem Gesamtumfang.                          |
+| Langer Vorgang ohne messbare Prozentzahl   | Wahrer Phasen- oder Bearbeitungsstatus; Abbruch beziehungsweise Wiederholung nur, wenn unterstützt. |
 
 Skeletons SOLLEN dem späteren Inhalt ähneln und Platz reservieren; Schimmern ist keine Pflicht. Fortschrittsbalken dürfen nicht bis 99 Prozent vorlaufen, wenn dafür keine Messgrundlage existiert.[^D54]
 
@@ -307,6 +312,7 @@ Bewusst nicht animierte Nachbarbereiche:
 ```
 
 <a id="s06"></a>
+
 ## 6. Sprache, Glaubwürdigkeit und Produktcharakter
 
 Texte SOLLEN die Handlung und deren Konsequenz konkret benennen. Beispiele dieses Guides: „Rechnung erstellen“ statt „Absenden“; „Änderungen verwerfen“ statt „Nein“; „Keine Treffer für diese Filter“ statt „Hier ist nichts“.[^D51]
@@ -320,28 +326,29 @@ Erfolgstexte SOLLEN den tatsächlichen Abschluss bestätigen und den nächsten s
 Die Produktstimme bleibt in Fehlern, Dialogen und Einstellungen erkennbar, verliert dort aber nicht ihre Präzision. Humor darf niemals verdecken, ob Daten gespeichert wurden, Kosten entstehen oder ein Vorgang rückgängig gemacht werden kann.
 
 <a id="s07"></a>
+
 ## 7. Komponenten nach Aufgabe auswählen
 
 Die folgenden Regeln sind eine Entscheidungshilfe, kein Auftrag, alle Komponenten in jedem Projekt zu bauen. Vorhandene zugängliche Komponenten werden zuerst geprüft.
 
-| Muster | SOLL leisten | Vermeiden |
-|---|---|---|
-| Tabs | Gleichrangige Ansichten wechseln; Auswahl und Tastaturfokus unterscheiden; Überlauf planen. | Tabs für lineare Pflichtschritte oder unklare Mischung aus Navigation und Formularfortschritt.[^D39] |
-| Accordion | Ergänzende Abschnitte gezielt offenlegen; Zustand am Trigger erkennbar machen. | Wesentliche Fehler und Pflichtinformationen standardmäßig verbergen.[^D62] |
-| Menü / Kontextmenü | Verwandte Aktionen kontextnah anbieten; am Viewportrand passend platzieren. | Exklusiver Zugang per Rechtsklick, Long-Press oder präziser Mausbewegung.[^D13] |
-| Command Palette | Wiederkehrende Befehle schnell auffindbar machen; Such- und Tastaturzustände abdecken. | Alle gewöhnlichen Aktionen ausschließlich dort verstecken.[^D58] |
-| Tooltip | Kurze Zusatzhilfe, auch beim Fokus. | Pflichtinformation oder interaktive Formulare in einem flüchtigen Tooltip.[^D42] |
-| Dialog / Drawer / Sheet | Passend zu Unterbrechung, Umfang und verfügbarem Platz auswählen. | Modalität allein aus der visuellen Form ableiten; ein Sheet kann modal sein.[^D49][^D65] |
-| Toast / Banner / Inline-Hinweis | Meldung dort und so lange zeigen, wie es Handlungsbedarf und Risiko erfordern. | Kritische Fehler nur kurz am Bildschirmrand anzeigen.[^D30][^D40] |
-| Suche / Filter | Suchbereich, aktive Kriterien, Kombination und Rücksetzung verständlich machen. | Leere Trefferliste ohne Erklärung; veraltete Trefferzahlen als aktuell ausgeben.[^D34][^D59] |
-| Datentabelle | Wichtige Spalten, vergleichbare Zahlen, erkennbare Sortierung und getrennte Auswahlaktionen. | Unklare Zeilenaktionen, zufällige Ausrichtung oder abgeschnittene wesentliche Werte.[^D63] |
-| Pagination | Passendes Navigationsmodell und sinnvolle Wiederaufnahme bieten. | Unendliches Scrollen reflexartig für jede Recherche- oder Verwaltungsaufgabe verwenden.[^D61] |
-| Bulk-Aktion | Auswahlumfang, betroffene Objekte und Ergebnis einschließlich Teilfehlern anzeigen. | „Alle“ sagen, wenn nur die aktuelle Seite gemeint ist.[^D04] |
-| Inline Editing | Bearbeitung erkennbar starten und konsistent speichern oder abbrechen. | Entwürfe bei Fehlern verlieren oder durch unklare Blur-Regeln versehentlich übernehmen.[^D10] |
-| Toggle | Binären Zustand und Wirkung erklären; laufende Verarbeitung bei Bedarf anzeigen. | Unbestätigte Änderung wie endgültig gespeichert darstellen.[^D41] |
-| Drag / Swipe | Manipulation nachvollziehbar machen, Ziel und Konsequenz zeigen, Alternative anbieten. | Eine Geste als einzige Bedienmöglichkeit oder als unauffällige irreversible Aktion.[^D19][^D47] |
-| Wizard | Fachlich sinnvolle Schritte mit Rückweg und erhaltenen Eingaben. | Künstlich viele Schritte oder Fortschritt ohne Bezug zum verbleibenden Aufwand.[^D38] |
-| Präsenz / Live-Cursor | Beteiligte und ihren relevanten Bearbeitungskontext verständlich machen. | Dekorative Dauerbewegung; Sperren oder konfliktfreie Zusammenarbeit ohne Backendgrundlage versprechen.[^D11] |
+| Muster                          | SOLL leisten                                                                                 | Vermeiden                                                                                                    |
+| ------------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Tabs                            | Gleichrangige Ansichten wechseln; Auswahl und Tastaturfokus unterscheiden; Überlauf planen.  | Tabs für lineare Pflichtschritte oder unklare Mischung aus Navigation und Formularfortschritt.[^D39]         |
+| Accordion                       | Ergänzende Abschnitte gezielt offenlegen; Zustand am Trigger erkennbar machen.               | Wesentliche Fehler und Pflichtinformationen standardmäßig verbergen.[^D62]                                   |
+| Menü / Kontextmenü              | Verwandte Aktionen kontextnah anbieten; am Viewportrand passend platzieren.                  | Exklusiver Zugang per Rechtsklick, Long-Press oder präziser Mausbewegung.[^D13]                              |
+| Command Palette                 | Wiederkehrende Befehle schnell auffindbar machen; Such- und Tastaturzustände abdecken.       | Alle gewöhnlichen Aktionen ausschließlich dort verstecken.[^D58]                                             |
+| Tooltip                         | Kurze Zusatzhilfe, auch beim Fokus.                                                          | Pflichtinformation oder interaktive Formulare in einem flüchtigen Tooltip.[^D42]                             |
+| Dialog / Drawer / Sheet         | Passend zu Unterbrechung, Umfang und verfügbarem Platz auswählen.                            | Modalität allein aus der visuellen Form ableiten; ein Sheet kann modal sein.[^D49][^D65]                     |
+| Toast / Banner / Inline-Hinweis | Meldung dort und so lange zeigen, wie es Handlungsbedarf und Risiko erfordern.               | Kritische Fehler nur kurz am Bildschirmrand anzeigen.[^D30][^D40]                                            |
+| Suche / Filter                  | Suchbereich, aktive Kriterien, Kombination und Rücksetzung verständlich machen.              | Leere Trefferliste ohne Erklärung; veraltete Trefferzahlen als aktuell ausgeben.[^D34][^D59]                 |
+| Datentabelle                    | Wichtige Spalten, vergleichbare Zahlen, erkennbare Sortierung und getrennte Auswahlaktionen. | Unklare Zeilenaktionen, zufällige Ausrichtung oder abgeschnittene wesentliche Werte.[^D63]                   |
+| Pagination                      | Passendes Navigationsmodell und sinnvolle Wiederaufnahme bieten.                             | Unendliches Scrollen reflexartig für jede Recherche- oder Verwaltungsaufgabe verwenden.[^D61]                |
+| Bulk-Aktion                     | Auswahlumfang, betroffene Objekte und Ergebnis einschließlich Teilfehlern anzeigen.          | „Alle“ sagen, wenn nur die aktuelle Seite gemeint ist.[^D04]                                                 |
+| Inline Editing                  | Bearbeitung erkennbar starten und konsistent speichern oder abbrechen.                       | Entwürfe bei Fehlern verlieren oder durch unklare Blur-Regeln versehentlich übernehmen.[^D10]                |
+| Toggle                          | Binären Zustand und Wirkung erklären; laufende Verarbeitung bei Bedarf anzeigen.             | Unbestätigte Änderung wie endgültig gespeichert darstellen.[^D41]                                            |
+| Drag / Swipe                    | Manipulation nachvollziehbar machen, Ziel und Konsequenz zeigen, Alternative anbieten.       | Eine Geste als einzige Bedienmöglichkeit oder als unauffällige irreversible Aktion.[^D19][^D47]              |
+| Wizard                          | Fachlich sinnvolle Schritte mit Rückweg und erhaltenen Eingaben.                             | Künstlich viele Schritte oder Fortschritt ohne Bezug zum verbleibenden Aufwand.[^D38]                        |
+| Präsenz / Live-Cursor           | Beteiligte und ihren relevanten Bearbeitungskontext verständlich machen.                     | Dekorative Dauerbewegung; Sperren oder konfliktfreie Zusammenarbeit ohne Backendgrundlage versprechen.[^D11] |
 
 ### 7.1 Tooltip-Gruppen und unaufdringliche Meldungen
 
@@ -366,24 +373,25 @@ Farben unterscheiden Serien und Zustände, nicht automatisch „gut“ und „sc
 Bei Bewertungen sind Abgabe, Hover-Vorschau und tatsächlicher Mittelwert unterschiedliche Zustände. Anzahl und Berechnungsbasis müssen stimmen. Rechenbeispiel: Bei 4,4 von 5 sind vier Sterne ganz und der fünfte zu 40 Prozent gefüllt, nicht zu 44 Prozent.[^D37]
 
 <a id="s08"></a>
+
 ## 8. Zustände, Speicherung und sichere Wiederherstellung
 
 ### 8.1 Zustandsvertrag
 
 Vor der Implementierung MUSS für den betroffenen Ablauf eine kleine Zustandsmatrix entstehen. Nicht relevante Zustände werden als „nicht anwendbar“ begründet; eine rein lokale Oberfläche braucht keinen erfundenen Netzwerkmodus.
 
-| Zustand | Im Entwurf beantworten |
-|---|---|
-| Initial / Laden | Was ist schon bedienbar? Welche Geometrie steht bereits fest? |
-| Inhalt vorhanden | Welche Daten und Aktionen bilden den Normalfall? |
-| Erstnutzung / keine Inhalte | Warum ist der Bereich leer? Wie entsteht der erste Inhalt? |
-| Keine Treffer | Welche Suche oder Filter verursachen das Ergebnis? Wie geht es weiter? |
-| Teilweise verfügbar | Was ist vollständig, was fehlt, welche Aktion bleibt sicher? |
-| Fehler | Was scheiterte, was blieb erhalten, wie kann die Person fortfahren? |
-| Erfolg | Welche konkrete Änderung ist tatsächlich bestätigt? |
-| Offline / veraltet | Welche Daten sind nur lokal oder nicht mehr aktuell? |
-| Ohne Berechtigung / nur lesbar | Welche Einschränkung gilt, und gibt es einen berechtigten nächsten Schritt? |
-| Ungespeichert / in Bearbeitung / Konflikt | Welche Fassung ist betroffen und welche Entscheidung ist erforderlich? |
+| Zustand                                   | Im Entwurf beantworten                                                      |
+| ----------------------------------------- | --------------------------------------------------------------------------- |
+| Initial / Laden                           | Was ist schon bedienbar? Welche Geometrie steht bereits fest?               |
+| Inhalt vorhanden                          | Welche Daten und Aktionen bilden den Normalfall?                            |
+| Erstnutzung / keine Inhalte               | Warum ist der Bereich leer? Wie entsteht der erste Inhalt?                  |
+| Keine Treffer                             | Welche Suche oder Filter verursachen das Ergebnis? Wie geht es weiter?      |
+| Teilweise verfügbar                       | Was ist vollständig, was fehlt, welche Aktion bleibt sicher?                |
+| Fehler                                    | Was scheiterte, was blieb erhalten, wie kann die Person fortfahren?         |
+| Erfolg                                    | Welche konkrete Änderung ist tatsächlich bestätigt?                         |
+| Offline / veraltet                        | Welche Daten sind nur lokal oder nicht mehr aktuell?                        |
+| Ohne Berechtigung / nur lesbar            | Welche Einschränkung gilt, und gibt es einen berechtigten nächsten Schritt? |
+| Ungespeichert / in Bearbeitung / Konflikt | Welche Fassung ist betroffen und welche Entscheidung ist erforderlich?      |
 
 Fehler SOLLEN am betroffenen Objekt oder Eingabefeld erscheinen. Ein systemweites Problem erhält eine entsprechend übergreifende Darstellung. Eingaben bleiben erhalten; hilfreiche Wiederholung oder Korrektur ersetzt einen bloßen Fehlercode.[^D23]
 
@@ -407,10 +415,10 @@ Debouncing, lokale Entwürfe und Wiederholungsversuche werden nach Inhalt, Risik
 
 **Entscheidung nach Wiederherstellbarkeit und Auswirkung:**
 
-| Situation | Standard dieses Guides |
-|---|---|
-| Geringes Risiko, echte verlässliche Rücknahme | Direkt ausführen; Ergebnis und gut erreichbares Undo anbieten. |
-| Größerer Umfang oder unsichere Folgen | Betroffene Objekte und Konsequenz vorher prüfen lassen; gegebenenfalls Vorschau. |
+| Situation                                             | Standard dieses Guides                                                                      |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Geringes Risiko, echte verlässliche Rücknahme         | Direkt ausführen; Ergebnis und gut erreichbares Undo anbieten.                              |
+| Größerer Umfang oder unsichere Folgen                 | Betroffene Objekte und Konsequenz vorher prüfen lassen; gegebenenfalls Vorschau.            |
 | Irreversibel, finanziell oder betrieblich folgenreich | Explizite benannte Bestätigung; zusätzliche bewusste Eingabe nur bei entsprechendem Risiko. |
 
 Ein Bestätigungsdialog ist weder immer falsch noch immer ausreichend. Die Aktion muss konkret benannt sein; „Sind Sie sicher?“ allein erklärt keine Konsequenz. Ein pauschaler Halteknopf von wenigen hundert Millisekunden ersetzt keine Risikoanalyse.[^D12]
@@ -418,6 +426,7 @@ Ein Bestätigungsdialog ist weder immer falsch noch immer ausreichend. Die Aktio
 Undo darf nur angeboten werden, wenn der Zustand zuverlässig wiederherstellbar ist. Ein kurz sichtbarer Toast SOLL nicht die einzige Möglichkeit sein, einen wesentlichen Verlust abzuwenden. Dauerhafte Wiederherstellung oder angemessene Zeitsteuerung berücksichtigen; reine Hover-Pause hilft Tastaturnutzung nicht.[^D48][^W10]
 
 <a id="s09"></a>
+
 ## 9. Formulare und spezialisierte Eingaben
 
 ### 9.1 Labels, Hilfe und Validierung
@@ -432,20 +441,21 @@ Ein nicht verfügbares Steuerelement benötigt einen nachvollziehbaren Grund. Ei
 
 ### 9.2 Eingabetyp passend zur Aufgabe
 
-| Eingabe | Anforderungen dieses Guides |
-|---|---|
-| Auswahl | Native oder vorhandene zugängliche Auswahl bevorzugen; Suche nur bei tatsächlichem Nutzen. Trigger und Optionsliste müssen zusammengehören.[^D20] |
-| Datum / Zeitraum | Direkte Eingabe und Kalender sinnvoll kombinieren; Format, Grenzen und Zeitzone fachlich klären. Voreinstellungen nach realen Aufgaben wählen.[^D16] |
-| Formatierte Eingabe | Einfügen, Löschen, Cursor und Teilwerte testen. Formatierung darf keine fachlich bedeutsamen Zeichen verlieren; Identifikatoren sind nicht automatisch Zahlen.[^D27] |
-| Passwort | Passwortmanager und Einfügen zulassen; Sichtbarkeit kontrollierbar; reale Regeln erklären, keine zusätzlichen Regeln erfinden.[^D57] |
-| Einmalcode | Vorzugsweise ein semantisches Eingabefeld mit möglicher optischer Segmentierung; Einfügen und Autofill unterstützen. Länge und Zeichensatz vom Backend übernehmen.[^D60] |
-| Slider | Aktuellen Wert, sinnvolle Schritte und Tastaturbedienung anbieten; für Präzision ergänzende Zahleneingabe vorsehen.[^D33] |
-| Farbauswahl | Exakte Werte eingeben können; Transparenz nachvollziehbar darstellen; resultierende Kontraste prüfen, soweit für den Einsatzzweck relevant.[^D55] |
-| Datei-Upload | Dateiauswahl zusätzlich zur Dropzone; zulässige Dateien erklären; pro Datei Fortschritt, Fehler und erneuten Versuch behandeln. Fortsetzung nur bei vorhandener Unterstützung.[^D56] |
+| Eingabe             | Anforderungen dieses Guides                                                                                                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Auswahl             | Native oder vorhandene zugängliche Auswahl bevorzugen; Suche nur bei tatsächlichem Nutzen. Trigger und Optionsliste müssen zusammengehören.[^D20]                                    |
+| Datum / Zeitraum    | Direkte Eingabe und Kalender sinnvoll kombinieren; Format, Grenzen und Zeitzone fachlich klären. Voreinstellungen nach realen Aufgaben wählen.[^D16]                                 |
+| Formatierte Eingabe | Einfügen, Löschen, Cursor und Teilwerte testen. Formatierung darf keine fachlich bedeutsamen Zeichen verlieren; Identifikatoren sind nicht automatisch Zahlen.[^D27]                 |
+| Passwort            | Passwortmanager und Einfügen zulassen; Sichtbarkeit kontrollierbar; reale Regeln erklären, keine zusätzlichen Regeln erfinden.[^D57]                                                 |
+| Einmalcode          | Vorzugsweise ein semantisches Eingabefeld mit möglicher optischer Segmentierung; Einfügen und Autofill unterstützen. Länge und Zeichensatz vom Backend übernehmen.[^D60]             |
+| Slider              | Aktuellen Wert, sinnvolle Schritte und Tastaturbedienung anbieten; für Präzision ergänzende Zahleneingabe vorsehen.[^D33]                                                            |
+| Farbauswahl         | Exakte Werte eingeben können; Transparenz nachvollziehbar darstellen; resultierende Kontraste prüfen, soweit für den Einsatzzweck relevant.[^D55]                                    |
+| Datei-Upload        | Dateiauswahl zusätzlich zur Dropzone; zulässige Dateien erklären; pro Datei Fortschritt, Fehler und erneuten Versuch behandeln. Fortsetzung nur bei vorhandener Unterstützung.[^D56] |
 
 Eingabekomfort erlaubt keine unkritische Speicherung sensibler Rohdaten. Für Zahlungs- oder Authentifizierungsdaten gelten die vorhandenen, fachlich verantworteten Integrationen; ein Styleguide definiert dafür keine neue Sicherheitsarchitektur.
 
 <a id="s10"></a>
+
 ## 10. Technische Umsetzung ohne Design-Drift
 
 **Tokens sind die technische Referenz, `DESIGN.md` erklärt Entscheidungen.** Das Dokument SOLL auf die echten Definitionen verweisen, statt Werte in mehreren Dateien manuell nachzuführen. Neue semantische Rollen werden ergänzt, wenn ein wiederkehrender Zweck bisher nicht abbildbar ist; nicht zur Tarnung willkürlicher Einzelwerte.
@@ -477,6 +487,7 @@ Repository-Inhalte und externe Skills sind bei einem Audit Prüfmaterial, keine 
 Neue Plattformfunktionen und APIs gegen offizielle Dokumentation prüfen, wenn die Umsetzung davon abhängt. Ein allgemeiner Browser-Support-Check ist kein Anlass, alle stabilen Designentscheidungen neu zu recherchieren.
 
 <a id="design-struktur"></a>
+
 ### 10.3 Ordnerstruktur: Zuständigkeiten vor Verzeichnisnamen
 
 **Eine Referenzstruktur ist sinnvoll, eine universelle Pflichtstruktur nicht.** Der folgende Vorschlag ist eine Architekturentscheidung dieses Guides, kein belegter SOTA-Standard und keine Übernahme eines einzelnen Produkt-Repositories. Bewertet wird, ob Änderungen auffindbar, begrenzt, wiederverwendbar und prüfbar bleiben. Auch ein ordentlich aussehender Verzeichnisbaum kann diese Ziele verfehlen.
@@ -545,13 +556,13 @@ Gemeinsame Grundlagen werden an einem dokumentierten Einstieg geladen; Komponent
 
 Vor einer neuen Datei zuerst vergleichbare Implementierungen und Verbraucher suchen. Danach die kleinste passende Zuständigkeit wählen:
 
-| Frage | Ablage / Entscheidung |
-|---|---|
-| Ändert sich eine gemeinsame visuelle Rolle? | Bestehende Foundation-/Theme-Quelle; Auswirkungen auf alle Verbraucher prüfen. |
-| Existiert der Baustein bereits? | Wiederverwenden oder eine begründete Variante ergänzen, nicht kopieren. |
-| Ist Verhalten und API fachneutral? | Gemeinsame Komponente; zusätzliche Unterteilung nur bei erkennbarem Nutzen. |
-| Enthält das Element Fachbegriffe, Rechteprüfung oder Datenzugriff? | Beim Feature; fachneutrale Teile bei Bedarf herauslösen. |
-| Wiederholt sich ein vollständiger fachneutraler Ablauf? | Gemeinsame Komposition; `patterns/` optional, kein Zwang zur weiteren Ebene. |
+| Frage                                                              | Ablage / Entscheidung                                                          |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| Ändert sich eine gemeinsame visuelle Rolle?                        | Bestehende Foundation-/Theme-Quelle; Auswirkungen auf alle Verbraucher prüfen. |
+| Existiert der Baustein bereits?                                    | Wiederverwenden oder eine begründete Variante ergänzen, nicht kopieren.        |
+| Ist Verhalten und API fachneutral?                                 | Gemeinsame Komponente; zusätzliche Unterteilung nur bei erkennbarem Nutzen.    |
+| Enthält das Element Fachbegriffe, Rechteprüfung oder Datenzugriff? | Beim Feature; fachneutrale Teile bei Bedarf herauslösen.                       |
+| Wiederholt sich ein vollständiger fachneutraler Ablauf?            | Gemeinsame Komposition; `patterns/` optional, kein Zwang zur weiteren Ebene.   |
 
 Mehrfache Verwendung allein macht eine fachliche Oberfläche nicht zum Designbaustein. Umgekehrt kann ein wichtiger zugänglicher Basisbaustein schon beim ersten Einsatz zentral sinnvoll sein. Keine starre Regel wie „ab der dritten Verwendung verschieben“.
 
@@ -560,6 +571,7 @@ Mehrfache Verwendung allein macht eine fachliche Oberfläche nicht zum Designbau
 **Keine automatische Migration.** Ein Agent bildet diese Verantwortlichkeiten zuerst auf vorhandene Verzeichnisse ab. Neue Strukturen oder Verschiebungen brauchen einen konkreten Nutzen, betroffene Verbraucher und eine zum Auftrag passende Freigabe. Zusätzliche Paketgrenzen, Prüfscripts oder Verzeichnis-Splits entstehen nicht bloß zur Ähnlichkeit mit einem Referenzprojekt. Bei einer erlaubten Strukturänderung Imports, Styles, öffentliche API, Vorschau und Tests gemeinsam prüfen. Vorhandene Importregeln oder Linter nach Möglichkeit verwenden; zusätzliche Gates nur für konkrete, wiederkehrende Verstöße.
 
 <a id="s11"></a>
+
 ## 11. Zugänglichkeit als Abnahmekriterium
 
 Der Guide nutzt relevante WCAG-2.2-Kriterien und WAI-ARIA-Entwurfsmuster. Die folgende Auswahl ist **keine vollständige WCAG-Konformitätsprüfung**. Die verlinkten Understanding-Seiten erläutern die Kriterien; die hier zusätzlich gesetzten Komfortziele sind eigene Empfehlungen.
@@ -597,6 +609,7 @@ Textvergrößerung und Reflow sind getrennt zu prüfen. WCAG 1.4.4 verlangt unte
 Reduzierte Bewegung wird nach Abschnitt 5 unterstützt; verringerte Transparenz und erhöhter Kontrast werden unabhängig davon betrachtet. Eine deckende Theme-Variante darf nicht mit einer bewegungsreduzierten Variante verwechselt werden. Relevante Statusmeldungen müssen programmatisch erkennbar sein, ohne dafür den Fokus zu stehlen. Dringliche Ansagen bleiben selten; nicht jede Filteränderung braucht eine unterbrechende Fehlermeldungsrolle.[^W09]
 
 <a id="s12"></a>
+
 ## 12. Arbeitsablauf für Coding-Agents und Abnahme
 
 Dieser Ablauf ist eine eigene Arbeitsvorgabe. Er integriert Bestandsaufnahme, begrenzte Umsetzung und überprüfbare Übergabe. Der Umfang bleibt proportional zum Auftrag. Ein Agent erzeugt nicht automatisch Varianten, Unteragenten oder einen vollständigen Audit, nur weil er diesen Guide gelesen hat.[^E06]
@@ -657,11 +670,11 @@ Codebefund, errechneter Wert, Browserbeobachtung und Messung im Ergebnis untersc
 
 ### Schritt 6 — Befunde nach Risiko behandeln
 
-| Schwere | Beispiele | Abschlussregel |
-|---|---|---|
-| Blockierend | Datenverlust, falsche Erfolgsbestätigung, unbedienbarer Kernablauf, unsichere irreversible Aktion. | Kein „fertig“, solange der Befund offen ist. |
-| Wesentlich | Fehlender Fehlerzustand, unzugänglicher Fokus, gebrochener schmaler Workflow, verlorener Arbeitskontext, deutliche Systemabweichung. | Vor Abnahme beheben oder ausdrücklich als offene Einschränkung vereinbaren. |
-| Feinschliff | Kleine optische Unwucht ohne relevante Beeinträchtigung. | Lokal korrigieren; kein zusätzliches Redesign auslösen. |
+| Schwere     | Beispiele                                                                                                                            | Abschlussregel                                                              |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| Blockierend | Datenverlust, falsche Erfolgsbestätigung, unbedienbarer Kernablauf, unsichere irreversible Aktion.                                   | Kein „fertig“, solange der Befund offen ist.                                |
+| Wesentlich  | Fehlender Fehlerzustand, unzugänglicher Fokus, gebrochener schmaler Workflow, verlorener Arbeitskontext, deutliche Systemabweichung. | Vor Abnahme beheben oder ausdrücklich als offene Einschränkung vereinbaren. |
+| Feinschliff | Kleine optische Unwucht ohne relevante Beeinträchtigung.                                                                             | Lokal korrigieren; kein zusätzliches Redesign auslösen.                     |
 
 Jeder Befund nennt Ort, beobachtetes Problem, Auswirkung, kleinste sinnvolle Korrektur und Nachtest. Stilpräferenzen von tatsächlichen Mängeln trennen. Keine Schönheitsnote, die blockierende Fehler durch hübsche Details ausgleicht.
 
@@ -682,6 +695,7 @@ Jeder Befund nennt Ort, beobachtetes Problem, Auswirkung, kleinste sinnvolle Kor
 **Endmaßstab:** Die nächste Person soll die Oberfläche verstehen, ihr Ergebnis einschätzen und ohne unnötige Unterbrechung weiterarbeiten können. Der nächste Agent soll diese Entscheidung nachvollziehen, ohne einen zweiten Stil zu erfinden.
 
 <a id="einbindung"></a>
+
 ## Einbindung: Referenzdatei mit optionalem Skill
 
 **Empfehlung für wiederkehrende, projektübergreifende Agent-Arbeit:** Den Guide als versionierte fachliche Referenz behalten und einen kleinen `frontend-design`-Skill als Einstieg verwenden. Nicht das gesamte Dokument in `SKILL.md` kopieren. Projektidentität und genehmigte Abweichungen bleiben in den vorhandenen Projektquellen.
@@ -717,21 +731,22 @@ Bei fehlender Referenzdatei diese Lücke benennen und vorhandene Projektregeln v
 **Auswahl:** Für gelegentliche manuelle Nutzung genügt die Datei mit Projektverweis. Für wiederholte Arbeit mit verschiedenen Agents und Projekten ist der kleine Skill die sinnvolle Ergänzung. Der Mehrwert liegt im wiederholbaren Ablauf und gezielten Laden, nicht im Dateinamen. Die Einbindung hier ist ein Vorschlag, kein bereits installierter oder getesteter Skill.
 
 <a id="quellen"></a>
+
 ## Übernahmegrenzen und Quellen
 
 ### Bewusst nicht als allgemeine Regeln übernommen
 
-| Quellaussage / Rezept | Regel dieser Fassung |
-|---|---|
-| Jede Tastaturaktion oder jede sehr häufige Aktion darf niemals animieren. | Keine zusätzliche Wartezeit oder Inszenierung; zweckmäßiges nicht blockierendes Feedback bleibt möglich. [^E01] |
-| Vorgegebene Kurven, starre Dauern und Druckskalierung für alle Controls. | Bestehende Projekttokens verwenden; Werte als Startpunkte behandeln, nicht als Qualitätsbeweis. [^E01][^E03] |
-| Reine Fades sind Fehler; reduzierte Bewegung darf nie vollständig statisch sein. | Fade und statischer Zustandswechsel sind mögliche zugängliche Alternativen. [^E08][^M04] |
-| CSS/WAAPI sind automatisch GPU-beschleunigt; alle Layoutanimationen sind verboten. | Eigenschaften, Renderingkosten und Zielbrowser prüfen; Beschleunigung nicht allein aus der Technik ableiten. [^M07] |
-| Keyframes lassen sich grundsätzlich nicht unterbrechen. | Konkrete Steuerung und Endzustände prüfen; die Web Animations API erlaubt auch Umkehr. [^M06] |
-| Alle Toolbars und Panels brauchen Glas, stärkeren Blur oder größere Schatten. | Ebenen verständlich machen; deckende Flächen sind gleichwertige Mittel. [^E04][^AP02] |
-| Eine Beschriftung zeigt, dass die Zuordnung des Controls schlecht ist. | Nähe und verständliche Labels ergänzen sich; notwendige Beschriftungen nicht aus Stilgründen streichen. [^E04] |
-| Apple-Springwerte lassen sich direkt auf Webbibliotheken übertragen. | Parameterbedeutung, Einheiten und Bibliotheksversion prüfen; Dämpfungsverhältnis nicht mit `damping` gleichsetzen. [^M08] |
-| Eine kuratierte Bibliothek ist für jede passende Aufgabe verbindlich. | Bestehende Komponenten zuerst; Bibliothekswechsel benötigt einen konkreten Grund und passenden Auftrag. [^E09] |
+| Quellaussage / Rezept                                                              | Regel dieser Fassung                                                                                                      |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Jede Tastaturaktion oder jede sehr häufige Aktion darf niemals animieren.          | Keine zusätzliche Wartezeit oder Inszenierung; zweckmäßiges nicht blockierendes Feedback bleibt möglich. [^E01]           |
+| Vorgegebene Kurven, starre Dauern und Druckskalierung für alle Controls.           | Bestehende Projekttokens verwenden; Werte als Startpunkte behandeln, nicht als Qualitätsbeweis. [^E01][^E03]              |
+| Reine Fades sind Fehler; reduzierte Bewegung darf nie vollständig statisch sein.   | Fade und statischer Zustandswechsel sind mögliche zugängliche Alternativen. [^E08][^M04]                                  |
+| CSS/WAAPI sind automatisch GPU-beschleunigt; alle Layoutanimationen sind verboten. | Eigenschaften, Renderingkosten und Zielbrowser prüfen; Beschleunigung nicht allein aus der Technik ableiten. [^M07]       |
+| Keyframes lassen sich grundsätzlich nicht unterbrechen.                            | Konkrete Steuerung und Endzustände prüfen; die Web Animations API erlaubt auch Umkehr. [^M06]                             |
+| Alle Toolbars und Panels brauchen Glas, stärkeren Blur oder größere Schatten.      | Ebenen verständlich machen; deckende Flächen sind gleichwertige Mittel. [^E04][^AP02]                                     |
+| Eine Beschriftung zeigt, dass die Zuordnung des Controls schlecht ist.             | Nähe und verständliche Labels ergänzen sich; notwendige Beschriftungen nicht aus Stilgründen streichen. [^E04]            |
+| Apple-Springwerte lassen sich direkt auf Webbibliotheken übertragen.               | Parameterbedeutung, Einheiten und Bibliotheksversion prüfen; Dämpfungsverhältnis nicht mit `damping` gleichsetzen. [^M08] |
+| Eine kuratierte Bibliothek ist für jede passende Aufgabe verbindlich.              | Bestehende Komponenten zuerst; Bibliothekswechsel benötigt einen konkreten Grund und passenden Auftrag. [^E09]            |
 
 ### Quellenstand und Reichweite
 
@@ -746,126 +761,245 @@ Die Quellen liefern Prinzipien und technische Grundlagen; Priorität, Lesepfade,
 ### Quellenverweise
 
 [^D00]: designmotionhq: [UX Engine / Startseite](https://www.designmotionhq.com/). Abruf: 11.09.2026.
+
 [^D03]: designmotionhq: [Reverse-Engineered Linear](https://www.designmotionhq.com/patterns/reverse-engineered-linear). Abruf: 11.09.2026.
+
 [^D53]: designmotionhq: [Gradient Design](https://www.designmotionhq.com/patterns/gradient-design). Abruf: 11.09.2026.
+
 [^D76]: designmotionhq: [Depth Layers](https://www.designmotionhq.com/patterns/depth-layers). Abruf: 11.09.2026.
+
 [^D43]: designmotionhq: [Visual Hierarchy](https://www.designmotionhq.com/patterns/visual-hierarchy). Abruf: 11.09.2026.
+
 [^D17]: designmotionhq: [Design System Kit](https://www.designmotionhq.com/patterns/design-system-kit). Abruf: 11.09.2026.
+
 [^D63]: designmotionhq: [Data Table](https://www.designmotionhq.com/patterns/data-table). Abruf: 11.09.2026.
+
 [^D69]: designmotionhq: [Design Tokens](https://www.designmotionhq.com/patterns/design-tokens). Abruf: 11.09.2026.
+
 [^D70]: designmotionhq: [Color Accessibility](https://www.designmotionhq.com/patterns/color-accessibility). Abruf: 11.09.2026.
+
 [^W01]: W3C WAI: [WCAG 2.2 — SC 1.4.3 Contrast (Minimum)](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html). Abruf: 11.09.2026.
+
 [^D32]: designmotionhq: [Proximity Rule](https://www.designmotionhq.com/patterns/proximity-rule). Abruf: 11.09.2026.
+
 [^D71]: designmotionhq: [Gestalt Laws](https://www.designmotionhq.com/patterns/gestalt-laws). Abruf: 11.09.2026.
+
 [^D25]: designmotionhq: [Golden Ratio](https://www.designmotionhq.com/patterns/golden-ratio). Abruf: 11.09.2026.
+
 [^D26]: designmotionhq: [Grid System](https://www.designmotionhq.com/patterns/grid-system). Abruf: 11.09.2026.
+
 [^D72]: designmotionhq: [Border Radius](https://www.designmotionhq.com/patterns/border-radius). Abruf: 11.09.2026.
+
 [^D36]: designmotionhq: [Shadow Elevation](https://www.designmotionhq.com/patterns/shadow-elevation). Abruf: 11.09.2026.
+
 [^D75]: designmotionhq: [Perfect Card](https://www.designmotionhq.com/patterns/perfect-card). Abruf: 11.09.2026.
+
 [^D64]: designmotionhq: [Card Hover Anatomy](https://www.designmotionhq.com/patterns/card-hover-anatomy). Abruf: 11.09.2026.
+
 [^D66]: designmotionhq: [Icon Design Rules](https://www.designmotionhq.com/patterns/icon-design-rules). Abruf: 11.09.2026.
+
 [^D73]: designmotionhq: [Dark Mode](https://www.designmotionhq.com/patterns/dark-mode). Abruf: 11.09.2026.
+
 [^D29]: designmotionhq: [Navigation Patterns](https://www.designmotionhq.com/patterns/navigation-patterns). Abruf: 11.09.2026.
+
 [^D08]: designmotionhq: [Settings System](https://www.designmotionhq.com/patterns/settings-system). Abruf: 11.09.2026.
+
 [^D02]: designmotionhq: [De-AI Landing Hero](https://www.designmotionhq.com/patterns/de-ai-landing-hero). Abruf: 11.09.2026.
+
 [^D67]: designmotionhq: [Landing Page Skeleton](https://www.designmotionhq.com/patterns/landing-page-skeleton). Abruf: 11.09.2026.
+
 [^D35]: designmotionhq: [Serial Position](https://www.designmotionhq.com/patterns/serial-position). Abruf: 11.09.2026.
+
 [^D06]: designmotionhq: [Hover Trap](https://www.designmotionhq.com/patterns/hover-trap). Abruf: 11.09.2026.
+
 [^D14]: designmotionhq: [Animation Timing](https://www.designmotionhq.com/patterns/animation-timing). Abruf: 11.09.2026.
+
 [^D21]: designmotionhq: [Easing Curves](https://www.designmotionhq.com/patterns/easing-curves). Abruf: 11.09.2026.
+
 [^D18]: designmotionhq: [Doherty Threshold](https://www.designmotionhq.com/patterns/doherty-threshold). Abruf: 11.09.2026.
+
 [^D28]: designmotionhq: [Loading States System](https://www.designmotionhq.com/patterns/loading-states-system). Abruf: 11.09.2026.
+
 [^D54]: designmotionhq: [Skeleton Loading](https://www.designmotionhq.com/patterns/skeleton-loading). Abruf: 11.09.2026.
+
 [^M04]: MDN Web Docs: [prefers-reduced-motion](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@media/prefers-reduced-motion). Erneut geprüft: 12.09.2026; Bewegung darf reduziert, ersetzt oder entfernt werden.
+
 [^D68]: designmotionhq: [Scroll-Driven Animations](https://www.designmotionhq.com/patterns/scroll-driven-animations). Abruf: 11.09.2026.
+
 [^D51]: designmotionhq: [Microcopy](https://www.designmotionhq.com/patterns/microcopy). Abruf: 11.09.2026.
+
 [^D22]: designmotionhq: [Empty States](https://www.designmotionhq.com/patterns/empty-states). Abruf: 11.09.2026.
+
 [^D31]: designmotionhq: [Peak-End Rule](https://www.designmotionhq.com/patterns/peak-end-rule). Abruf: 11.09.2026.
+
 [^D45]: designmotionhq: [Zeigarnik Effect](https://www.designmotionhq.com/patterns/zeigarnik-effect). Abruf: 11.09.2026.
+
 [^D74]: designmotionhq: [Von Restorff Effect](https://www.designmotionhq.com/patterns/von-restorff). Abruf: 11.09.2026.
+
 [^D39]: designmotionhq: [Tabs System](https://www.designmotionhq.com/patterns/tabs-system). Abruf: 11.09.2026.
+
 [^D62]: designmotionhq: [Accordion Disclosure](https://www.designmotionhq.com/patterns/accordion-disclosure). Abruf: 11.09.2026.
+
 [^D13]: designmotionhq: [Context Menu](https://www.designmotionhq.com/patterns/context-menu). Abruf: 11.09.2026.
+
 [^D58]: designmotionhq: [Command Palette](https://www.designmotionhq.com/patterns/command-palette). Abruf: 11.09.2026.
+
 [^D42]: designmotionhq: [Tooltip Design](https://www.designmotionhq.com/patterns/tooltip-design). Abruf: 11.09.2026.
+
 [^D49]: designmotionhq: [Bottom Sheets](https://www.designmotionhq.com/patterns/bottom-sheets). Abruf: 11.09.2026.
+
 [^D65]: designmotionhq: [Modal Hierarchy](https://www.designmotionhq.com/patterns/modal-hierarchy). Abruf: 11.09.2026.
+
 [^D30]: designmotionhq: [Notification System](https://www.designmotionhq.com/patterns/notification-system). Abruf: 11.09.2026.
+
 [^D40]: designmotionhq: [Toast Notifications](https://www.designmotionhq.com/patterns/toast-notifications). Abruf: 11.09.2026.
+
 [^D34]: designmotionhq: [Search Experience System](https://www.designmotionhq.com/patterns/search-experience-system). Abruf: 11.09.2026.
+
 [^D59]: designmotionhq: [Filter Chips](https://www.designmotionhq.com/patterns/filter-chips). Abruf: 11.09.2026.
+
 [^D61]: designmotionhq: [Pagination](https://www.designmotionhq.com/patterns/pagination). Abruf: 11.09.2026.
+
 [^D04]: designmotionhq: [Bulk Actions](https://www.designmotionhq.com/patterns/bulk-actions). Abruf: 11.09.2026.
+
 [^D10]: designmotionhq: [Inline Editing](https://www.designmotionhq.com/patterns/inline-editing). Abruf: 11.09.2026.
+
 [^D41]: designmotionhq: [Toggle Anatomy](https://www.designmotionhq.com/patterns/toggle-anatomy). Abruf: 11.09.2026.
+
 [^D19]: designmotionhq: [Drag and Drop](https://www.designmotionhq.com/patterns/drag-and-drop). Abruf: 11.09.2026.
+
 [^D47]: designmotionhq: [Swipe Actions](https://www.designmotionhq.com/patterns/swipe-actions). Abruf: 11.09.2026.
+
 [^D38]: designmotionhq: [Stepper Wizard](https://www.designmotionhq.com/patterns/stepper-wizard). Abruf: 11.09.2026.
+
 [^D11]: designmotionhq: [Live Cursors](https://www.designmotionhq.com/patterns/live-cursors). Abruf: 11.09.2026.
+
 [^D15]: designmotionhq: [Charts That Lie](https://www.designmotionhq.com/patterns/charts-that-lie). Abruf: 11.09.2026.
+
 [^D37]: designmotionhq: [Star Rating](https://www.designmotionhq.com/patterns/star-rating). Abruf: 11.09.2026.
+
 [^D23]: designmotionhq: [Error States](https://www.designmotionhq.com/patterns/error-states). Abruf: 11.09.2026.
+
 [^D52]: designmotionhq: [Optimistic UI](https://www.designmotionhq.com/patterns/optimistic-ui). Abruf: 11.09.2026.
+
 [^D07]: designmotionhq: [Behind the Button](https://www.designmotionhq.com/patterns/behind-the-button). Abruf: 11.09.2026.
+
 [^D09]: designmotionhq: [Autosave](https://www.designmotionhq.com/patterns/autosave-ux). Abruf: 11.09.2026.
+
 [^M02]: MDN Web Docs: [Window: beforeunload event](https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeunload_event). Abruf: 11.09.2026.
+
 [^D12]: designmotionhq: [Destructive Actions](https://www.designmotionhq.com/patterns/destructive-actions). Abruf: 11.09.2026.
+
 [^D48]: designmotionhq: [Undo UX](https://www.designmotionhq.com/patterns/undo-ux). Abruf: 11.09.2026.
+
 [^W10]: W3C WAI: [WCAG 2.2 — SC 2.2.1 Timing Adjustable](https://www.w3.org/WAI/WCAG22/Understanding/timing-adjustable.html). Abruf: 11.09.2026.
+
 [^D24]: designmotionhq: [Form Field States](https://www.designmotionhq.com/patterns/form-field-states). Abruf: 11.09.2026.
+
 [^D50]: designmotionhq: [Form Validation Timing](https://www.designmotionhq.com/patterns/form-validation-timing). Abruf: 11.09.2026.
+
 [^D05]: designmotionhq: [Disabled Buttons](https://www.designmotionhq.com/patterns/disabled-buttons). Abruf: 11.09.2026.
+
 [^D20]: designmotionhq: [Dropdown Design](https://www.designmotionhq.com/patterns/dropdown-design). Abruf: 11.09.2026.
+
 [^D16]: designmotionhq: [Date Pickers](https://www.designmotionhq.com/patterns/date-pickers). Abruf: 11.09.2026.
+
 [^D27]: designmotionhq: [Input Masking](https://www.designmotionhq.com/patterns/input-masking). Abruf: 11.09.2026.
+
 [^D57]: designmotionhq: [Password Field UX](https://www.designmotionhq.com/patterns/password-field-ux). Abruf: 11.09.2026.
+
 [^D60]: designmotionhq: [OTP Input](https://www.designmotionhq.com/patterns/otp-input). Abruf: 11.09.2026.
+
 [^D33]: designmotionhq: [Range Sliders](https://www.designmotionhq.com/patterns/range-sliders). Abruf: 11.09.2026.
+
 [^D55]: designmotionhq: [Color Picker UX](https://www.designmotionhq.com/patterns/color-picker-ux). Abruf: 11.09.2026.
+
 [^D56]: designmotionhq: [File Upload UX](https://www.designmotionhq.com/patterns/file-upload-ux). Abruf: 11.09.2026.
+
 [^D01]: designmotionhq: [CSS Has Selector](https://www.designmotionhq.com/patterns/css-has-selector). Abruf: 11.09.2026.
+
 [^D44]: designmotionhq: [Z-Index Mastery](https://www.designmotionhq.com/patterns/z-index-mastery). Abruf: 11.09.2026.
+
 [^M01]: MDN Web Docs: [z-index](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/z-index). Abruf: 11.09.2026.
+
 [^M03]: MDN Web Docs: [interpolate-size](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/interpolate-size). Abruf: 11.09.2026.
+
 [^W04]: W3C WAI: [WCAG 2.2 — SC 1.4.11 Non-text Contrast](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html). Abruf: 11.09.2026.
+
 [^W05]: W3C WAI: [WCAG 2.2 — SC 2.4.7 Focus Visible](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible.html). Abruf: 11.09.2026.
+
 [^W06]: W3C WAI: [WCAG 2.2 — SC 2.4.11 Focus Not Obscured (Minimum)](https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum.html). Abruf: 11.09.2026.
+
 [^A01]: W3C WAI: [ARIA Authoring Practices — Dialog (Modal) Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/). Abruf: 11.09.2026.
+
 [^A02]: W3C WAI: [ARIA Authoring Practices — Tabs Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/tabs/). Abruf: 11.09.2026.
+
 [^W02]: W3C WAI: [WCAG 2.2 — SC 2.5.8 Target Size (Minimum)](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html). Abruf: 11.09.2026.
+
 [^W07]: W3C WAI: [WCAG 2.2 — SC 1.4.13 Content on Hover or Focus](https://www.w3.org/WAI/WCAG22/Understanding/content-on-hover-or-focus.html). Abruf: 11.09.2026.
+
 [^W03]: W3C WAI: [WCAG 2.2 — SC 2.5.7 Dragging Movements](https://www.w3.org/WAI/WCAG22/Understanding/dragging-movements.html). Abruf: 11.09.2026.
+
 [^W08]: W3C WAI: [WCAG 2.2 — SC 1.4.10 Reflow](https://www.w3.org/WAI/WCAG22/Understanding/reflow.html). Abruf: 11.09.2026.
+
 [^W09]: W3C WAI: [WCAG 2.2 — SC 4.1.3 Status Messages](https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html). Abruf: 11.09.2026.
 
 [^E01]: Emil Kowalski: [animate/SKILL.md](https://github.com/emilkowalski/skills/blob/d23d7f88a2e21c9e4b1418c7abe420f5c1052ba7/skills/animate/SKILL.md). Stand der vorherigen Skill-Auswertung: 12.09.2026.
+
 [^E02]: Emil Kowalski: [find-animation-opportunities/SKILL.md](https://github.com/emilkowalski/skills/blob/d23d7f88a2e21c9e4b1418c7abe420f5c1052ba7/skills/find-animation-opportunities/SKILL.md). Zweck, Häufigkeit und bewusst verworfene Vorschläge.
+
 [^E03]: Emil Kowalski: [emil-design-eng/SKILL.md](https://github.com/emilkowalski/skills/blob/d23d7f88a2e21c9e4b1418c7abe420f5c1052ba7/skills/emil-design-eng/SKILL.md). Druckfeedback, Tooltip-Gruppen, Herkunft und Komponentenverhalten.
+
 [^E04]: Emil Kowalski: [apple-design/SKILL.md](https://github.com/emilkowalski/skills/blob/d23d7f88a2e21c9e4b1418c7abe420f5c1052ba7/skills/apple-design/SKILL.md). Interpretation für Weboberflächen; keine offizielle Apple-Veröffentlichung.
+
 [^E05]: Emil Kowalski: [prototype/SKILL.md](https://github.com/emilkowalski/skills/blob/d23d7f88a2e21c9e4b1418c7abe420f5c1052ba7/skills/prototype/SKILL.md). Isolierte, funktionierende und tatsächlich unterschiedliche Varianten.
+
 [^E06]: Emil Kowalski: [improve-animations/SKILL.md](https://github.com/emilkowalski/skills/blob/d23d7f88a2e21c9e4b1418c7abe420f5c1052ba7/skills/improve-animations/SKILL.md). Bestandsaufnahme, bestätigte Befunde und begrenzte Pläne.
+
 [^E07]: Emil Kowalski: [improve-animations/PLAN-TEMPLATE.md](https://github.com/emilkowalski/skills/blob/d23d7f88a2e21c9e4b1418c7abe420f5c1052ba7/skills/improve-animations/PLAN-TEMPLATE.md). Nachvollziehbare Übergabe und konkrete Nachtests.
+
 [^E08]: Emil Kowalski: [review-animations/SKILL.md](https://github.com/emilkowalski/skills/blob/d23d7f88a2e21c9e4b1418c7abe420f5c1052ba7/skills/review-animations/SKILL.md). Quelle kritisch eingeordneter Review-Vorgaben, kein unverändert übernommener Maßstab.
+
 [^E09]: Emil Kowalski: [pick-ui-library/SKILL.md](https://github.com/emilkowalski/skills/blob/d23d7f88a2e21c9e4b1418c7abe420f5c1052ba7/skills/pick-ui-library/SKILL.md). Kuratierte Präferenzen; bestehende Bibliotheken nicht unaufgefordert austauschen.
+
 [^AP01]: Apple: [Human Interface Guidelines — Design principles](https://developer.apple.com/design/human-interface-guidelines/design-principles). Geprüft: 12.09.2026. Insbesondere Agency, Familiarity, Flexibility, Simplicity, Craft und Delight.
+
 [^AP02]: Apple: [Human Interface Guidelines — Materials](https://developer.apple.com/design/human-interface-guidelines/materials). Geprüft: 12.09.2026. Hierarchie, Lesbarkeit und gezielter Materialeinsatz; plattformspezifische Gestaltung wird nicht universell vorgeschrieben.
+
 [^AP03]: Apple: [Designing Fluid Interfaces](https://developer.apple.com/videos/play/wwdc2018/803/), WWDC 2018, Session 803. Transkript geprüft: 12.09.2026. Direkte Reaktion, Unterbrechung und Gestenübergang.
+
 [^AP04]: Apple: [The details of UI typography](https://developer.apple.com/videos/play/wwdc2020/10175/), WWDC 2020, Session 10175. Transkript geprüft: 12.09.2026. Größenabhängige Schriftgestaltung, Abstände und skalierbare Typografie.
+
 [^M05]: MDN Web Docs: [prefers-reduced-transparency](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@media/prefers-reduced-transparency). Geprüft: 12.09.2026; eingeschränkte Browserverfügbarkeit beachten.
+
 [^M06]: MDN Web Docs: [Animation: reverse() method](https://developer.mozilla.org/en-US/docs/Web/API/Animation/reverse). Geprüft: 12.09.2026.
+
 [^M07]: Motion: [Animation performance guide](https://motion.dev/docs/performance). Geprüft: 12.09.2026. Renderingkosten, Hardwarebeschleunigung und Ausnahmen.
+
 [^M08]: Motion: [React transitions](https://motion.dev/docs/react-transitions). Geprüft: 12.09.2026. Physikalische und zeitbasierte Springparameter, `damping`, `bounce` und Vorränge.
+
 [^M09]: MDN Web Docs: [font-optical-sizing](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/font-optical-sizing). Geprüft: 12.09.2026. Voraussetzung einer passenden optischen Größenachse.
+
 [^M10]: MDN Web Docs: [Pointer events](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events). Geprüft: 12.09.2026. Pointer Capture, Zeigerabbruch und Eingabegeräte.
+
 [^W11]: W3C WAI: [WCAG 2.2 — SC 2.5.2 Pointer Cancellation](https://www.w3.org/WAI/WCAG22/Understanding/pointer-cancellation.html). Geprüft: 12.09.2026.
+
 [^W12]: W3C WAI: [WCAG 2.2 — SC 1.4.4 Resize Text](https://www.w3.org/WAI/WCAG22/Understanding/resize-text.html). Geprüft: 12.09.2026.
+
 [^W13]: W3C WAI: [WCAG 2.2 — SC 1.4.12 Text Spacing](https://www.w3.org/WAI/WCAG22/Understanding/text-spacing.html). Geprüft: 12.09.2026.
+
 [^T01]: OpenAI: [Build skills](https://developers.openai.com/codex/skills/). Geprüft: 12.09.2026. Skill-Einstieg, Metadaten, Referenzen und projektbezogene Codex-Pfade.
+
 [^T02]: Anthropic: [Extend Claude with skills](https://code.claude.com/docs/en/skills). Geprüft: 12.09.2026. Kleine Skill-Einstiege, bedarfsweise Referenzen und Claude-Code-Pfade.
+
 [^T03]: OpenAI: [Custom instructions with AGENTS.md](https://developers.openai.com/codex/guides/agents-md/). Geprüft: 12.09.2026. Projektanweisungen und deren Einlesen.
 
 [^ARCH01]: React: [Thinking in React](https://react.dev/learn/thinking-in-react). Geprüft: 12.09.2026. Komponenten nach Verantwortlichkeiten und UI-Struktur zerlegen; keine allgemeine Ordnerhierarchie vorgeschrieben.
+
 [^ARCH02]: Angular: [Angular coding style guide](https://angular.dev/style-guide). Geprüft: 12.09.2026. Zusammengehörige Dateien und Unit-Tests nebeneinander; Produktcode nach fachlichen Bereichen; Konsistenz mit dem Bestand. Angular-spezifische Benennungen werden nicht auf andere Frameworks übertragen.
+
 [^ARCH03]: Storybook: [How to write stories](https://storybook.js.org/docs/writing-stories). Geprüft: 12.09.2026. Gerenderte Komponentenzustände und Story-Dateien neben der Implementierung; keine Pflicht zur Installation von Storybook.
+
 [^ARCH04]: IBM Carbon Design System: [Themes](https://carbondesignsystem.com/elements/themes/overview/). Geprüft: 12.09.2026. Stabile Tokenrollen und themeabhängige Werte; kein vorgeschriebener physischer Dateischnitt für andere Projekte.
+
 [^ARCH05]: Node.js: [Modules: Packages — Package entry points / Subpath exports](https://nodejs.org/api/packages.html#package-entry-points). Geprüft: 12.09.2026. Explizite Paket-APIs und öffentliche Unterpfade; keine Forderung nach einem einzigen Barrel oder einem eigenen UI-Paket.
