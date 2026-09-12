@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT), str(ROOT / "src")]
 
 from functionality.logging import logging_config
+from src.util.models import Effect, Product, Substance
 from tests.api_test_support import authorized_client
 
 with patch.object(logging_config, "setup_logging", return_value=Mock()):
@@ -140,6 +141,81 @@ class SearchModeTests(unittest.TestCase):
                     self.assertIsInstance(call.kwargs["active_effects"], dict)
                     self.assertEqual(call.args[1], sum(call.kwargs["active_effects"].values()))
 
+    def test_tied_modifier_prefers_profit_then_shorter_recipe_in_both_engines(self):
+        fixture = {
+            "effects": [Effect("same", 0.5)],
+            "products": [Product("fixture", Decimal(10), Decimal(0), 1, [])],
+            "substances": [
+                Substance("expensive", Decimal(2), 1, "same", {}),
+                Substance("cheap", Decimal(1), 1, "same", {}),
+            ],
+        }
+
+        def price(active_effects):
+            return Decimal(10) * (
+                Decimal(1) + sum(map(Decimal.from_float, active_effects.values()))
+            )
+
+        with patch.multiple(search_exact.lookup, **fixture):
+            for engine in (search_exact, search_fast):
+                with self.subTest(engine=engine.__name__):
+                    modifier, profit, stats = engine.search(
+                        "fixture", 1, 16, price_from_effects=price
+                    )
+                    self.assertEqual(modifier.substances, ["cheap"])
+                    self.assertEqual(profit.substances, ["cheap"])
+                    self.assertEqual(modifier.substance_cost, Decimal(1))
+                    self.assertEqual(stats["work_units"], 4)
+
+    def test_all_self_loops_still_return_one_step_and_skip_useless_repetitions(self):
+        fixture = {
+            "effects": [Effect("same", 0.5)],
+            "products": [Product("fixture", Decimal(10), Decimal(0), 1, ["same"])],
+            "substances": [
+                Substance("costly_loop", Decimal(1), 1, "same", {}),
+                Substance("free_loop", Decimal(0), 1, "same", {}),
+            ],
+        }
+
+        def price(_active_effects):
+            return Decimal(15)
+
+        with patch.multiple(search_exact.lookup, **fixture):
+            for engine in (search_exact, search_fast):
+                with self.subTest(engine=engine.__name__):
+                    modifier, profit, stats = engine.search(
+                        "fixture", 1, 16, price_from_effects=price
+                    )
+                    self.assertEqual(modifier.substances, ["free_loop"])
+                    self.assertEqual(profit.substances, ["free_loop"])
+                    self.assertEqual(modifier.effects, ["same"])
+                    self.assertEqual(stats["work_units"], 2)
+
+    def test_effect_order_is_part_of_dominance_state_in_both_engines(self):
+        fixture = {
+            "effects": [Effect("a", 0.1), Effect("b", 0.2)],
+            "products": [Product("fixture", Decimal(10), Decimal(0), 1, [])],
+            "substances": [
+                Substance("add_a", Decimal(0), 1, "a", {}),
+                Substance("add_b", Decimal(0), 1, "b", {}),
+            ],
+        }
+
+        def price(active_effects):
+            return Decimal(10) + sum(
+                (Decimal.from_float(value) * Decimal(10) for value in active_effects.values()),
+                Decimal(0),
+            )
+
+        with patch.multiple(search_exact.lookup, **fixture):
+            for engine in (search_exact, search_fast):
+                with self.subTest(engine=engine.__name__):
+                    modifier, _, stats = engine.search("fixture", 1, 2, price_from_effects=price)
+                    self.assertEqual(modifier.substances, ["add_a", "add_b"])
+                    self.assertEqual(modifier.effects, ["a", "b"])
+                    if engine is search_fast:
+                        self.assertEqual(stats["unique_states_by_depth"][2], 2)
+
     def test_invalid_mode_is_rejected_before_search(self):
         with patch.object(app_module, "get_best_mix") as search:
             for mode in (None, False, 1, "", "automatic", [], {}):
@@ -165,7 +241,10 @@ class SearchModeTests(unittest.TestCase):
             "/", data={**self.request_data, "combination_size": 0, "search_mode": "fast"}
         )
         self.assertEqual(response.status_code, 400)
-        self.assertIn('<option value="fast" selected>', response.get_data(as_text=True))
+        self.assertRegex(
+            response.get_data(as_text=True),
+            r'<input(?=[^>]*id="search-mode-fast")(?=[^>]*checked)[^>]*>',
+        )
 
     def test_huge_depth_is_incomplete_instead_of_infeasible_or_approximate(self):
         response = self.client.post(

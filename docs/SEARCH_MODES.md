@@ -18,6 +18,12 @@ Der Reiter **Your Recipe** berechnet genau die ausgewählte Zutatenfolge. Nach A
 
 Jede Änderung aktualisiert das Ergebnis unmittelbar im Browser. `Schedule1Search.evaluateRecipe(catalog, { product_name, substances })` verwendet dieselben geordneten Effektübergänge und dieselbe Preisberechnung wie die Suche. Es werden keine alternativen Kombinationen durchsucht; deshalb gilt die Suchgrenze von 16 Schritten hier nicht. Auch 14 oder mehr ausdrücklich ausgewählte Zutaten sind möglich. Alle Zutaten stehen unabhängig vom Spielerrang zur Auswahl. Die Berechnung prüft Eingaben und sichere Ganzzahlarithmetik anhand der tatsächlichen Rezeptlänge und liefert bei ungültigen Daten kein Teilergebnis. Sie macht keine Aussage über globale Optimalität.
 
+Das Zutatenregal ersetzt die manuellen Zutaten-Dropdowns. Jeder Klick hängt einen Schritt an;
+Drag-and-drop fügt Zutaten an einer bestimmten Position ein oder verschiebt bestehende Schritte.
+Während des Ziehens bleiben Rezept und Ergebnis unverändert, bis die Zutat gültig abgelegt wird.
+Alt + Pfeil hoch/runter verschiebt einen fokussierten Schritt per Tastatur. Clear lässt sich mit
+Undo clear einschließlich aller Wiederholungen zurücknehmen.
+
 Beide Reiter teilen erfolgreich geladene Modelldaten. Beim Wechsel zu **Your Recipe** wird eine noch laufende Optimierung abgebrochen; deren verspätete Ergebnisse bleiben verworfen. Einstellungen und eigenes Rezept bleiben beim Wechsel zwischen den Reitern erhalten. Ladefehler können erneut versucht werden. Es entsteht kein neuer Server-Rechenweg. Die direkte Auswertung benötigt JavaScript, aber keinen Web Worker; diese bleiben für die Optimierung erforderlich.
 
 `tests/test_browser_recipe.py` vergleicht unter anderem ein Rezept mit 14 unterschiedlichen Zutaten gegen die bestehende Python-Berechnung. Die Node-Tests prüfen zusätzlich Reihenfolge, Wiederholungen, mehr als 16 Schritte, Eingabefehler und die Bedienung des neuen Reiters.
@@ -30,9 +36,9 @@ Die folgenden HTTP-Schemas gelten für autorisierte API-Aufrufe. Öffentliche We
 
 ## Exakter Modus
 
-Der exakte Modus gibt die Gewinner für Profit und Multiplikator ausschließlich nach vollständigem Abschluss seiner exakten Suche zurück. Die Garantie bezieht sich auf die angeforderten Eingaben und die aktuelle zentrale Berechnung. Sie gilt auch bei mehreren gleich guten Rezepten: Die bisherige Bevorzugung längerer Rezepte und anschließend der Lookup-Reihenfolge bleibt erhalten.
+Der exakte Modus gibt die Gewinner für Profit und Multiplikator ausschließlich nach vollständigem Abschluss seiner exakten Suche zurück. Die Garantie bezieht sich auf die angeforderten Eingaben und die aktuelle zentrale Berechnung. Beim höchsten Multiplikator entscheidet bei einem numerisch exakt gleichen Multiplikator zuerst der höhere Profit, dann die kürzere Zutatenfolge und zuletzt die Lookup-Reihenfolge. Beim besten Profit entscheiden bei numerisch exakt gleichem Profit die kürzere Zutatenfolge und danach die Lookup-Reihenfolge. Der Schnellmodus verwendet dieselben Gleichstandsregeln für die von ihm untersuchten Kandidaten, ohne dadurch globale Optimalität zu versprechen.
 
-Gemeinsame Zwischenzustände dürfen nur verlustfrei zusammengefasst werden. Für dieselbe geordnete Effektfolge bei derselben Tiefe werden der früheste Rezeptweg und der billigste Weg getrennt gehalten. Cache-Verdrängung erzwingt gegebenenfalls Neuberechnung und verwirft keinen Suchzweig. Eine Heuristik darf niemals als stiller Ersatz für die exakte Suche dienen.
+Gemeinsame Zwischenzustände dürfen nur verlustfrei zusammengefasst werden. Für dieselbe geordnete Effektfolge bei derselben Tiefe bleibt der billigste Rezeptweg erhalten; bei gleichen Kosten entscheidet die Lookup-Reihenfolge. Ein Schritt, der die vollständige geordnete Effektfolge unverändert lässt, wird als Kandidat ausgewertet, aber bei nichtnegativen Zutatenkosten nicht weiter verlängert: Jede Fortsetzung ist ohne diesen Schritt mindestens so profitabel und bei Gleichstand kürzer. Dadurch bleibt selbst dann ein zulässiges Rezept mit einem Schritt verfügbar, wenn alle Zutaten den Ausgangszustand unverändert lassen. Explizit eingegebene eigene Rezepte werden weiterhin Schritt für Schritt einschließlich solcher Wiederholungen berechnet. Cache-Verdrängung erzwingt gegebenenfalls Neuberechnung und verwirft keinen Suchzweig. Eine Heuristik darf niemals als stiller Ersatz für die exakte Suche dienen.
 
 Eine erreichte Ressourcen- oder Größenbegrenzung liefert **kein Rezept**. Bereits gefundene Kandidaten bleiben intern; selbst ein erst bei der abschließenden Zeitprüfung festgestelltes Limit verhindert die Rückgabe. Der Status lautet `incomplete`, nicht „unlösbar“. Bei endlicher Rezeptlänge ist der Suchraum theoretisch entscheidbar; ein praktisch begrenzter Lauf muss ihn aber nicht vollständig bewältigen.
 

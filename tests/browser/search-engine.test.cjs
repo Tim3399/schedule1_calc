@@ -46,13 +46,13 @@ const request = {
   search_mode: "exact",
 };
 const exact = engine.search(tieCatalog, request);
-assert.deepEqual(exact.best_modifier.substances, ["expensive", "expensive"]);
+assert.deepEqual(exact.best_modifier.substances, ["cheap"]);
 assert.deepEqual(exact.best_profit.substances, ["cheap"]);
 assert.equal(exact.best_profit.sell_price, 15);
 assert.equal(exact.search.optimality_proven, true);
 
 const fast = engine.search(tieCatalog, { ...request, search_mode: "fast" }, { beam_width: 1 });
-assert.deepEqual(fast.best_modifier.substances, ["expensive", "expensive"]);
+assert.deepEqual(fast.best_modifier.substances, ["cheap"]);
 assert.deepEqual(fast.best_profit.substances, ["cheap"]);
 assert.equal(fast.search.optimality_proven, false);
 
@@ -68,7 +68,7 @@ const deepExact = engine.search(tieCatalog, deepRequest, {
 });
 assert.equal(deepExact.stats.frontier_depth, 5);
 assert.equal(deepExact.search.optimality_proven, true);
-assert.deepEqual(deepExact.best_modifier.substances, Array(7).fill("expensive"));
+assert.deepEqual(deepExact.best_modifier.substances, ["cheap"]);
 assert.deepEqual(deepExact.best_profit.substances, ["cheap"]);
 const oneLayer = engine.search(tieCatalog, deepRequest, { tail_depth: 1 });
 assert.equal(oneLayer.stats.frontier_depth, 6);

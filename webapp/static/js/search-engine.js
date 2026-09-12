@@ -212,10 +212,7 @@
   }
 
   function preferred(recipe, winner) {
-    if (winner === null || recipe.length !== winner.length) {
-      return winner === null || recipe.length > winner.length;
-    }
-    return compareRecipes(recipe, winner) < 0;
+    return winner === null || compareRecipes(recipe, winner) < 0;
   }
 
   function stateKey(state) {
@@ -316,6 +313,7 @@
     const evaluationCache = new Map();
     let bestModifier = null;
     let bestModifierValue = Number.NEGATIVE_INFINITY;
+    let bestModifierProfitUnits = Number.NEGATIVE_INFINITY;
     let bestModifierRecipe = null;
     let bestProfit = null;
     let bestProfitUnits = Number.NEGATIVE_INFINITY;
@@ -364,12 +362,17 @@
 
     function consider(state, early, earlyCost, cheap, cheapCost, useCache) {
       const evaluation = evaluate(state, useCache);
+      const modifierProfitUnits = evaluation.sellUnits - earlyCost;
       const profitUnits = evaluation.sellUnits - cheapCost;
       if (
         evaluation.modifier > bestModifierValue ||
-        (evaluation.modifier === bestModifierValue && preferred(early, bestModifierRecipe))
+        (evaluation.modifier === bestModifierValue &&
+          (modifierProfitUnits > bestModifierProfitUnits ||
+            (modifierProfitUnits === bestModifierProfitUnits &&
+              preferred(early, bestModifierRecipe))))
       ) {
         bestModifierValue = evaluation.modifier;
+        bestModifierProfitUnits = modifierProfitUnits;
         bestModifierRecipe = early;
         bestModifier = runtime.result(state, early, earlyCost, evaluation);
       }
@@ -410,6 +413,7 @@
           const cheapCost = representative.cheapCost + ingredient.priceCents * 100;
           consider(nextState, early, earlyCost, cheap, cheapCost, true);
           const key = stateKey(nextState);
+          if (key === stateKey(representative.state) && ingredient.priceCents >= 0) continue;
           const old = nextStates.get(key);
           if (old === undefined) {
             if (nextStates.size >= options.frontier_limit) {
@@ -421,7 +425,10 @@
             nextStates.set(key, { state: nextState, early, earlyCost, cheap, cheapCost });
           } else {
             stats.merged_prefix_candidates += 1;
-            if (compareRecipes(early, old.early) < 0) {
+            if (
+              earlyCost < old.earlyCost ||
+              (earlyCost === old.earlyCost && compareRecipes(early, old.early) < 0)
+            ) {
               old.early = early;
               old.earlyCost = earlyCost;
             }
@@ -456,7 +463,12 @@
           cheapCost: representative.cheapCost + ingredient.priceCents * 100,
         };
         consider(next.state, next.early, next.earlyCost, next.cheap, next.cheapCost, !finalLayer);
-        if (!finalLayer) streamTail(next, remaining - 1);
+        if (
+          !finalLayer &&
+          (stateKey(next.state) !== stateKey(representative.state) || ingredient.priceCents < 0)
+        ) {
+          streamTail(next, remaining - 1);
+        }
       }
     }
 
@@ -499,6 +511,7 @@
     };
     let bestModifier = null;
     let bestModifierValue = Number.NEGATIVE_INFINITY;
+    let bestModifierProfitUnits = Number.NEGATIVE_INFINITY;
     let bestModifierRecipe = null;
     let bestProfit = null;
     let bestProfitUnits = Number.NEGATIVE_INFINITY;
@@ -517,12 +530,17 @@
 
     function record(state, modifierRecipe, profitRecipe, modifierCost, profitCost) {
       const evaluation = runtime.evaluate(state);
+      const modifierProfitUnits = evaluation.sellUnits - modifierCost;
       const profitUnits = evaluation.sellUnits - profitCost;
       if (
         evaluation.modifier > bestModifierValue ||
-        (evaluation.modifier === bestModifierValue && preferred(modifierRecipe, bestModifierRecipe))
+        (evaluation.modifier === bestModifierValue &&
+          (modifierProfitUnits > bestModifierProfitUnits ||
+            (modifierProfitUnits === bestModifierProfitUnits &&
+              preferred(modifierRecipe, bestModifierRecipe))))
       ) {
         bestModifierValue = evaluation.modifier;
+        bestModifierProfitUnits = modifierProfitUnits;
         bestModifierRecipe = modifierRecipe;
         bestModifier = runtime.result(state, modifierRecipe, modifierCost, evaluation);
       }
@@ -534,7 +552,7 @@
         bestProfitRecipe = profitRecipe;
         bestProfit = runtime.result(state, profitRecipe, profitCost, evaluation);
       }
-      return { modifier: evaluation.modifier, profitUnits };
+      return { modifier: evaluation.modifier, modifierProfitUnits, profitUnits };
     }
 
     let states = new Map([
@@ -561,18 +579,19 @@
           const cheapCost = representative.cheapCost + ingredient.priceCents * 100;
           record(nextState, early, cheap, recipeCost(early, available), cheapCost);
           const key = stateKey(nextState);
+          if (key === stateKey(representative.state) && ingredient.priceCents >= 0) continue;
           const old = nextStates.get(key);
           if (old === undefined) {
             nextStates.set(key, { state: nextState, early, cheap, cheapCost });
           } else {
             stats.merged_candidates += 1;
-            if (compareRecipes(early, old.early) < 0) old.early = early;
             if (
               cheapCost < old.cheapCost ||
               (cheapCost === old.cheapCost && compareRecipes(cheap, old.cheap) < 0)
             ) {
               old.cheap = cheap;
               old.cheapCost = cheapCost;
+              old.early = cheap;
             }
           }
         }
@@ -586,6 +605,7 @@
           const forecast = {
             modifier: current.modifier,
             modifierRecipe: representative.early,
+            modifierProfitUnits: current.sellUnits - recipeCost(representative.early, available),
             profitUnits: current.sellUnits - representative.cheapCost,
             profitRecipe: representative.cheap,
           };
@@ -620,10 +640,13 @@
                 if (
                   completed.modifier > forecast.modifier ||
                   (completed.modifier === forecast.modifier &&
-                    preferred(completedEarly, forecast.modifierRecipe))
+                    (completed.modifierProfitUnits > forecast.modifierProfitUnits ||
+                      (completed.modifierProfitUnits === forecast.modifierProfitUnits &&
+                        preferred(completedEarly, forecast.modifierRecipe))))
                 ) {
                   forecast.modifier = completed.modifier;
                   forecast.modifierRecipe = completedEarly;
+                  forecast.modifierProfitUnits = completed.modifierProfitUnits;
                 }
                 if (
                   completed.profitUnits > forecast.profitUnits ||
@@ -633,12 +656,17 @@
                   forecast.profitUnits = completed.profitUnits;
                   forecast.profitRecipe = completedCheap;
                 }
-                following.push({
-                  state: completedState,
-                  early: completedEarly,
-                  cheap: completedCheap,
-                  cheapCost: completedCost,
-                });
+                if (
+                  stateKey(completedState) !== stateKey(item.state) ||
+                  ingredient.priceCents < 0
+                ) {
+                  following.push({
+                    state: completedState,
+                    early: completedEarly,
+                    cheap: completedCheap,
+                    cheapCost: completedCost,
+                  });
+                }
               }
             }
             frontier = following;
@@ -650,7 +678,6 @@
           const rightForecast = forecasts.get(right[0]);
           return (
             rightForecast.profitUnits - leftForecast.profitUnits ||
-            rightForecast.profitRecipe.length - leftForecast.profitRecipe.length ||
             compareRecipes(leftForecast.profitRecipe, rightForecast.profitRecipe) ||
             compareStates(left[1].state, right[1].state, model)
           );
@@ -660,7 +687,7 @@
           const rightForecast = forecasts.get(right[0]);
           return (
             rightForecast.modifier - leftForecast.modifier ||
-            rightForecast.modifierRecipe.length - leftForecast.modifierRecipe.length ||
+            rightForecast.modifierProfitUnits - leftForecast.modifierProfitUnits ||
             compareRecipes(leftForecast.modifierRecipe, rightForecast.modifierRecipe) ||
             compareStates(left[1].state, right[1].state, model)
           );
