@@ -70,7 +70,7 @@ class SearchModeTests(unittest.TestCase):
         self.assertEqual(html_response.status_code, 200)
         html = html_response.get_data(as_text=True)
         self.assertIn("optimality not guaranteed", html)
-        self.assertNotIn("<h2>Best Profit Combination</h2>", html)
+        self.assertNotIn("Best Profit Combination", html)
         self.assertNotIn("Optimality proven", html)
 
     def test_exact_limit_after_finding_candidates_never_calls_fast_or_returns_winners(self):
@@ -95,8 +95,8 @@ class SearchModeTests(unittest.TestCase):
                     else:
                         html = response.get_data(as_text=True)
                         self.assertIn("Search incomplete", html)
-                        self.assertNotIn("<h2>Best Profit Combination</h2>", html)
-                        self.assertNotIn("Ingredients:", html)
+                        self.assertNotIn("Best Profit Combination", html)
+                        self.assertNotIn("Best Modifier Combination", html)
             fast.assert_not_called()
 
     def test_deadline_at_completion_withholds_already_discovered_winners(self):

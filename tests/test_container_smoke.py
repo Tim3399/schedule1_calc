@@ -50,6 +50,9 @@ class ContainerSmokeTests(unittest.TestCase):
             (200, {}, b"Schedule1Search evaluateRecipe"),
             (200, {}, b"search-engine.js"),
             (200, {}, b"Worker"),
+            (200, {}, b"schedule1-theme"),
+            (200, {}, b"--action-primary"),
+            (200, {}, b".recipe-ingredient-tile"),
         ]
 
     @mock.patch.object(container_smoke, "_request")
@@ -60,6 +63,20 @@ class ContainerSmokeTests(unittest.TestCase):
         ]
 
         container_smoke.probe_application("http://127.0.0.1:8080")
+
+        self.assertEqual(
+            [call.args[0] for call in request.call_args_list[:8]],
+            [
+                "http://127.0.0.1:8080/",
+                "http://127.0.0.1:8080/search-data",
+                "http://127.0.0.1:8080/static/js/search-engine.js",
+                "http://127.0.0.1:8080/static/js/search-worker.js",
+                "http://127.0.0.1:8080/static/js/script.js",
+                "http://127.0.0.1:8080/static/js/theme.js",
+                "http://127.0.0.1:8080/static/css/tokens.css",
+                "http://127.0.0.1:8080/static/css/styles.css",
+            ],
+        )
 
     @mock.patch.object(container_smoke, "_request")
     def test_application_probe_rejects_public_server_calculation(self, request):
@@ -73,7 +90,7 @@ class ContainerSmokeTests(unittest.TestCase):
     @mock.patch.object(container_smoke, "_request")
     def test_application_probe_rejects_missing_browser_asset(self, request):
         request.side_effect = self.public_responses()[:2] + [(404, {}, b"missing")]
-        with self.assertRaisesRegex(container_smoke.SmokeError, "browser search asset"):
+        with self.assertRaisesRegex(container_smoke.SmokeError, "browser asset"):
             container_smoke.probe_application("http://127.0.0.1:8080")
 
     @mock.patch.object(container_smoke, "_request")

@@ -50,8 +50,10 @@ class CalculatorBudgetTests(unittest.TestCase):
             )
 
         self.assertEqual(response.status_code, 503)
-        self.assertIn("Search incomplete", response.get_data(as_text=True))
-        self.assertNotIn("Ingredients:", response.get_data(as_text=True))
+        html = response.get_data(as_text=True)
+        self.assertIn("Search incomplete", html)
+        self.assertNotIn("Best Profit Combination", html)
+        self.assertNotIn("Best Modifier Combination", html)
         product.assert_not_called()
 
     def test_exact_budget_boundary_is_accepted_and_next_size_is_rejected(self):
