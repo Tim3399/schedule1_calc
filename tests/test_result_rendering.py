@@ -32,48 +32,90 @@ class ResultRenderingTests(unittest.TestCase):
             },
         )
 
+    def assert_card_layout(self, card, ingredients, sell_price, cost, profit):
+        labels = [
+            "<dt>Profit</dt>",
+            "<dt>Sell Price</dt>",
+            "<dt>Ingredient Cost</dt>",
+            "<dt>Modifier</dt>",
+            '<span class="chips-label">Ingredients</span>',
+            '<span class="chips-label">Effects</span>',
+        ]
+        positions = [card.index(label) for label in labels]
+        self.assertEqual(positions, sorted(positions))
+        self.assertRegex(card, ingredients)
+        self.assertRegex(card, rf"<dt>Sell Price</dt>\s*<dd>{sell_price}\$</dd>")
+        self.assertRegex(card, rf"<dt>Ingredient Cost</dt>\s*<dd>{cost}\$</dd>")
+        self.assertRegex(card, rf"<dt>Profit</dt>\s*<dd>{profit}\$</dd>")
+        self.assertRegex(card, r"<dt>Modifier</dt>\s*<dd>")
+
     def test_html_post_renders_distinct_modifier_and_profit_winners(self):
         response = self.post_mix(2, "green_crack", "hustler_iii")
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
-        modifier_heading = html.index("<h2>Best Modifier Combination</h2>")
-        profit_heading = html.index("<h2>Best Profit Combination</h2>")
-        modifier_result = html[modifier_heading:profit_heading]
-        profit_result = html[profit_heading:]
+        profit_heading = html.index("Best Profit Combination")
+        comparison = html.index('<details class="result-comparison">')
+        summary = html.index("<summary>Compare highest modifier</summary>", comparison)
+        modifier_heading = html.index("Best Modifier Combination", summary)
+        self.assertLess(profit_heading, comparison)
+        self.assertLess(summary, modifier_heading)
 
-        self.assertIn("Effects:", modifier_result)
-        self.assertIn("Ingredients: Horse Semen, Mega Bean", modifier_result)
-        self.assertIn("Modifier:", modifier_result)
-        self.assertIn("Sell Price: 85.40$", modifier_result)
-        self.assertIn("Ingredient Cost: 16.00$", modifier_result)
-        self.assertIn("Profit: 69.40$", modifier_result)
-
-        self.assertIn("Effects:", profit_result)
-        self.assertIn("Ingredients: Viagra, Mega Bean", profit_result)
-        self.assertIn("Modifier:", profit_result)
-        self.assertIn("Sell Price: 83.30$", profit_result)
-        self.assertIn("Ingredient Cost: 11.00$", profit_result)
-        self.assertIn("Profit: 72.30$", profit_result)
+        profit_result = html[profit_heading:comparison]
+        modifier_result = html[modifier_heading : html.index("</details>", modifier_heading)]
+        self.assert_card_layout(
+            profit_result,
+            r"<li>Viagra</li>\s*<li>Mega Bean</li>",
+            r"83\.30",
+            r"11\.00",
+            r"72\.30",
+        )
+        self.assert_card_layout(
+            modifier_result,
+            r"<li>Horse Semen</li>\s*<li>Mega Bean</li>",
+            r"85\.40",
+            r"16\.00",
+            r"69\.40",
+        )
+        self.assertEqual(profit_result.count("Optimality proven"), 1)
+        self.assertEqual(modifier_result.count("Optimality proven"), 1)
 
     def test_html_post_keeps_both_headings_for_an_identical_winner(self):
         response = self.post_mix(1, "green_crack", "hustler_iii")
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
-        self.assertEqual(html.count("<h2>Best Modifier Combination</h2>"), 1)
-        self.assertEqual(html.count("<h2>Best Profit Combination</h2>"), 1)
-        self.assertEqual(html.count("Ingredients: Mega Bean"), 2)
+        self.assertEqual(html.count("Best Modifier Combination"), 1)
+        self.assertEqual(html.count("Best Profit Combination"), 1)
+        self.assertEqual(html.count("<li>Mega Bean</li>"), 2)
 
     def test_get_renders_readable_product_and_level_names_with_stable_values(self):
         response = self.client.get("/")
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
-        self.assertIn('<option value="og_kush">OG Kush</option>', html)
-        self.assertIn('<option value="green_crack">Green Crack</option>', html)
-        self.assertIn('<option value="street_rat_i">Street Rat I</option>', html)
-        self.assertIn("up to 5 minutes", html)
+        self.assertRegex(html, r'<option value="og_kush">\s*OG Kush\s*</option>')
+        self.assertRegex(html, r'<option value="green_crack">\s*Green Crack\s*</option>')
+        self.assertRegex(html, r'<option value="street_rat_i">\s*Street Rat I\s*</option>')
+        self.assertIn('<label for="product-name">Base product</label>', html)
+        self.assertIn('<label for="level">Your rank</label>', html)
+        self.assertIn('<label for="combination-size">Max ingredients</label>', html)
+        self.assertRegex(html, r'id="combination-size"[\s\S]*?value="3"')
+        self.assertRegex(
+            html,
+            r'<input(?=[^>]*id="search-mode-exact")(?=[^>]*checked)[^>]*>',
+        )
+        self.assertRegex(html, r'<input(?=[^>]*id="search-mode-fast")[^>]*>')
+        self.assertRegex(
+            html,
+            r"Exact proves the best mix or returns no result \(up to 5 min\)\.",
+        )
+        self.assertRegex(html, r"Fast gives a quick\s+estimate without a guarantee\.")
+        self.assertNotIn('id="combination-size-hint"', html)
+        self.assertRegex(
+            html,
+            r'<button type="button" id="restore-recipe" hidden>Undo clear</button>',
+        )
 
     def test_html_validation_error_does_not_show_a_raw_identifier(self):
         response = self.post_mix(1, "motor_oil", "street_rat_i")

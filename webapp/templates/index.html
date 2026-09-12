@@ -1,168 +1,381 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="system">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Best Mix Calculator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("schedule1-theme");
+          if (stored === "light" || stored === "dark") {
+            document.documentElement.dataset.theme = stored;
+          }
+        } catch (error) {
+          /* Storage may be unavailable; the system preference stays in charge. */
+        }
+      })();
+    </script>
   </head>
   <body>
-    <div class="container">
-      <h1>Best Mix Calculator</h1>
-      <p>All mix calculations run locally on this device.</p>
-      <div class="calculator-tabs" role="tablist" aria-label="Calculator">
-        <button
-          type="button"
-          id="search-tab"
-          role="tab"
-          aria-controls="search-panel"
-          aria-selected="true"
-        >
-          Find Best Mix
-        </button>
-        <button
-          type="button"
-          id="recipe-tab"
-          role="tab"
-          aria-controls="recipe-panel"
-          aria-selected="false"
-          tabindex="-1"
-        >
-          Your Recipe
-        </button>
-      </div>
-      <section id="search-panel" role="tabpanel" aria-labelledby="search-tab">
-        <form
-          id="best-mix-form"
-          method="GET"
-          action="/"
-          data-search-data-url="{{ url_for('search_data_json') }}"
-          data-worker-url="{{ url_for('static', filename='js/search-worker.js') }}"
-        >
-          <label for="level">Level:</label>
-          <select id="level" name="level" required>
-            {% for level_name, level_id in level_name_to_int.items() %}
-            <option value="{{ level_name }}">{{ display_lookup_name(level_name) }}</option>
-            {% endfor %}
-          </select>
-
-          <label for="combination-size">Combination Size:</label>
-          <input
-            type="number"
-            id="combination-size"
-            name="combination_size"
-            min="1"
-            step="1"
-            required
-          />
-
-          <label for="product-name">Product Name:</label>
-          <select id="product-name" name="product_name" required>
-            {% for product in products %}
-            <option value="{{ product.name }}">{{ display_lookup_name(product.name) }}</option>
-            {% endfor %}
-          </select>
-
-          <label for="search-mode">Search Mode:</label>
-          <select id="search-mode" name="search_mode" required>
-            {% if selected_search_mode | default('exact') == 'exact' %}
-            <option value="exact" selected>
-              Exact — optimal result or no result at limits (up to 5 minutes)
-            </option>
-            {% else %}
-            <option value="exact">
-              Exact — optimal result or no result at limits (up to 5 minutes)
-            </option>
-            {% endif %} {% if selected_search_mode | default('exact') == 'fast' %}
-            <option value="fast" selected>Fast — approximate, optimality not guaranteed</option>
-            {% else %}
-            <option value="fast">Fast — approximate, optimality not guaranteed</option>
-            {% endif %}
-          </select>
-
-          <button type="submit" disabled>Get Best Mix</button>
-          <button type="button" id="cancel-search" hidden>Cancel Search</button>
-        </form>
-
-        <noscript>
-          <p>This calculator needs JavaScript to run the search on your device.</p>
-        </noscript>
-
-        <div id="result">
-          {% if error %}
-          <div class="error" role="alert">Error: {{ error }}</div>
-          {% endif %} {% if not error and search and search.status in ['optimal', 'approximate'] %}
-          {% if search.status == 'optimal' %}
-          <p>Optimality proven</p>
-          {% else %}
-          <p>Approximate result — optimality not guaranteed</p>
-          {% endif %} {% if best_modifier %} {% if search.mode == 'fast' %}
-          <h2>Highest modifier found</h2>
-          {% else %}
-          <h2>Best Modifier Combination</h2>
-          {% endif %}
-          <p>Effects: {{ best_modifier.effects | map('display_lookup_name') | join(', ') }}</p>
-          <p>
-            Ingredients: {{ best_modifier.substances | map('display_lookup_name') | join(', ') }}
-          </p>
-          <p>Modifier: {{ '%.2f' | format(best_modifier.modifier) }}</p>
-          <p>Sell Price: {{ '%.2f' | format(best_modifier.sell_price) }}$</p>
-          <p>Ingredient Cost: {{ '%.2f' | format(best_modifier.substance_cost) }}$</p>
-          <p>
-            Profit: {{ '%.2f' | format(best_modifier.sell_price - best_modifier.substance_cost) }}$
-          </p>
-          {% endif %} {% if best_profit %} {% if search.mode == 'fast' %}
-          <h2>Highest profit found</h2>
-          {% else %}
-          <h2>Best Profit Combination</h2>
-          {% endif %}
-          <p>Effects: {{ best_profit.effects | map('display_lookup_name') | join(', ') }}</p>
-          <p>Ingredients: {{ best_profit.substances | map('display_lookup_name') | join(', ') }}</p>
-          <p>Modifier: {{ '%.2f' | format(best_profit.modifier) }}</p>
-          <p>Sell Price: {{ '%.2f' | format(best_profit.sell_price) }}$</p>
-          <p>Ingredient Cost: {{ '%.2f' | format(best_profit.substance_cost) }}$</p>
-          <p>Profit: {{ '%.2f' | format(best_profit.sell_price - best_profit.substance_cost) }}$</p>
-          {% endif %} {% endif %}
+    {% macro combination_card(combination, proven) %}
+    <article class="card result-card">
+      <header class="result-card__head">
+        <h2>{{ caller() }}</h2>
+        {% if proven %}
+        <span class="badge badge--proven">Optimality proven</span>
+        {% else %}
+        <span class="badge badge--approximate">
+          Approximate result — optimality not guaranteed
+        </span>
+        {% endif %}
+      </header>
+      <dl class="stats">
+        <div class="stat stat--primary">
+          <dt>Profit</dt>
+          <dd>{{ '%.2f' | format(combination.sell_price - combination.substance_cost) }}$</dd>
         </div>
-      </section>
-      <section id="recipe-panel" role="tabpanel" aria-labelledby="recipe-tab" hidden>
-        <p>
-          Choose a base product and add ingredients in mixing order. You can use an ingredient more
-          than once. The result updates immediately after each change.
-        </p>
-        <div class="recipe-layout">
-          <form id="recipe-form" method="GET" action="/">
-            <label for="recipe-product">Base Product:</label>
-            <select id="recipe-product" disabled>
-              {% for product in products %}
-              <option value="{{ product.name }}">{{ display_lookup_name(product.name) }}</option>
-              {% endfor %}
-            </select>
-            <label for="recipe-ingredient">Ingredient:</label>
-            <div class="ingredient-picker">
-              <select id="recipe-ingredient" disabled></select>
-              <button type="submit" id="add-ingredient" disabled>Add Ingredient</button>
-            </div>
-            <h2>Mixing order <span id="recipe-count">(0 ingredients)</span></h2>
-            <p id="recipe-empty">No ingredients yet. The result shows the base product.</p>
-            <ol id="recipe-steps" aria-label="Ingredients in mixing order"></ol>
-            <button type="button" id="clear-recipe" disabled>Clear Recipe</button>
-          </form>
-          <div>
-            <div
-              id="recipe-result"
-              class="results"
-              role="status"
-              aria-live="polite"
-              aria-atomic="true"
+        <div class="stat">
+          <dt>Sell Price</dt>
+          <dd>{{ '%.2f' | format(combination.sell_price) }}$</dd>
+        </div>
+        <div class="stat">
+          <dt>Ingredient Cost</dt>
+          <dd>{{ '%.2f' | format(combination.substance_cost) }}$</dd>
+        </div>
+        <div class="stat">
+          <dt>Modifier</dt>
+          <dd>{{ '%.2f' | format(combination.modifier) }}</dd>
+        </div>
+      </dl>
+      <div class="chips-row">
+        <span class="chips-label">Ingredients</span>
+        {% if combination.substances %}
+        <ol class="chips chips--ordered">
+          {% for substance in combination.substances %}
+          <li>{{ substance | display_lookup_name }}</li>
+          {% endfor %}
+        </ol>
+        {% else %}
+        <span class="chips__empty">None</span>
+        {% endif %}
+      </div>
+      <div class="chips-row">
+        <span class="chips-label">Effects</span>
+        {% if combination.effects %}
+        <ul class="chips">
+          {% for effect in combination.effects %}
+          <li>{{ effect | display_lookup_name }}</li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <span class="chips__empty">None</span>
+        {% endif %}
+      </div>
+    </article>
+    {% endmacro %}
+
+    <a class="skip-link" href="#main">Skip to calculator</a>
+    <div class="app-shell">
+      <header class="app-header">
+        <div class="app-header__bar container">
+          <div class="app-header__identity">
+            <span class="app-header__mark" aria-hidden="true">$</span>
+            <h1>Best Mix Calculator</h1>
+          </div>
+          <div class="theme-switch" id="theme-switch" role="radiogroup" aria-label="Color theme">
+            <button
+              type="button"
+              class="theme-switch__option"
+              role="radio"
+              aria-checked="true"
+              data-theme-value="system"
             >
-              <p>Select this tab to load the recipe calculator.</p>
-            </div>
-            <button type="button" id="retry-recipe" hidden>Retry Loading</button>
+              System
+            </button>
+            <button
+              type="button"
+              class="theme-switch__option"
+              role="radio"
+              aria-checked="false"
+              tabindex="-1"
+              data-theme-value="light"
+            >
+              Light
+            </button>
+            <button
+              type="button"
+              class="theme-switch__option"
+              role="radio"
+              aria-checked="false"
+              tabindex="-1"
+              data-theme-value="dark"
+            >
+              Dark
+            </button>
           </div>
         </div>
-      </section>
+      </header>
+
+      <main class="app-main container" id="main">
+        <div class="calculator-tabs" role="tablist" aria-label="Calculator">
+          <button
+            type="button"
+            id="search-tab"
+            role="tab"
+            aria-controls="search-panel"
+            aria-selected="true"
+          >
+            Find Best Mix
+          </button>
+          <button
+            type="button"
+            id="recipe-tab"
+            role="tab"
+            aria-controls="recipe-panel"
+            aria-selected="false"
+            tabindex="-1"
+          >
+            Your Recipe
+          </button>
+        </div>
+
+        <section id="search-panel" role="tabpanel" aria-labelledby="search-tab">
+          <div class="panel-grid panel-grid--search">
+            <div class="panel-column">
+              <form
+                id="best-mix-form"
+                class="card"
+                method="GET"
+                action="/"
+                data-search-data-url="{{ url_for('search_data_json') }}"
+                data-worker-url="{{ url_for('static', filename='js/search-worker.js') }}"
+              >
+                <h2 class="card__title">Set up your mix</h2>
+
+                <div class="field">
+                  <label for="product-name">Base product</label>
+                  <div class="select-control">
+                    <select id="product-name" name="product_name" required>
+                      <button type="button"><selectedcontent></selectedcontent></button>
+                      {% for product in products %}
+                      <option value="{{ product.name }}">
+                        {{ display_lookup_name(product.name) }}
+                      </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                </div>
+
+                <div class="field-grid">
+                  <div class="field">
+                    <label for="level">Your rank</label>
+                    <div class="select-control">
+                      <select id="level" name="level" required>
+                        <button type="button"><selectedcontent></selectedcontent></button>
+                        {% for level_name, level_id in level_name_to_int.items() %}
+                        <option value="{{ level_name }}">
+                          {{ display_lookup_name(level_name) }}
+                        </option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <label for="combination-size">Max ingredients</label>
+                    <input
+                      type="number"
+                      id="combination-size"
+                      name="combination_size"
+                      min="1"
+                      value="3"
+                      step="1"
+                      required
+                    />
+                  </div>
+                </div>
+                <fieldset class="field search-mode-field" aria-describedby="search-mode-hint">
+                  <legend class="field-label">Search mode</legend>
+                  <div id="search-mode" class="mode-switch">
+                    <label class="mode-switch__option">
+                      {% if selected_search_mode | default('exact') == 'exact' %}
+                      <input
+                        type="radio"
+                        id="search-mode-exact"
+                        name="search_mode"
+                        value="exact"
+                        required
+                        checked
+                      />
+                      {% else %}
+                      <input
+                        type="radio"
+                        id="search-mode-exact"
+                        name="search_mode"
+                        value="exact"
+                        required
+                      />
+                      {% endif %}
+                      <span>Exact</span>
+                    </label>
+                    <label class="mode-switch__option">
+                      {% if selected_search_mode | default('exact') == 'fast' %}
+                      <input
+                        type="radio"
+                        id="search-mode-fast"
+                        name="search_mode"
+                        value="fast"
+                        required
+                        checked
+                      />
+                      {% else %}
+                      <input
+                        type="radio"
+                        id="search-mode-fast"
+                        name="search_mode"
+                        value="fast"
+                        required
+                      />
+                      {% endif %}
+                      <span>Fast</span>
+                    </label>
+                  </div>
+                  <p class="field__hint" id="search-mode-hint">
+                    Exact proves the best mix or returns no result (up to 5 min). Fast gives a quick
+                    estimate without a guarantee.
+                  </p>
+                </fieldset>
+
+                <div class="form-actions">
+                  <button type="submit" class="btn--primary" disabled>Get Best Mix</button>
+                  <button type="button" id="cancel-search" hidden>Cancel Search</button>
+                </div>
+              </form>
+
+              <noscript>
+                <p class="alert alert--error">
+                  This calculator needs JavaScript to run the search on your device.
+                </p>
+              </noscript>
+            </div>
+
+            <div class="panel-column">
+              <div id="result" class="result-stack" aria-live="polite">
+                {% if error %}
+                <div class="alert alert--error" role="alert">Error: {{ error }}</div>
+                {% elif search and search.status in ['optimal', 'approximate'] %} {% set proven =
+                search.status == 'optimal' %} {% set fast = search.mode == 'fast' %} {% if
+                best_profit %} {% call combination_card(best_profit, proven) %} {% if fast %}Highest
+                profit found{% else %}Best Profit Combination{% endif %} {% endcall %} {% endif %}
+                {% if best_modifier %}
+                <details class="result-comparison">
+                  <summary>Compare highest modifier</summary>
+                  {% call combination_card(best_modifier, proven) %} {% if fast %}Highest modifier
+                  found{% else %}Best Modifier Combination{% endif %} {% endcall %}
+                </details>
+                {% endif %} {% else %}
+                <div class="empty-state">
+                  <h2>No mix yet</h2>
+                  <p>Choose your settings, then select Get Best Mix.</p>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="recipe-panel" role="tabpanel" aria-labelledby="recipe-tab" hidden>
+          <div class="panel-grid">
+            <div class="panel-column">
+              <form id="recipe-form" class="card" method="GET" action="/">
+                <div class="card__heading">
+                  <h2>Your ingredients</h2>
+                  <a class="jump-link" href="#recipe-result">View result ↓</a>
+                </div>
+                <div class="field">
+                  <label for="recipe-product">Base product</label>
+                  <div class="select-control">
+                    <select id="recipe-product" disabled>
+                      <button type="button"><selectedcontent></selectedcontent></button>
+                      {% for product in products %}
+                      <option value="{{ product.name }}">
+                        {{ display_lookup_name(product.name) }}
+                      </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                </div>
+                <div class="ingredient-library" aria-labelledby="ingredient-shelf-title">
+                  <div class="ingredient-library__heading">
+                    <h3 id="ingredient-shelf-title" tabindex="-1">Ingredients</h3>
+                    <a class="jump-link" href="#recipe-drop-area">View mixing order ↓</a>
+                  </div>
+                  <p id="ingredient-shelf-hint" class="field__hint">
+                    Click to add, drag to place. On touchscreens, hold briefly to drag.
+                  </p>
+                  <p
+                    id="recipe-announcement"
+                    class="recipe-announcement"
+                    role="status"
+                    aria-live="polite"
+                    aria-atomic="true"
+                  ></p>
+                  <div
+                    id="ingredient-shelf"
+                    class="ingredient-shelf"
+                    role="group"
+                    aria-label="Available ingredients"
+                    aria-describedby="ingredient-shelf-hint"
+                  ></div>
+                </div>
+                <div id="recipe-drop-area" class="recipe-drop-area" tabindex="-1">
+                  <div class="ingredient-library__heading">
+                    <h2>Mixing order <span id="recipe-count">(0 ingredients)</span></h2>
+                    <a class="jump-link" href="#ingredient-shelf-title">↑ Ingredients</a>
+                  </div>
+                  <p id="recipe-order-hint" class="field__hint">
+                    Drag a step to reorder. With a step focused, use Alt + ↑ or ↓.
+                  </p>
+                  <p id="recipe-empty" class="empty-state">
+                    No ingredients yet. Click an ingredient above or drag it here.
+                  </p>
+                  <ol
+                    id="recipe-steps"
+                    class="recipe-steps"
+                    aria-label="Ingredients in mixing order"
+                    aria-describedby="recipe-order-hint"
+                  ></ol>
+                </div>
+                <div class="form-actions">
+                  <button type="button" id="clear-recipe" disabled>Clear Recipe</button>
+                  <button type="button" id="restore-recipe" hidden>Undo clear</button>
+                  <a class="jump-link" href="#recipe-result">View result ↓</a>
+                </div>
+              </form>
+            </div>
+            <div class="panel-column panel-column--recipe-result">
+              <div
+                id="recipe-result"
+                class="result-stack"
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+                tabindex="-1"
+              >
+                <p class="status-line">Select this tab to load the recipe calculator.</p>
+              </div>
+              <button type="button" id="retry-recipe" hidden>Retry Loading</button>
+              <a class="jump-link" href="#recipe-form">↑ Back to ingredients</a>
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
+
+    <script src="{{ url_for('static', filename='js/theme.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/search-engine.js') }}"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
   </body>

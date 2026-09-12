@@ -83,14 +83,17 @@ def probe_application(base_url, *, timeout=2):
     ):
         raise SmokeError("browser search model is missing or incompatible")
 
-    for filename, marker in (
-        ("search-engine.js", b"evaluateRecipe"),
-        ("search-worker.js", b"search-engine.js"),
-        ("script.js", b"Worker"),
+    for asset, marker in (
+        ("js/search-engine.js", b"evaluateRecipe"),
+        ("js/search-worker.js", b"search-engine.js"),
+        ("js/script.js", b"Worker"),
+        ("js/theme.js", b"schedule1-theme"),
+        ("css/tokens.css", b"--action-primary"),
+        ("css/styles.css", b".recipe-ingredient-tile"),
     ):
-        status, _, body = _request(f"{base_url}/static/js/{filename}", timeout=timeout)
+        status, _, body = _request(f"{base_url}/static/{asset}", timeout=timeout)
         if status != 200 or marker not in body:
-            raise SmokeError(f"browser search asset is missing: {filename}")
+            raise SmokeError(f"browser asset is missing: {asset}")
 
     request_data = {
         "level": "street_rat_i",

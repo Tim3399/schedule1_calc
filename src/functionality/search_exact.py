@@ -175,14 +175,11 @@ def search(
         return result
 
     def preferred(recipe: tuple[int, ...], winner: tuple[int, ...] | None) -> bool:
-        return (
-            winner is None
-            or len(recipe) > len(winner)
-            or (len(recipe) == len(winner) and recipe < winner)
-        )
+        return winner is None or (len(recipe), recipe) < (len(winner), winner)
 
     best_modifier: CombinationResult | None = None
     best_modifier_value = float("-inf")
+    best_modifier_profit = Decimal("-Infinity")
     best_modifier_recipe: tuple[int, ...] | None = None
     best_profit: CombinationResult | None = None
     best_profit_value = Decimal("-Infinity")
@@ -197,14 +194,23 @@ def search(
         *,
         use_cache: bool,
     ) -> None:
-        nonlocal best_modifier, best_modifier_value, best_modifier_recipe
+        nonlocal best_modifier, best_modifier_value, best_modifier_profit, best_modifier_recipe
         nonlocal best_profit, best_profit_value, best_profit_recipe
         modifier, sell_price = evaluate(state, use_cache=use_cache)
+        modifier_profit = sell_price - earliest_cost
         profit = sell_price - cheapest_cost
         if modifier > best_modifier_value or (
-            modifier == best_modifier_value and preferred(earliest_recipe, best_modifier_recipe)
+            modifier == best_modifier_value
+            and (
+                modifier_profit > best_modifier_profit
+                or (
+                    modifier_profit == best_modifier_profit
+                    and preferred(earliest_recipe, best_modifier_recipe)
+                )
+            )
         ):
             best_modifier_value = modifier
+            best_modifier_profit = modifier_profit
             best_modifier_recipe = earliest_recipe
             best_modifier = CombinationResult(
                 sell_price,
@@ -252,6 +258,8 @@ def search(
                     use_cache=True,
                 )
                 existing = next_states.get(next_state)
+                if next_state == state and price >= 0:
+                    continue
                 if existing is None:
                     if len(next_states) >= frontier_limit:
                         raise SearchLimitExceeded(
@@ -267,7 +275,9 @@ def search(
                     continue
                 stats["merged_prefix_candidates"] += 1
                 old_earliest, old_earliest_cost, old_cheapest, old_cheapest_cost = existing
-                if new_earliest < old_earliest:
+                if new_earliest_cost < old_earliest_cost or (
+                    new_earliest_cost == old_earliest_cost and new_earliest < old_earliest
+                ):
                     old_earliest, old_earliest_cost = new_earliest, new_earliest_cost
                 if new_cheapest_cost < old_cheapest_cost or (
                     new_cheapest_cost == old_cheapest_cost and new_cheapest < old_cheapest
@@ -309,7 +319,7 @@ def search(
                 new_cheapest_cost,
                 use_cache=not final_layer,
             )
-            if not final_layer:
+            if not final_layer and (next_state != state or price < 0):
                 stream_tail(
                     next_state,
                     new_earliest,

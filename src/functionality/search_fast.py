@@ -145,14 +145,11 @@ def search(
         )
 
     def preferred(recipe: Recipe, current: Recipe | None) -> bool:
-        return (
-            current is None
-            or len(recipe) > len(current)
-            or (len(recipe) == len(current) and recipe < current)
-        )
+        return current is None or (len(recipe), recipe) < (len(current), current)
 
     best_modifier: CombinationResult | None = None
     best_modifier_value = float("-inf")
+    best_modifier_profit = Decimal("-Infinity")
     best_modifier_recipe: Recipe | None = None
     best_profit: CombinationResult | None = None
     best_profit_value = Decimal("-Infinity")
@@ -164,15 +161,24 @@ def search(
         profit_recipe: Recipe,
         modifier_cost: Decimal,
         profit_cost: Decimal,
-    ) -> tuple[float, Decimal]:
-        nonlocal best_modifier, best_modifier_value, best_modifier_recipe
+    ) -> tuple[float, Decimal, Decimal]:
+        nonlocal best_modifier, best_modifier_value, best_modifier_profit, best_modifier_recipe
         nonlocal best_profit, best_profit_value, best_profit_recipe
         modifier, sell_price = evaluate(state)
+        modifier_profit = sell_price - modifier_cost
         profit = sell_price - profit_cost
         if modifier > best_modifier_value or (
-            modifier == best_modifier_value and preferred(modifier_recipe, best_modifier_recipe)
+            modifier == best_modifier_value
+            and (
+                modifier_profit > best_modifier_profit
+                or (
+                    modifier_profit == best_modifier_profit
+                    and preferred(modifier_recipe, best_modifier_recipe)
+                )
+            )
         ):
             best_modifier_value = modifier
+            best_modifier_profit = modifier_profit
             best_modifier_recipe = modifier_recipe
             best_modifier = result(state, modifier_recipe, modifier_cost)
         if profit > best_profit_value or (
@@ -181,7 +187,7 @@ def search(
             best_profit_value = profit
             best_profit_recipe = profit_recipe
             best_profit = result(state, profit_recipe, profit_cost)
-        return modifier, profit
+        return modifier, modifier_profit, profit
 
     states: dict[State, Representative] = {initial_effects: ((), (), Decimal(0))}
     for depth in range(1, max_size + 1):
@@ -202,26 +208,29 @@ def search(
                     profit_cost,
                 )
                 existing = next_states.get(next_state)
+                if next_state == state and ingredient.price >= 0:
+                    continue
                 if existing is None:
                     next_states[next_state] = (modifier_recipe, profit_recipe, profit_cost)
                     continue
                 stats["merged_candidates"] += 1
                 old_earliest, old_cheapest, old_cost = existing
-                old_earliest = min(old_earliest, modifier_recipe)
                 if profit_cost < old_cost or (
                     profit_cost == old_cost and profit_recipe < old_cheapest
                 ):
                     old_cheapest, old_cost = profit_recipe, profit_cost
+                    old_earliest = old_cheapest
                 next_states[next_state] = old_earliest, old_cheapest, old_cost
 
         stats["unique_states_by_depth"][depth] = len(next_states)
         if len(next_states) > beam_width:
             horizon = min(lookahead, max_size - depth)
-            forecasts: dict[State, tuple[float, Recipe, Decimal, Recipe]] = {}
+            forecasts: dict[State, tuple[float, Decimal, Recipe, Decimal, Recipe]] = {}
             for state, (earliest_recipe, cheapest_recipe, cheapest_cost) in next_states.items():
                 modifier, sell_price = evaluate(state)
                 forecasts[state] = (
                     modifier,
+                    sell_price - recipe_cost(earliest_recipe),
                     earliest_recipe,
                     sell_price - cheapest_cost,
                     cheapest_recipe,
@@ -238,37 +247,61 @@ def search(
                             completed_early = forecast_early + (ingredient_index,)
                             completed_cheap = forecast_cheap + (ingredient_index,)
                             completed_cost = forecast_cost + ingredient.price
-                            completed_modifier, completed_profit = record(
-                                completed_state,
-                                completed_early,
-                                completed_cheap,
-                                recipe_cost(completed_early),
-                                completed_cost,
+                            completed_modifier, completed_modifier_profit, completed_profit = (
+                                record(
+                                    completed_state,
+                                    completed_early,
+                                    completed_cheap,
+                                    recipe_cost(completed_early),
+                                    completed_cost,
+                                )
                             )
-                            best_mod, mod_recipe, best_prof, prof_recipe = forecasts[state]
+                            best_mod, best_mod_profit, mod_recipe, best_prof, prof_recipe = (
+                                forecasts[state]
+                            )
                             if completed_modifier > best_mod or (
                                 completed_modifier == best_mod
-                                and preferred(completed_early, mod_recipe)
+                                and (
+                                    completed_modifier_profit > best_mod_profit
+                                    or (
+                                        completed_modifier_profit == best_mod_profit
+                                        and preferred(completed_early, mod_recipe)
+                                    )
+                                )
                             ):
-                                best_mod, mod_recipe = completed_modifier, completed_early
+                                best_mod = completed_modifier
+                                best_mod_profit = completed_modifier_profit
+                                mod_recipe = completed_early
                             if completed_profit > best_prof or (
                                 completed_profit == best_prof
                                 and preferred(completed_cheap, prof_recipe)
                             ):
                                 best_prof, prof_recipe = completed_profit, completed_cheap
-                            forecasts[state] = best_mod, mod_recipe, best_prof, prof_recipe
-                            following.append(
-                                (completed_state, completed_early, completed_cheap, completed_cost)
+                            forecasts[state] = (
+                                best_mod,
+                                best_mod_profit,
+                                mod_recipe,
+                                best_prof,
+                                prof_recipe,
                             )
+                            if completed_state != forecast_state or ingredient.price < 0:
+                                following.append(
+                                    (
+                                        completed_state,
+                                        completed_early,
+                                        completed_cheap,
+                                        completed_cost,
+                                    )
+                                )
                     frontier = following
 
             check_time("beam ranking")
             profit_ranked = sorted(
                 next_states,
                 key=lambda state: (
-                    -forecasts[state][2],
-                    -len(forecasts[state][3]),
-                    forecasts[state][3],
+                    -forecasts[state][3],
+                    len(forecasts[state][4]),
+                    forecasts[state][4],
                     state,
                 ),
             )
@@ -276,8 +309,9 @@ def search(
                 next_states,
                 key=lambda state: (
                     -forecasts[state][0],
-                    -len(forecasts[state][1]),
-                    forecasts[state][1],
+                    -forecasts[state][1],
+                    len(forecasts[state][2]),
+                    forecasts[state][2],
                     state,
                 ),
             )

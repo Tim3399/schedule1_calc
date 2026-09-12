@@ -61,10 +61,16 @@ function loadUi(catalog = {}, mode = "exact") {
   const submitButton = element({ disabled: true });
   const cancelButton = element({ hidden: true });
   const result = element();
+  const modeInputs = {
+    exact: element({ checked: mode === "exact", value: "exact" }),
+    fast: element({ checked: mode === "fast", value: "fast" }),
+  };
   const form = element({
     dataset: { searchDataUrl: "/search-data", workerUrl: "/static/js/search-worker.js" },
-    querySelector() {
-      return submitButton;
+    querySelector(selector) {
+      return selector === 'button[type="submit"]'
+        ? submitButton
+        : Object.values(modeInputs).find((input) => input.checked);
     },
   });
   const elements = {
@@ -74,7 +80,13 @@ function loadUi(catalog = {}, mode = "exact") {
     level: element({ value: "street_rat_i" }),
     "combination-size": element({ value: "2" }),
     "product-name": element({ value: "og_kush" }),
-    "search-mode": element({ value: mode }),
+    "search-mode": element(),
+    "search-mode-exact": modeInputs.exact,
+    "search-mode-fast": modeInputs.fast,
+    "search-mode-hint": element({
+      textContent:
+        "Exact proves the best mix or returns no result (up to 5 min). Fast gives a quick estimate without a guarantee.",
+    }),
   };
 
   class FakeWorker {
@@ -134,6 +146,8 @@ function loadUi(catalog = {}, mode = "exact") {
     cancelButton,
     fetchCalls,
     form,
+    modeHint: elements["search-mode-hint"],
+    modeInputs,
     result,
     submitButton,
     timers,
@@ -141,12 +155,25 @@ function loadUi(catalog = {}, mode = "exact") {
   };
 }
 
+function descendants(node) {
+  return node.children.flatMap((child) => [child, ...descendants(child)]);
+}
+
 function submitEvent() {
   return { preventDefault() {} };
 }
 
+function selectMode(ui, mode) {
+  ui.modeInputs.exact.checked = mode === "exact";
+  ui.modeInputs.fast.checked = mode === "fast";
+}
+
+function textOf(node) {
+  return [node.textContent, ...node.children.map(textOf)].filter(Boolean).join("\n");
+}
+
 function resultText(ui) {
-  return ui.result.children.map((child) => child.textContent).join("\n");
+  return ui.result.children.map(textOf).join("\n");
 }
 
 test("cancel terminates work, ignores stale results, and allows a cached restart", async () => {
@@ -228,21 +255,101 @@ test("result IDs render with catalog display names and readable unknown fallback
 
   worker.emit({ type: "result", request_id: worker.sent[0].request_id, result: result });
 
-  assert.match(resultText(ui), /Effects: Energizing/);
-  assert.match(resultText(ui), /Ingredients: Cuke/);
-  assert.match(resultText(ui), /Effects: Bright Eyed/);
-  assert.match(resultText(ui), /Ingredients: Motor Oil, Constructor/);
+  assert.match(resultText(ui), /Effects\nEnergizing/);
+  assert.match(resultText(ui), /Ingredients\nCuke/);
+  assert.match(resultText(ui), /Effects\nBright Eyed/);
+  assert.match(resultText(ui), /Ingredients\nMotor Oil\nConstructor/);
   assert.doesNotMatch(resultText(ui), /bright_eyed|motor_oil/);
 });
 
-test("exact and fast searches keep their distinct watchdog budgets", async () => {
+test("profit leads and the modifier result stays in a labelled native comparison", async () => {
+  const ui = loadUi();
+  await ui.form.listeners.submit(submitEvent());
+  const worker = ui.workers[0];
+  const result = successfulResult();
+  result.best_modifier = {
+    effects: ["modifier_effect"],
+    substances: ["modifier_ingredient"],
+    modifier: 0.91,
+    sell_price: 75,
+    substance_cost: 14,
+  };
+  result.best_profit = {
+    effects: ["profit_effect"],
+    substances: ["profit_ingredient"],
+    modifier: 0.42,
+    sell_price: 90,
+    substance_cost: 8,
+  };
+
+  worker.emit({ type: "result", request_id: worker.sent[0].request_id, result });
+
+  assert.equal(ui.result.children.length, 2);
+  const profitCard = ui.result.children[0];
+  const comparison = ui.result.children[1];
+  assert.equal(profitCard.tagName, "article");
+  assert.match(textOf(profitCard), /^Best Profit Combination/);
+  assert.equal(comparison.tagName, "details");
+  assert.equal(comparison.className, "result-comparison");
+  assert.equal(comparison.children[0].tagName, "summary");
+  assert.equal(comparison.children[0].textContent, "Compare highest modifier");
+  assert.match(textOf(comparison.children[1]), /^Best Modifier Combination/);
+  assert.equal(textOf(profitCard).match(/Optimality proven/g)?.length, 1);
+  assert.equal(textOf(comparison).match(/Optimality proven/g)?.length, 1);
+
+  for (const card of [profitCard, comparison.children[1]]) {
+    const labels = descendants(card)
+      .filter((node) => node.tagName === "dt" || node.className === "chips-label")
+      .map((node) => node.textContent);
+    assert.deepEqual(labels, [
+      "Profit",
+      "Sell Price",
+      "Ingredient Cost",
+      "Modifier",
+      "Ingredients",
+      "Effects",
+    ]);
+  }
+
+  const fastUi = loadUi({}, "fast");
+  await fastUi.form.listeners.submit(submitEvent());
+  const fastWorker = fastUi.workers[0];
+  fastWorker.emit({
+    type: "result",
+    request_id: fastWorker.sent[0].request_id,
+    result: successfulResult("fast"),
+  });
+  assert.equal(
+    resultText(fastUi).match(/Approximate result — optimality not guaranteed/g)?.length,
+    2,
+  );
+});
+
+test("search mode uses one static explanation for both radio choices", () => {
+  const ui = loadUi({}, "exact");
+
+  assert.equal(ui.modeInputs.exact.checked, true);
+  assert.equal(ui.modeInputs.fast.checked, false);
+  assert.match(ui.modeHint.textContent, /Exact proves the best mix/);
+  assert.match(ui.modeHint.textContent, /up to 5 min/);
+  assert.match(ui.modeHint.textContent, /Fast gives a quick estimate without a guarantee/);
+  const hint = ui.modeHint.textContent;
+  selectMode(ui, "fast");
+  assert.equal(ui.modeHint.textContent, hint, "the shared explanation does not swap by mode");
+});
+
+test("radio selection is captured at submit with the matching watchdog budget", async () => {
   const exactUi = loadUi();
-  await exactUi.form.listeners.submit(submitEvent());
+  const exactSubmit = exactUi.form.listeners.submit(submitEvent());
+  selectMode(exactUi, "fast");
+  await exactSubmit;
   assert.equal(exactUi.timers[0].delay, 305_000);
+  assert.equal(exactUi.workers[0].sent[0].request.search_mode, "exact");
 
   const fastUi = loadUi({}, "fast");
   await fastUi.form.listeners.submit(submitEvent());
   assert.equal(fastUi.timers[0].delay, 20_000);
+  assert.equal(fastUi.workers[0].sent[0].request.search_mode, "fast");
 });
 
 test("worker errors use readable catalog names at the display boundary", async () => {
@@ -262,6 +369,7 @@ test("worker errors use readable catalog names at the display boundary", async (
 
   assert.match(resultText(ui), /Motor Oilspill differs from Motor Oil at Street Rat I/);
   assert.doesNotMatch(resultText(ui), /motor_oil|street_rat_i/);
+  assert.equal(ui.result.children[0].attributes.role, "alert");
 });
 
 test("malformed catalog data cannot suppress a worker error", async () => {
@@ -280,4 +388,5 @@ test("malformed catalog data cannot suppress a worker error", async () => {
   assert.match(resultText(ui), /No result was produced/);
   assert.equal(worker.terminateCalls, 1);
   assert.equal(ui.submitButton.disabled, false);
+  assert.equal(ui.result.children[0].attributes.role, "alert");
 });

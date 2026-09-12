@@ -11,6 +11,7 @@ Lies vor Änderungen an Formatierung, Start-, Prüf-, Versionstooling oder CI/CD
 - Ändere Produktversionen über `tools/project.py set-version`, halte VERSION/Manifest/Lock synchron und reviewe den Diff. Der Versionsschritt darf nicht implizit committen, taggen, pushen oder veröffentlichen.
 - Spieldaten liegen in `src/lookup/lookup.py`. Trenne belegte Abweichungen von Wikikonflikten. Dokumentiere Quelle, Prüfdatum und Spielversion; übernimm unsichere Sollwerte nicht ungeprüft.
 - Reviewberichte in `docs/reviews/` sind Befunde und kein pauschaler Auftrag, alle beschriebenen Fehler zu beheben. Beachte den aktuellen Nutzerauftrag und dokumentiere offene Anforderungen ehrlich.
+- Bei Frontend-Aufgaben gelten `webapp/design/FRONTEND_STYLEGUIDE_v2.1.md` (Einstieg, Abschnitt 1 und Definition of Done zuerst) und `webapp/design/DESIGN.md` für Produktidentität und Abweichungen. Technische Wahrheit sind `webapp/static/css/tokens.css` und die vorhandenen Komponenten; lege keine zweite Tokenquelle an. Ein Review ist keine Änderungsfreigabe. Nenne tatsächlich durchgeführte Prüfungen und verbleibende Lücken.
 
 ## Agentenkoordination
 
