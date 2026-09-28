@@ -3,6 +3,12 @@ name: Tagged release
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type v1.6.0 to resume only the original failed publication"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -15,6 +21,7 @@ concurrency:
 jobs:
   quality:
     name: Quality gates
+    if: github.event_name == 'push'
     uses: ./.github/workflows/check.yml
 
   publish:
@@ -52,3 +59,47 @@ jobs:
         run: |
           python -B tools/publish_release.py --directory dist --revision "$GITHUB_SHA" \
             --run-id "$BUILD_RUN_ID" --version "$BUILD_VERSION" --repository "$GITHUB_REPOSITORY"
+
+  recover-1-6-0:
+    name: Recover original v1.6.0 publication
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    concurrency:
+      group: schedule1-release-publication
+      cancel-in-progress: false
+      queue: max
+    permissions:
+      actions: read
+      contents: write
+      packages: write
+    steps:
+      - name: Require the explicit recovery version
+        env:
+          RECOVERY_CONFIRM: ${{ inputs.confirm }}
+        shell: bash
+        run: test "$RECOVERY_CONFIRM" = 'v1.6.0'
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        with:
+          version: "0.12.8"
+          activate-environment: true
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: "10989900296"
+          run-id: "36464467830"
+          github-token: ${{ github.token }}
+          path: dist
+          digest-mismatch: error
+      - name: Verify the original artifact bytes and complete OCI graph
+        run: python -B tools/recover_release_1_6_0.py --directory dist
+      - name: Resume the original empty draft without rebuilding
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RECOVERY_CONFIRM: ${{ inputs.confirm }}
+        shell: bash
+        run: |
+          python -B tools/recover_release_1_6_0.py --directory dist \
+            --execute --confirm "$RECOVERY_CONFIRM"

@@ -125,6 +125,17 @@ deciding whether to complete that draft or prepare a new version. Never delete o
 overwrite a published version to make a failed run green. Recovery after partial
 publication is an explicit owner operation, not an automatic destructive rollback.
 
+The manual `v1.6.0` recovery path in the same release workflow is a narrowly scoped
+exception for the original failed publication. It only accepts a dispatch from `main`,
+checks the original successful build gates and fixed artifact bytes, and reuses the
+specific empty draft. Its job token has `actions: read`, `contents: write` and
+`packages: write`. It transfers the original OCI blobs and manifest directly without
+Docker transformation or rebuilding, using the existing publication concurrency group.
+An existing version tag or changed draft is an error, not a retry shortcut. The config
+digest remains the receipt's `image_id`; the registry manifest digest is a separate field.
+See the [recovery review and activation runbook](reviews/2026-09-28-release-1.6.0-recovery.md)
+for fixed identities, evidence, remaining limitations and the activation boundary.
+
 A deployment rollback is outside this repository's scope. Consumers can select a
 previous verified image digest; operators remain responsible for any external data
 compatibility. The calculator has no required persistent database migration here.
