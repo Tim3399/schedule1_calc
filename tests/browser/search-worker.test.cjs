@@ -64,6 +64,30 @@ test("worker forwards progress and a successful result with the request id", () 
   assert.equal(worker.messages[1].result, result);
 });
 
+test("worker forwards incumbent checkpoints with the request id", () => {
+  const checkpoint = {
+    search: { mode: "exact", status: "incomplete", optimality_proven: false },
+    best_modifier: { substances: ["first"] },
+    best_profit: { substances: ["first"] },
+    stats: { work_units: 1 },
+  };
+  const result = {
+    ...checkpoint,
+    search: { mode: "exact", status: "optimal", optimality_proven: true },
+  };
+  const worker = loadWorker((_catalog, _request, options) => {
+    options.onCheckpoint(checkpoint);
+    return result;
+  });
+
+  worker.dispatch({ type: "search", request_id: 12, request: { search_mode: "exact" } });
+
+  assert.equal(worker.messages[0].type, "checkpoint");
+  assert.equal(worker.messages[0].request_id, 12);
+  assert.equal(worker.messages[0].result, checkpoint);
+  assert.equal(worker.messages[1].type, "result");
+});
+
 test("worker reports typed limits as incomplete without winner fields", () => {
   class SearchLimitExceeded extends Error {}
   const worker = loadWorker(() => {
@@ -82,6 +106,29 @@ test("worker reports typed limits as incomplete without winner fields", () => {
   assert.equal(message.search.optimality_proven, false);
   assert.equal("best_modifier" in message, false);
   assert.equal("best_profit" in message, false);
+});
+
+test("worker includes a typed limit's partial result and reason", () => {
+  class SearchLimitExceeded extends Error {}
+  const partial = {
+    search: { mode: "fast", status: "incomplete", optimality_proven: false },
+    best_modifier: { substances: ["incumbent"] },
+    best_profit: { substances: ["incumbent"] },
+    stats: { work_units: 9 },
+  };
+  const worker = loadWorker(() => {
+    const error = new SearchLimitExceeded("limit reached");
+    error.reason = "work_limit";
+    error.partial_result = partial;
+    throw error;
+  }, SearchLimitExceeded);
+
+  worker.dispatch({ type: "search", request_id: 13, request: { search_mode: "fast" } });
+
+  assert.equal(worker.messages[0].search.status, "incomplete");
+  assert.equal(worker.messages[0].search.optimality_proven, false);
+  assert.equal(worker.messages[0].reason, "work_limit");
+  assert.equal(worker.messages[0].result, partial);
 });
 
 test("worker reports unexpected engine failures as errors without winner fields", () => {

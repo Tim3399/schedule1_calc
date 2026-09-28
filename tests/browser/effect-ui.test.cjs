@@ -307,13 +307,101 @@ function effectResult({
         : engine.evaluateRecipe(catalog(), { product_name: "og_kush", substances }),
     search: {
       mode,
-      optimality_proven: mode === "exact",
+      optimality_proven: mode === "exact" && status !== "incomplete",
       status,
     },
     stats: {},
     target_effects: targets,
   };
 }
+
+test("effect cancellation and watchdog preserve validated matches without proving shortest", async () => {
+  for (const ending of ["cancel", "watchdog", "tab", "limit"]) {
+    const ui = loadUi();
+    await openEffects(ui);
+    setMatchMode(ui, "contains");
+    choose(ui, "focused");
+    choose(ui, "calming", "excluded");
+    await ui.effectForm.listeners.submit(event());
+    const worker = ui.workers[0];
+    const request_id = worker.sent[0].request_id;
+    const result = effectResult({
+      status: "incomplete",
+      matchMode: "contains",
+      targets: ["focused"],
+      excluded: ["calming"],
+      substances: ["motor_oil"],
+    });
+    worker.emit({ type: "checkpoint", request_id, result });
+    if (ending === "cancel") ui.elements["cancel-effects"].listeners.click();
+    if (ending === "watchdog") ui.timers.find(({ delay }) => delay === 305_000).callback();
+    if (ending === "tab") await ui.elements["search-tab"].listeners.click();
+    if (ending === "limit")
+      worker.emit({
+        type: "error",
+        request_id,
+        result,
+        error: "Work limit reached.",
+        search: { mode: "exact", status: "incomplete", optimality_proven: false },
+      });
+    const text = textOf(ui.elements["effect-result"]);
+    assert.match(text, /best matching recipe found so far/i);
+    assert.match(text, /Motor Oil/);
+    assert.match(text, /Search stopped — optimality not proven/);
+    assert.doesNotMatch(text, /Optimality proven|Shortest matching recipe|No result was produced/);
+    assert.equal(worker.terminateCalls, 1);
+    assert.equal(ui.elements["find-effects"].disabled, false);
+    worker.emit({ type: "result", request_id, result: effectResult({ targets: ["calming"] }) });
+    assert.equal(textOf(ui.elements["effect-result"]), text);
+  }
+});
+
+test("stopped effect searches with no candidate never claim that no match exists", async () => {
+  const ui = loadUi();
+  await openEffects(ui);
+  choose(ui, "calming");
+  await ui.effectForm.listeners.submit(event());
+  ui.elements["cancel-effects"].listeners.click();
+  assert.match(textOf(ui.elements["effect-result"]), /No matching recipe was found before/);
+  assert.match(textOf(ui.elements["effect-result"]), /does not prove that no match exists/);
+});
+
+test("effect checkpoints reject avoided effects and proof claims; changed inputs discard candidates", async () => {
+  for (const kind of ["avoided", "proven", "settings"]) {
+    const ui = loadUi();
+    await openEffects(ui);
+    setMatchMode(ui, "contains");
+    choose(ui, "focused");
+    choose(ui, "calming", "excluded");
+    await ui.effectForm.listeners.submit(event());
+    const worker = ui.workers[0];
+    const request_id = worker.sent[0].request_id;
+    const result = effectResult({
+      status: "incomplete",
+      matchMode: "contains",
+      targets: ["focused"],
+      excluded: ["calming"],
+      substances: ["motor_oil"],
+    });
+    if (kind === "avoided") result.recipe.effects.push("calming");
+    if (kind === "proven") result.search.optimality_proven = true;
+    worker.emit({ type: "checkpoint", request_id, result });
+    if (kind === "settings") {
+      choose(ui, "bright_eyed");
+      assert.match(textOf(ui.elements["effect-result"]), /settings changed/);
+      await ui.effectForm.listeners.submit(event());
+      worker.emit({ type: "checkpoint", request_id, result });
+      ui.elements["cancel-effects"].listeners.click();
+      assert.match(textOf(ui.elements["effect-result"]), /No matching recipe was found/);
+    } else {
+      assert.match(textOf(ui.elements["effect-result"]), /invalid intermediate result/);
+    }
+    assert.doesNotMatch(
+      textOf(ui.elements["effect-result"]),
+      /Best matching recipe found so far|Optimality proven/,
+    );
+  }
+});
 
 test("renders filterable effect choices with colors, descriptions, retained selection, and clear", async () => {
   const ui = loadUi();

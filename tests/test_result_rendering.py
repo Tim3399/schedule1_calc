@@ -109,9 +109,13 @@ class ResultRenderingTests(unittest.TestCase):
         self.assertRegex(html, r'<input(?=[^>]*id="search-mode-fast")[^>]*>')
         self.assertRegex(
             html,
-            r"Exact proves the best mix or returns no result \(up to 5 min\)\.",
+            r"Exact proves the best mix when complete \(up to 5 min\)\.",
         )
-        self.assertRegex(html, r"Fast gives a quick\s+estimate without a guarantee\.")
+        self.assertRegex(html, r"Fast gives a quick\s+estimate\.")
+        self.assertRegex(
+            html,
+            r"If stopped, the best result found is kept without a guarantee\.",
+        )
         self.assertNotIn('id="combination-size-hint"', html)
         self.assertRegex(
             html,

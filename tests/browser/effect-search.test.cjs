@@ -426,7 +426,7 @@ test("constraint validation rejects invalid modes, lists, duplicates, and overla
   );
 });
 
-test("all exact and fast limits throw without exposing a partial recipe", () => {
+test("limits before a match do not claim impossibility or expose a partial recipe", () => {
   const branching = catalog(
     effects,
     [],
@@ -442,7 +442,8 @@ test("all exact and fast limits throw without exposing a partial recipe", () => 
       (error) =>
         error instanceof engine.SearchLimitExceeded &&
         error.recipe === undefined &&
-        error.result === undefined,
+        error.result === undefined &&
+        error.partial_result === undefined,
     );
   }
 
@@ -450,13 +451,16 @@ test("all exact and fast limits throw without exposing a partial recipe", () => 
     () =>
       engine.searchEffects(
         branching,
-        request("exact", 3, ["a"], {
+        request("exact", 3, ["b"], {
           match_mode: "contains",
           excluded_effects: ["extra"],
         }),
         { work_limit: 1 },
       ),
-    (error) => error instanceof engine.SearchLimitExceeded && error.recipe === undefined,
+    (error) =>
+      error instanceof engine.SearchLimitExceeded &&
+      error.recipe === undefined &&
+      error.partial_result === undefined,
   );
 
   for (const mode of ["exact", "fast"]) {
@@ -474,7 +478,111 @@ test("all exact and fast limits throw without exposing a partial recipe", () => 
       (error) =>
         error instanceof engine.SearchLimitExceeded &&
         error.reason === "time_limit" &&
-        error.recipe === undefined,
+        error.recipe === undefined &&
+        error.partial_result?.search.status === "incomplete" &&
+        error.partial_result.search.optimality_proven === false &&
+        error.partial_result.recipe !== null,
     );
   }
+});
+
+test("exact checkpoints keep the latest valid tie winner and are detached", () => {
+  const model = catalog(
+    effects,
+    ["temporary"],
+    [
+      substance("expensive", 20, "b", [["temporary", "a"]]),
+      substance("cheapest", 5, "b", [["temporary", "a"]]),
+      substance("trigger_limit", 0, "extra"),
+    ],
+  );
+  const checkpoints = [];
+  assert.throws(
+    () =>
+      engine.searchEffects(model, request("exact", 1), {
+        work_limit: 2,
+        onCheckpoint(result) {
+          checkpoints.push(result);
+          result.recipe.substances[0] = "mutated callback data";
+          result.stats.work_units = -1;
+        },
+      }),
+    (error) => {
+      assert.ok(error instanceof engine.SearchLimitExceeded);
+      assert.equal(error.reason, "work_limit");
+      assert.deepEqual(error.partial_result.search, {
+        mode: "exact",
+        status: "incomplete",
+        optimality_proven: false,
+      });
+      assert.deepEqual(error.partial_result.recipe.substances, ["cheapest"]);
+      assert.deepEqual(error.partial_result.recipe.effects, ["a", "b"]);
+      assert.equal(error.partial_result.stats.work_units, 2);
+      return true;
+    },
+  );
+  assert.equal(checkpoints.length, 2);
+});
+
+test("effect checkpoints satisfy target and excluded constraints", () => {
+  const model = catalog(
+    effects,
+    ["temporary"],
+    [
+      substance("still_forbidden", 0, "a"),
+      substance("valid", 1, "b", [["temporary", "a"]]),
+      substance("trigger_limit", 0, "extra"),
+    ],
+  );
+  assert.throws(
+    () =>
+      engine.searchEffects(
+        model,
+        request("fast", 2, ["a"], {
+          match_mode: "contains",
+          excluded_effects: ["temporary"],
+        }),
+        { work_limit: 2, beam_width: 1, lookahead: 1 },
+      ),
+    (error) => {
+      assert.ok(error instanceof engine.SearchLimitExceeded);
+      assert.deepEqual(error.partial_result.recipe.substances, ["valid"]);
+      assert.equal(error.partial_result.recipe.effects.includes("a"), true);
+      assert.equal(error.partial_result.recipe.effects.includes("temporary"), false);
+      assert.deepEqual(error.partial_result.target_effects, ["a"]);
+      assert.deepEqual(error.partial_result.excluded_effects, ["temporary"]);
+      return true;
+    },
+  );
+});
+
+test("fast lookahead checkpoints a valid match before a later work bound", () => {
+  const model = catalog(
+    effects,
+    [],
+    [
+      substance("temporary_first", 1, "temporary"),
+      substance("convert_temporary", 1, "b", [["temporary", "a"]]),
+      substance("partial_a", 0, "a"),
+      substance("extra", 0, "extra"),
+    ],
+  );
+  assert.throws(
+    () =>
+      engine.searchEffects(model, request("fast", 2), {
+        beam_width: 1,
+        lookahead: 1,
+        work_limit: 6,
+      }),
+    (error) => {
+      assert.ok(error instanceof engine.SearchLimitExceeded);
+      assert.deepEqual(error.partial_result.recipe.substances, [
+        "temporary_first",
+        "convert_temporary",
+      ]);
+      assert.deepEqual(new Set(error.partial_result.recipe.effects), new Set(["a", "b"]));
+      assert.equal(error.partial_result.search.status, "incomplete");
+      return true;
+    },
+  );
 });
