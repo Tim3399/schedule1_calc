@@ -85,7 +85,7 @@ function loadUi(catalog = {}, mode = "exact") {
     "search-mode-fast": modeInputs.fast,
     "search-mode-hint": element({
       textContent:
-        "Exact proves the best mix or returns no result (up to 5 min). Fast gives a quick estimate without a guarantee.",
+        "Exact proves the best mix when complete (up to 5 min). Fast gives a quick estimate. If stopped, the best result found is kept without a guarantee.",
     }),
   };
 
@@ -167,6 +167,94 @@ function selectMode(ui, mode) {
   ui.modeInputs.exact.checked = mode === "exact";
   ui.modeInputs.fast.checked = mode === "fast";
 }
+
+function checkpointResult(mode = "exact", profit = 40.7) {
+  const result = successfulResult(mode);
+  result.search.status = "incomplete";
+  result.search.optimality_proven = false;
+  result.best_profit = { ...result.best_profit, sell_price: profit + 2 };
+  return result;
+}
+
+test("cancel retains the latest checkpoint without claiming optimality in either mode", async () => {
+  for (const mode of ["exact", "fast"]) {
+    const ui = loadUi({}, mode);
+    await ui.form.listeners.submit(submitEvent());
+    const worker = ui.workers[0];
+    const request_id = worker.sent[0].request_id;
+    worker.emit({ type: "checkpoint", request_id, result: checkpointResult(mode, 50) });
+    worker.emit({ type: "checkpoint", request_id, result: checkpointResult(mode, 60) });
+    worker.emit({ type: "progress", request_id, progress: { depth: 2 } });
+    assert.equal(ui.submitButton.disabled, true);
+    ui.cancelButton.listeners.click();
+    assert.equal(worker.terminateCalls, 1);
+    assert.match(resultText(ui), /Search cancelled.*Showing the best result found so far/);
+    assert.match(resultText(ui), /Highest profit found/);
+    assert.match(resultText(ui), /60\.00\$/);
+    assert.match(resultText(ui), /Search stopped — optimality not proven/);
+    assert.doesNotMatch(resultText(ui), /Optimality proven|Best Profit Combination|No result/);
+    const stoppedText = resultText(ui);
+    worker.emit({ type: "result", request_id, result: successfulResult(mode) });
+    assert.equal(resultText(ui), stoppedText);
+
+    await ui.form.listeners.submit(submitEvent());
+    worker.emit({ type: "checkpoint", request_id, result: checkpointResult(mode, 100) });
+    ui.cancelButton.listeners.click();
+    assert.doesNotMatch(resultText(ui), /Highest profit|60\.00|100\.00/);
+    assert.match(resultText(ui), /No recipe was found before the search stopped/);
+  }
+});
+
+test("limits use the final incumbent and the watchdog retains the latest checkpoint", async () => {
+  for (const watchdog of [false, true]) {
+    const ui = loadUi();
+    await ui.form.listeners.submit(submitEvent());
+    const worker = ui.workers[0];
+    const request_id = worker.sent[0].request_id;
+    worker.emit({ type: "checkpoint", request_id, result: checkpointResult("exact", 50) });
+    if (watchdog) {
+      ui.timers.find(({ delay }) => delay === 305_000).callback();
+    } else {
+      worker.emit({
+        type: "error",
+        request_id,
+        error: "Search reached its work limit.",
+        search: { mode: "exact", status: "incomplete", optimality_proven: false },
+        result: checkpointResult("exact", 70),
+      });
+    }
+    assert.match(resultText(ui), watchdog ? /timed out/ : /work limit/);
+    assert.match(resultText(ui), watchdog ? /50\.00\$/ : /70\.00\$/);
+    assert.doesNotMatch(resultText(ui), /Optimality proven/);
+    assert.equal(ui.submitButton.disabled, false);
+  }
+});
+
+test("invalid checkpoint metadata and ordinary worker errors never present partial success", async () => {
+  for (const kind of ["wrong mode", "proven", "error"]) {
+    const ui = loadUi();
+    await ui.form.listeners.submit(submitEvent());
+    const worker = ui.workers[0];
+    const request_id = worker.sent[0].request_id;
+    worker.emit({ type: "checkpoint", request_id, result: checkpointResult() });
+    const result = checkpointResult();
+    if (kind === "wrong mode") result.search.mode = "fast";
+    if (kind === "proven") result.search.optimality_proven = true;
+    worker.emit(
+      kind === "error"
+        ? {
+            type: "error",
+            request_id,
+            error: "Engine failed.",
+            search: { mode: "exact", status: "error", optimality_proven: false },
+          }
+        : { type: "checkpoint", request_id, result },
+    );
+    assert.match(resultText(ui), /No result was produced/);
+    assert.doesNotMatch(resultText(ui), /Highest profit found/);
+    assert.equal(worker.terminateCalls, 1);
+  }
+});
 
 function textOf(node) {
   return [node.textContent, ...node.children.map(textOf)].filter(Boolean).join("\n");
@@ -363,7 +451,11 @@ test("search mode uses one static explanation for both radio choices", () => {
   assert.equal(ui.modeInputs.fast.checked, false);
   assert.match(ui.modeHint.textContent, /Exact proves the best mix/);
   assert.match(ui.modeHint.textContent, /up to 5 min/);
-  assert.match(ui.modeHint.textContent, /Fast gives a quick estimate without a guarantee/);
+  assert.match(ui.modeHint.textContent, /Fast gives a quick estimate/);
+  assert.match(
+    ui.modeHint.textContent,
+    /If stopped, the best result found is kept without a guarantee/,
+  );
   const hint = ui.modeHint.textContent;
   selectMode(ui, "fast");
   assert.equal(ui.modeHint.textContent, hint, "the shared explanation does not swap by mode");

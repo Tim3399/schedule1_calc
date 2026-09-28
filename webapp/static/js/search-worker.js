@@ -12,8 +12,8 @@ function errorText(error) {
     : "Local search failed.";
 }
 
-function postSearchError(requestId, mode, error, status) {
-  globalThis.postMessage({
+function postSearchError(requestId, mode, error, status, limitExceeded = false) {
+  const message = {
     type: "error",
     request_id: requestId,
     error: errorText(error),
@@ -22,7 +22,14 @@ function postSearchError(requestId, mode, error, status) {
       status: status,
       optimality_proven: false,
     },
-  });
+  };
+  if (limitExceeded) {
+    if (typeof error.reason === "string" && error.reason) message.reason = error.reason;
+    if (error.partial_result !== undefined && error.partial_result !== null) {
+      message.result = error.partial_result;
+    }
+  }
+  globalThis.postMessage(message);
 }
 
 globalThis.addEventListener("message", (event) => {
@@ -54,12 +61,19 @@ globalThis.addEventListener("message", (event) => {
           progress: progress,
         });
       },
+      onCheckpoint(result) {
+        globalThis.postMessage({
+          type: "checkpoint",
+          request_id: requestId,
+          result: result,
+        });
+      },
     });
     globalThis.postMessage({ type: "result", request_id: requestId, result: result });
   } catch (error) {
     const limitExceeded =
       typeof engine.SearchLimitExceeded === "function" &&
       error instanceof engine.SearchLimitExceeded;
-    postSearchError(requestId, mode, error, limitExceeded ? "incomplete" : "error");
+    postSearchError(requestId, mode, error, limitExceeded ? "incomplete" : "error", limitExceeded);
   }
 });

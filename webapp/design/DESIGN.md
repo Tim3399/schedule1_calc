@@ -94,6 +94,26 @@ deshalb ein dunkles Blattgrün mit weißer Schrift. Die Rolle bleibt, der Wert w
 Eingaben bleiben in **jedem** Fehlerfall erhalten; `#result` ist eine `aria-live="polite"`-Region,
 Fehler tragen zusätzlich `role="alert"`.
 
+### Abbruch mit Zwischenstand
+
+Die vorhandenen Ergebniskarten und das Badge `badge--approximate` werden wiederverwendet;
+es entstehen keine neuen Tokens oder Komponentenvarianten. Der Abbruchgrund steht als
+Statuszeile über der Karte. Der Zustand unterscheidet sich sprachlich von einem erfolgreichen
+Fast-Ergebnis und behauptet auch im Exact-Modus keinen Beweis.
+
+| Zustand                               | Verhalten                                                                                             |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Suche läuft                           | Fortschritt und Abbruch bleiben sichtbar; verbesserte Kandidaten werden im Arbeitsspeicher behalten.  |
+| Abbruch / Limit mit Kandidat          | Besten bisherigen Kandidaten und Abbruchgrund zeigen; Badge „Search stopped — optimality not proven“. |
+| Abbruch / Limit ohne Kandidat         | Fehlenden Zwischenstand erklären; keine Unmöglichkeit behaupten.                                      |
+| Vollständig abgeschlossen             | Bisherige Unterscheidung zwischen bewiesenem Exact-Ergebnis und Fast-Näherung.                        |
+| Tabwechsel                            | Abbrechen und bisherigen Kandidaten im verlassenen Suchreiter erhalten.                               |
+| Neuer Lauf / geänderte Effektvorgaben | Vorherige Kandidaten verwerfen; verspätete Nachrichten ignorieren.                                    |
+| Daten- / Protokollfehler              | Fehler ohne Gewinner; Eingaben bleiben erhalten.                                                      |
+
+Zwischenstände überleben keinen Seiten-Reload; serverseitige Speicherung und Synchronisation
+sind für diesen lokalen Rechenablauf nicht vorgesehen.
+
 ## 7. Bewegungsvertrag
 
 Bewegung ist bewusst minimal, weil Suche und Rezeptbearbeitung wiederholte Bedienung sind.

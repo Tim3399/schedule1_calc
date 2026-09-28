@@ -254,7 +254,7 @@ document.addEventListener("DOMContentLoaded", function () {
     );
   }
 
-  function resultMatchesMode(result, requestedMode) {
+  function resultMatchesMode(result, requestedMode, incomplete = false) {
     const search = result?.search;
     const exactResult =
       requestedMode === "exact" &&
@@ -268,18 +268,27 @@ document.addEventListener("DOMContentLoaded", function () {
       search.optimality_proven === false;
     return (
       !result?.error &&
-      (exactResult || fastResult) &&
+      (incomplete
+        ? search?.mode === requestedMode &&
+          search.status === "incomplete" &&
+          search.optimality_proven === false
+        : exactResult || fastResult) &&
       isCombination(result.best_modifier) &&
       isCombination(result.best_profit)
     );
   }
 
-  function renderResult(result, requestedMode, catalog) {
+  function renderResult(result, requestedMode, catalog, notice = null) {
     resultDiv.replaceChildren();
-    const exact = requestedMode === "exact";
-    const status = exact
-      ? { tone: "proven", label: "Optimality proven" }
-      : { tone: "approximate", label: "Approximate result — optimality not guaranteed" };
+    if (notice)
+      appendTextElement(resultDiv, "p", notice, "status-line").setAttribute("role", "status");
+    const incomplete = result.search.status === "incomplete";
+    const exact = requestedMode === "exact" && !incomplete;
+    const status = incomplete
+      ? { tone: "approximate", label: "Search stopped — optimality not proven" }
+      : exact
+        ? { tone: "proven", label: "Optimality proven" }
+        : { tone: "approximate", label: "Approximate result — optimality not guaranteed" };
     renderCombination(
       exact ? "Best Profit Combination" : "Highest profit found",
       result.best_profit,
@@ -298,6 +307,24 @@ document.addEventListener("DOMContentLoaded", function () {
       status,
     );
     resultDiv.appendChild(comparison);
+  }
+
+  function interruptRun(run, message) {
+    if (activeRun !== run) return;
+    stopRun(run);
+    const reason = readableMessage(message, run.catalog);
+    if (run.checkpoint) {
+      renderResult(
+        run.checkpoint,
+        run.mode,
+        run.catalog,
+        `${reason} Showing the best result found so far.`,
+      );
+    } else {
+      renderMessage(
+        `${reason} No recipe was found before the search stopped. Optimality was not proven.`,
+      );
+    }
   }
 
   function progressText(progress) {
@@ -379,6 +406,14 @@ document.addEventListener("DOMContentLoaded", function () {
         renderMessage(progressText(message.progress), { busy: true });
         return;
       }
+      if (message.type === "checkpoint") {
+        if (!resultMatchesMode(message.result, run.mode, true)) {
+          failRun(run, "The local search returned an invalid intermediate result.");
+          return;
+        }
+        run.checkpoint = message.result;
+        return;
+      }
       if (message.type === "result") {
         if (!resultMatchesMode(message.result, run.mode)) {
           failRun(run, "The local search returned an invalid or incomplete response.");
@@ -397,6 +432,17 @@ document.addEventListener("DOMContentLoaded", function () {
           metadata?.mode === run.mode &&
           (metadata.status === "incomplete" || metadata.status === "error") &&
           metadata.optimality_proven === false;
+        if (validError && metadata.status === "incomplete" && typeof message.error === "string") {
+          if (message.result != null) {
+            if (!resultMatchesMode(message.result, run.mode, true)) {
+              failRun(run, "The local search returned an invalid intermediate result.");
+              return;
+            }
+            run.checkpoint = message.result;
+          }
+          interruptRun(run, message.error);
+          return;
+        }
         failRun(
           run,
           validError && typeof message.error === "string"
@@ -445,6 +491,7 @@ document.addEventListener("DOMContentLoaded", function () {
       worker: null,
       watchdog: null,
       catalog: null,
+      checkpoint: null,
     };
     nextRequestId += 1;
     activeRun = run;
@@ -452,7 +499,7 @@ document.addEventListener("DOMContentLoaded", function () {
     renderMessage("Loading search data for local computation…", { busy: true });
     const timeout = mode === "exact" ? 305_000 : 20_000;
     run.watchdog = setTimeout(function () {
-      failRun(run, "The local search timed out.");
+      interruptRun(run, "The local search timed out.");
     }, timeout);
 
     try {
@@ -470,8 +517,7 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
     const run = activeRun;
-    stopRun(run);
-    renderMessage("Search cancelled. No result was produced.", { error: true });
+    interruptRun(run, "Search cancelled.");
   });
 
   function initializeRecipeTab() {
@@ -1252,14 +1298,16 @@ document.addEventListener("DOMContentLoaded", function () {
       );
     }
 
-    function validateEffectResult(result, run) {
+    function validateEffectResult(result, run, incomplete = false) {
       const search = result?.search;
       const exact = run.mode === "exact";
       const foundStatus = exact ? "optimal" : "approximate";
       const validSearch =
         search?.mode === run.mode &&
-        search.optimality_proven === exact &&
-        (search.status === foundStatus || search.status === "not_found");
+        (incomplete
+          ? search.optimality_proven === false && search.status === "incomplete"
+          : search.optimality_proven === exact &&
+            (search.status === foundStatus || search.status === "not_found"));
       if (
         result?.error ||
         !validSearch ||
@@ -1332,8 +1380,28 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     }
 
-    function renderEffectResult(result, run) {
+    function interruptEffectRun(run, message) {
+      if (activeEffectRun !== run) return;
+      stopEffectRun(run);
+      const reason = readableMessage(message, catalog);
+      if (run.checkpoint) {
+        renderEffectResult(
+          run.checkpoint,
+          run,
+          true,
+          `${reason} Showing the best matching recipe found so far.`,
+        );
+      } else {
+        effectMessage(
+          `${reason} No matching recipe was found before the search stopped. This does not prove that no match exists.`,
+        );
+      }
+    }
+
+    function renderEffectResult(result, run, incomplete = false, notice = null) {
       output.replaceChildren();
+      if (notice)
+        appendTextElement(output, "p", notice, "status-line").setAttribute("role", "status");
       if (result.notFound) {
         const proven = run.mode === "exact";
         effectMessage(
@@ -1348,19 +1416,23 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
       renderCombination(
-        run.matchMode === "contains"
-          ? run.mode === "exact"
-            ? "Shortest matching recipe"
-            : "Matching recipe found"
-          : run.mode === "exact"
-            ? "Shortest recipe with only wanted effects"
-            : "Recipe with only wanted effects found",
+        incomplete
+          ? "Best matching recipe found so far"
+          : run.matchMode === "contains"
+            ? run.mode === "exact"
+              ? "Shortest matching recipe"
+              : "Matching recipe found"
+            : run.mode === "exact"
+              ? "Shortest recipe with only wanted effects"
+              : "Recipe with only wanted effects found",
         result.recipe,
         catalog,
         output,
-        run.mode === "exact"
-          ? { label: "Optimality proven", tone: "proven" }
-          : { label: "Approximate search — optimality not guaranteed", tone: "approximate" },
+        incomplete
+          ? { label: "Search stopped — optimality not proven", tone: "approximate" }
+          : run.mode === "exact"
+            ? { label: "Optimality proven", tone: "proven" }
+            : { label: "Approximate search — optimality not guaranteed", tone: "approximate" },
       );
     }
 
@@ -1373,6 +1445,15 @@ document.addEventListener("DOMContentLoaded", function () {
         if (activeEffectRun !== run || message?.request_id !== run.requestId) return;
         if (message.type === "progress") {
           effectMessage(progressText(message.progress), { busy: true });
+          return;
+        }
+        if (message.type === "checkpoint") {
+          const validated = validateEffectResult(message.result, run, true);
+          if (!validated) {
+            failEffectRun(run, "The local effect search returned an invalid intermediate result.");
+            return;
+          }
+          run.checkpoint = validated;
           return;
         }
         if (message.type === "result") {
@@ -1394,6 +1475,21 @@ document.addEventListener("DOMContentLoaded", function () {
             metadata?.mode === run.mode &&
             (metadata.status === "incomplete" || metadata.status === "error") &&
             metadata.optimality_proven === false;
+          if (validError && metadata.status === "incomplete" && typeof message.error === "string") {
+            if (message.result != null) {
+              const validated = validateEffectResult(message.result, run, true);
+              if (!validated) {
+                failEffectRun(
+                  run,
+                  "The local effect search returned an invalid intermediate result.",
+                );
+                return;
+              }
+              run.checkpoint = validated;
+            }
+            interruptEffectRun(run, message.error);
+            return;
+          }
           failEffectRun(
             run,
             validError && typeof message.error === "string"
@@ -1488,6 +1584,7 @@ document.addEventListener("DOMContentLoaded", function () {
       };
       const run = {
         abortController: new AbortController(),
+        checkpoint: null,
         excludedEffects: [...excludedEffects],
         matchMode,
         mode: selectedMode.value,
@@ -1502,7 +1599,7 @@ document.addEventListener("DOMContentLoaded", function () {
       setEffectBusy(true);
       effectMessage("Starting local effect search…", { busy: true });
       run.watchdog = setTimeout(
-        () => failEffectRun(run, "The local effect search timed out."),
+        () => interruptEffectRun(run, "The local effect search timed out."),
         run.mode === "exact" ? 305_000 : 20_000,
       );
       try {
@@ -1538,8 +1635,7 @@ document.addEventListener("DOMContentLoaded", function () {
     cancelButton.addEventListener("click", () => {
       if (!activeEffectRun) return;
       const run = activeEffectRun;
-      stopEffectRun(run);
-      effectMessage("Effect search cancelled. Your selected effects were kept.", { error: true });
+      interruptEffectRun(run, "Effect search cancelled.");
     });
     retryButton.addEventListener("click", prepareEffects);
     window.addEventListener("pagehide", () => {
@@ -1550,8 +1646,7 @@ document.addEventListener("DOMContentLoaded", function () {
       cancelSearch(message) {
         if (!activeEffectRun) return;
         const run = activeEffectRun;
-        stopEffectRun(run);
-        effectMessage(message, { error: true });
+        interruptEffectRun(run, message);
       },
       prepare: prepareEffects,
     };
@@ -1569,8 +1664,7 @@ document.addEventListener("DOMContentLoaded", function () {
     function selectTab(index, focus = false) {
       recipeController?.cancel();
       if (index !== 0 && activeRun) {
-        stopRun(activeRun);
-        renderMessage("Search cancelled when switching tabs. No result was produced.");
+        interruptRun(activeRun, "Search cancelled when switching tabs.");
       }
       if (index !== 2) {
         effectController?.cancelSearch(

@@ -136,6 +136,95 @@ assert.throws(
   () => engine.search(tieCatalog, request, { work_limit: 1 }),
   (error) => error instanceof engine.SearchLimitExceeded && error.reason === "work_limit",
 );
+
+for (const searchMode of ["exact", "fast"]) {
+  const checkpoints = [];
+  assert.throws(
+    () =>
+      engine.search(
+        tieCatalog,
+        { ...request, combination_size: 1, search_mode: searchMode },
+        {
+          work_limit: 1,
+          beam_width: 1,
+          onCheckpoint(result) {
+            checkpoints.push(result);
+            result.best_profit.substances[0] = "mutated callback data";
+            result.stats.work_units = -1;
+          },
+        },
+      ),
+    (error) => {
+      assert.ok(error instanceof engine.SearchLimitExceeded);
+      assert.equal(error.reason, "work_limit");
+      assert.deepEqual(error.partial_result.search, {
+        mode: searchMode,
+        status: "incomplete",
+        optimality_proven: false,
+      });
+      assert.deepEqual(error.partial_result.best_modifier.substances, ["expensive"]);
+      assert.deepEqual(error.partial_result.best_profit.substances, ["expensive"]);
+      assert.equal(error.partial_result.stats.work_units, 1);
+      return true;
+    },
+  );
+  assert.equal(checkpoints.length, 1);
+}
+
+for (const searchMode of ["exact", "fast"]) {
+  let clockCalls = 0;
+  assert.throws(
+    () =>
+      engine.search(
+        tieCatalog,
+        { ...request, search_mode: searchMode },
+        {
+          now: () => (clockCalls++ === 0 ? 0 : 1000),
+          time_limit_seconds: 1,
+        },
+      ),
+    (error) =>
+      error instanceof engine.SearchLimitExceeded &&
+      error.reason === "time_limit" &&
+      error.partial_result === undefined,
+  );
+}
+
+const lookaheadCatalog = catalog(
+  [
+    { name: "a", modifier: 0.1, modifier_units: 10 },
+    { name: "b", modifier: 0.2, modifier_units: 20 },
+  ],
+  [{ name: "fixture", base_price_cents: 1000, effects: [] }],
+  [
+    { name: "add_a", price_cents: 0, level: 1, resulting_effect: "a", replacements: [] },
+    { name: "add_b", price_cents: 0, level: 1, resulting_effect: "b", replacements: [] },
+  ],
+);
+assert.throws(
+  () =>
+    engine.search(
+      lookaheadCatalog,
+      { ...request, combination_size: 2, search_mode: "fast" },
+      { beam_width: 1, lookahead: 1, work_limit: 4 },
+    ),
+  (error) => {
+    assert.ok(error instanceof engine.SearchLimitExceeded);
+    assert.deepEqual(error.partial_result.best_modifier.substances, ["add_a", "add_b"]);
+    assert.deepEqual(error.partial_result.best_profit.substances, ["add_a", "add_b"]);
+    assert.equal(error.partial_result.stats.lookahead_candidates, 2);
+    return true;
+  },
+);
+
+const completedCheckpoints = [];
+const completed = engine.search(
+  tieCatalog,
+  { ...request, combination_size: 1 },
+  { onCheckpoint: (result) => completedCheckpoints.push(result) },
+);
+completedCheckpoints.at(-1).best_profit.substances[0] = "mutated after completion";
+assert.deepEqual(completed.best_profit.substances, ["cheap"]);
 for (const searchMode of ["exact", "fast"]) {
   let clock = 0;
   let completionProgress = false;
@@ -155,11 +244,21 @@ for (const searchMode of ["exact", "fast"]) {
           },
         },
       ),
-    (error) =>
-      error instanceof engine.SearchLimitExceeded &&
-      error.reason === "time_limit" &&
-      error.best_modifier === undefined &&
-      error.best_profit === undefined,
+    (error) => {
+      assert.ok(error instanceof engine.SearchLimitExceeded);
+      assert.equal(error.reason, "time_limit");
+      assert.deepEqual(error.partial_result.search, {
+        mode: searchMode,
+        status: "incomplete",
+        optimality_proven: false,
+      });
+      assert.deepEqual(error.partial_result.best_modifier.substances, ["cheap"]);
+      assert.deepEqual(error.partial_result.best_profit.substances, ["cheap"]);
+      assert.equal(error.partial_result.stats.work_units, 2);
+      assert.equal(error.best_modifier, undefined);
+      assert.equal(error.best_profit, undefined);
+      return true;
+    },
   );
   assert.equal(completionProgress, true);
 }

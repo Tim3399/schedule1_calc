@@ -35,6 +35,30 @@
     return value !== null && typeof value === "object" && !Array.isArray(value);
   }
 
+  function cloneSnapshot(value) {
+    if (Array.isArray(value)) return value.map(cloneSnapshot);
+    if (!isObject(value)) return value;
+    return Object.fromEntries(
+      Object.entries(value).map(([key, nested]) => [key, cloneSnapshot(nested)]),
+    );
+  }
+
+  function checkpointEmitter(callback, buildSnapshot) {
+    if (callback !== undefined && typeof callback !== "function") {
+      throw new TypeError("options.onCheckpoint must be a function");
+    }
+    let latest;
+    return {
+      emit(outcome) {
+        latest = buildSnapshot(outcome);
+        if (callback !== undefined) callback(cloneSnapshot(latest));
+      },
+      latest() {
+        return latest;
+      },
+    };
+  }
+
   function requireInteger(value, name, minimum = 0) {
     if (!Number.isSafeInteger(value) || value < minimum) {
       throw new TypeError(`${name} must be a safe integer of at least ${minimum}`);
@@ -364,6 +388,7 @@
       const evaluation = evaluate(state, useCache);
       const modifierProfitUnits = evaluation.sellUnits - earlyCost;
       const profitUnits = evaluation.sellUnits - cheapCost;
+      let improved = false;
       if (
         evaluation.modifier > bestModifierValue ||
         (evaluation.modifier === bestModifierValue &&
@@ -375,6 +400,7 @@
         bestModifierProfitUnits = modifierProfitUnits;
         bestModifierRecipe = early;
         bestModifier = runtime.result(state, early, earlyCost, evaluation);
+        improved = true;
       }
       if (
         profitUnits > bestProfitUnits ||
@@ -383,7 +409,9 @@
         bestProfitUnits = profitUnits;
         bestProfitRecipe = cheap;
         bestProfit = runtime.result(state, cheap, cheapCost, evaluation);
+        improved = true;
       }
+      if (improved) options.onIncumbent({ bestModifier, bestProfit, stats });
     }
 
     let states = new Map([
@@ -532,6 +560,7 @@
       const evaluation = runtime.evaluate(state);
       const modifierProfitUnits = evaluation.sellUnits - modifierCost;
       const profitUnits = evaluation.sellUnits - profitCost;
+      let improved = false;
       if (
         evaluation.modifier > bestModifierValue ||
         (evaluation.modifier === bestModifierValue &&
@@ -543,6 +572,7 @@
         bestModifierProfitUnits = modifierProfitUnits;
         bestModifierRecipe = modifierRecipe;
         bestModifier = runtime.result(state, modifierRecipe, modifierCost, evaluation);
+        improved = true;
       }
       if (
         profitUnits > bestProfitUnits ||
@@ -551,7 +581,9 @@
         bestProfitUnits = profitUnits;
         bestProfitRecipe = profitRecipe;
         bestProfit = runtime.result(state, profitRecipe, profitCost, evaluation);
+        improved = true;
       }
+      if (improved) options.onIncumbent({ bestModifier, bestProfit, stats });
       return { modifier: evaluation.modifier, modifierProfitUnits, profitUnits };
     }
 
@@ -793,13 +825,10 @@
 
     if (matchesEffectConstraints(product.effects, constraints)) {
       const evaluation = runtime.evaluate(product.effects);
+      const recipe = runtime.result(product.effects, [], 0, evaluation);
+      options.onIncumbent({ recipe, stats });
       stats.optimality_guaranteed = true;
-      return finishEffectSearch(
-        runtime,
-        stats,
-        maxSize,
-        runtime.result(product.effects, [], 0, evaluation),
-      );
+      return finishEffectSearch(runtime, stats, maxSize, recipe);
     }
 
     let states = new Map([
@@ -825,6 +854,16 @@
             preferEffectRecipe(candidate, winner)
           ) {
             winner = candidate;
+            const evaluation = runtime.evaluate(candidate.state);
+            options.onIncumbent({
+              recipe: runtime.result(
+                candidate.state,
+                candidate.recipe,
+                candidate.costUnits,
+                evaluation,
+              ),
+              stats,
+            });
           }
           if (depth === maxSize) continue;
           if (
@@ -910,7 +949,13 @@
     }
 
     if (matchesEffectConstraints(product.effects, constraints)) {
-      return completed({ state: product.effects, recipe: [], costUnits: 0 });
+      const candidate = { state: product.effects, recipe: [], costUnits: 0 };
+      const evaluation = runtime.evaluate(candidate.state);
+      options.onIncumbent({
+        recipe: runtime.result(candidate.state, candidate.recipe, candidate.costUnits, evaluation),
+        stats,
+      });
+      return completed(candidate);
     }
 
     let states = new Map([
@@ -934,6 +979,16 @@
             preferEffectRecipe(candidate, winner)
           ) {
             winner = candidate;
+            const evaluation = runtime.evaluate(candidate.state);
+            options.onIncumbent({
+              recipe: runtime.result(
+                candidate.state,
+                candidate.recipe,
+                candidate.costUnits,
+                evaluation,
+              ),
+              stats,
+            });
           }
           if (
             stateKey(nextState) === stateKey(representative.state) &&
@@ -987,6 +1042,16 @@
                 preferEffectRecipe(candidate, lookaheadWinner)
               ) {
                 lookaheadWinner = candidate;
+                const evaluation = runtime.evaluate(candidate.state);
+                options.onIncumbent({
+                  recipe: runtime.result(
+                    candidate.state,
+                    candidate.recipe,
+                    candidate.costUnits,
+                    evaluation,
+                  ),
+                  stats,
+                });
               }
               const distance = effectDistance(forecastState, constraints);
               if (
@@ -1117,6 +1182,17 @@
         ? { ...EXACT_DEFAULTS, tail_depth: size >= 7 ? 2 : 1 }
         : FAST_DEFAULTS;
     const options = { ...defaults, ...suppliedOptions };
+    const checkpoints = checkpointEmitter(suppliedOptions.onCheckpoint, (outcome) => ({
+      search: {
+        mode: request.search_mode,
+        status: "incomplete",
+        optimality_proven: false,
+      },
+      best_modifier: cloneSnapshot(outcome.bestModifier),
+      best_profit: cloneSnapshot(outcome.bestProfit),
+      stats: cloneSnapshot(outcome.stats),
+    }));
+    options.onIncumbent = checkpoints.emit;
     requireInteger(options.work_limit, "work_limit", 1);
     requirePositiveNumber(options.time_limit_seconds, "time_limit_seconds");
     if (request.search_mode === "exact") {
@@ -1127,10 +1203,16 @@
       requireInteger(options.beam_width, "beam_width", 1);
       if (![0, 1].includes(options.lookahead)) throw new TypeError("lookahead must be 0 or 1");
     }
-    const outcome =
-      request.search_mode === "exact"
-        ? exactSearch(model, product, available, size, options)
-        : fastSearch(model, product, available, size, options);
+    let outcome;
+    try {
+      outcome =
+        request.search_mode === "exact"
+          ? exactSearch(model, product, available, size, options)
+          : fastSearch(model, product, available, size, options);
+    } catch (error) {
+      if (error instanceof SearchLimitExceeded) error.partial_result = checkpoints.latest();
+      throw error;
+    }
     return {
       search: {
         mode: request.search_mode,
@@ -1227,6 +1309,19 @@
     const available = model.substances.filter((substance) => substance.level <= level);
     const defaults = request.search_mode === "exact" ? EXACT_DEFAULTS : FAST_DEFAULTS;
     const options = { ...defaults, ...suppliedOptions };
+    const checkpoints = checkpointEmitter(suppliedOptions.onCheckpoint, (outcome) => ({
+      search: {
+        mode: request.search_mode,
+        status: "incomplete",
+        optimality_proven: false,
+      },
+      recipe: cloneSnapshot(outcome.recipe),
+      match_mode: matchMode,
+      target_effects: [...targetNames],
+      excluded_effects: [...excludedNames],
+      stats: cloneSnapshot(outcome.stats),
+    }));
+    options.onIncumbent = checkpoints.emit;
     requireInteger(options.work_limit, "work_limit", 1);
     requirePositiveNumber(options.time_limit_seconds, "time_limit_seconds");
     if (request.search_mode === "exact") {
@@ -1235,10 +1330,16 @@
       requireInteger(options.beam_width, "beam_width", 1);
       if (![0, 1].includes(options.lookahead)) throw new TypeError("lookahead must be 0 or 1");
     }
-    const outcome =
-      request.search_mode === "exact"
-        ? exactEffectSearch(model, product, available, size, constraints, options)
-        : fastEffectSearch(model, product, available, size, constraints, options);
+    let outcome;
+    try {
+      outcome =
+        request.search_mode === "exact"
+          ? exactEffectSearch(model, product, available, size, constraints, options)
+          : fastEffectSearch(model, product, available, size, constraints, options);
+    } catch (error) {
+      if (error instanceof SearchLimitExceeded) error.partial_result = checkpoints.latest();
+      throw error;
+    }
     const found = outcome.recipe !== null;
     const exact = request.search_mode === "exact";
     return {

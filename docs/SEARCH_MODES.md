@@ -6,7 +6,9 @@ Die Weboberfläche und `POST /get_best_mix` bieten die Modi `exact` und `fast`. 
 
 Die Website lädt die Regeln und Preise über `GET /browser/<revision>/search-data`. Diese URL und alle CSS-/JS-URLs enthalten einen gemeinsamen Inhalts-Hash und dürfen langfristig im Browser-Cache bleiben. Alle drei Reiter teilen die geladenen Modelldaten. Der kompatible Endpunkt `GET /search-data` bleibt mit erneuter Cache-Validierung erreichbar. Die [HTTP-Auslieferung](HTTP_DELIVERY.md) beschreibt Cache-Vertrag und Request-Limits.
 
-Jede Suche läuft anschließend in einem eigenen Browser-Worker aus `webapp/static/js/search-engine.js`; sie sendet keine Rechenanfrage an den Server. Die Seite bleibt bedienbar und zeigt Tiefe und Arbeitszähler. **Cancel search** beendet den Worker und verwirft alle Kandidaten. Ein neuer Lauf startet unabhängig; verspätete Nachrichten alter Läufe werden ignoriert.
+Jede Suche läuft anschließend in einem eigenen Browser-Worker aus `webapp/static/js/search-engine.js`; sie sendet keine Rechenanfrage an den Server. Die Seite bleibt bedienbar und zeigt Tiefe und Arbeitszähler. **Cancel search** beendet den Worker und zeigt den besten bereits übermittelten Zwischenstand. Dasselbe gilt bei Tabwechsel, Zeit-, Arbeits- und Zustandslimits. Die Ergebniskarte trägt ausdrücklich **Search stopped — optimality not proven**; sie behauptet weder das Optimum noch die Unmöglichkeit eines Treffers. Ein neuer Lauf startet unabhängig; verspätete Nachrichten alter Läufe werden ignoriert. Änderungen an Effektvorgaben verwerfen den dazu nicht mehr passenden Zwischenstand.
+
+Die Browser-Engine meldet verbesserte Gewinner über `options.onCheckpoint(result)`. Der Worker sendet dafür `type: "checkpoint"` mit der Lauf-ID und einem unabhängigen Ergebnissnapshot (`search.status: "incomplete"`, `optimality_proven: false`). Ein `SearchLimitExceeded` wird weiterhin geworfen und trägt, falls vorhanden, `partial_result`; der Worker übernimmt diesen Stand in das Feld `result` seiner Limitmeldung. Ohne gefundenes Rezept bleibt die Anzeige leer und erklärt den fehlenden Beweis. Ungültige Eingaben, Protokollfehler und gewöhnliche Enginefehler werden weiterhin als Fehler ohne Gewinner behandelt. Die private Python-API behält ihren bisherigen Vertrag ohne Zwischenstände.
 
 Die Laufzeit und verfügbare Speichermenge hängen vom Gerät ab. JavaScript und Web Workers sind erforderlich; fehlende Unterstützung, Ladefehler, Abbruch und Zeitlimits lösen keinen Server-Fallback aus. Ohne JavaScript bleibt die Rechenschaltfläche gesperrt. Worker-Auslagerung und unmittelbares Beenden verwenden die [Web-Worker-API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers).
 
@@ -63,7 +65,9 @@ Exact durchsucht die Tiefen der Reihe nach. Die erste vollständig geprüfte Tre
 die geringste Schrittzahl; unter ihren Treffern entscheidet der Preis. Identische geordnete
 Zwischenzustände werden verlustfrei zusammengefasst. Erschöpfte Suche ohne Treffer liefert
 `not_found` mit Beweis nur für die angeforderten Grenzen. Ein Zeit-, Arbeits-, Zustands- oder
-Größenlimit liefert dagegen `incomplete` **ohne Rezept und ohne Unmöglichkeitsbehauptung**.
+Größenlimit liefert dagegen `incomplete` **ohne Optimalitäts- oder Unmöglichkeitsbehauptung**.
+Bereits gefundene Rezepte bleiben als vorläufiger Zwischenstand verfügbar; sie erfüllen weiterhin
+alle gewünschten und ausgeschlossenen Effekte. Beim Größenlimit vor Suchbeginn gibt es keinen Zwischenstand.
 
 Die letzte angeforderte Schicht wird vollständig ausgewertet, aber nicht mehr gespeichert.
 Ein Frontier-Limit für danach ungenutzte Zustände verhindert deshalb dort keinen Beweis.
@@ -145,7 +149,7 @@ Die folgenden HTTP-Schemas gelten für autorisierte API-Aufrufe. Öffentliche We
 
 ## Exakter Modus
 
-Der exakte Modus gibt die Gewinner für Profit und Multiplikator ausschließlich nach vollständigem Abschluss seiner exakten Suche zurück. Die Garantie bezieht sich auf die angeforderten Eingaben und die aktuelle zentrale Berechnung. Beim höchsten Multiplikator entscheidet bei einem numerisch exakt gleichen Multiplikator zuerst der höhere Profit, dann die kürzere Zutatenfolge und zuletzt die Lookup-Reihenfolge. Beim besten Profit entscheiden bei numerisch exakt gleichem Profit die kürzere Zutatenfolge und danach die Lookup-Reihenfolge. Der Schnellmodus verwendet dieselben Gleichstandsregeln für die von ihm untersuchten Kandidaten, ohne dadurch globale Optimalität zu versprechen.
+Der exakte Modus bestätigt die Gewinner für Profit und Multiplikator ausschließlich nach vollständigem Abschluss seiner exakten Suche. Im Browser kann ein Abbruch zusätzlich die vorläufigen Gewinner ohne Beweis anzeigen. Die Garantie bezieht sich auf die angeforderten Eingaben und die aktuelle zentrale Berechnung. Beim höchsten Multiplikator entscheidet bei einem numerisch exakt gleichen Multiplikator zuerst der höhere Profit, dann die kürzere Zutatenfolge und zuletzt die Lookup-Reihenfolge. Beim besten Profit entscheiden bei numerisch exakt gleichem Profit die kürzere Zutatenfolge und danach die Lookup-Reihenfolge. Der Schnellmodus verwendet dieselben Gleichstandsregeln für die von ihm untersuchten Kandidaten, ohne dadurch globale Optimalität zu versprechen.
 
 Gemeinsame Zwischenzustände dürfen nur verlustfrei zusammengefasst werden. Für dieselbe geordnete Effektfolge bei derselben Tiefe bleibt der billigste Rezeptweg erhalten; bei gleichen Kosten entscheidet die Lookup-Reihenfolge. Ein Schritt, der die vollständige geordnete Effektfolge unverändert lässt, wird als Kandidat ausgewertet, aber bei nichtnegativen Zutatenkosten nicht weiter verlängert: Jede Fortsetzung ist ohne diesen Schritt mindestens so profitabel und bei Gleichstand kürzer. Dadurch bleibt selbst dann ein zulässiges Rezept mit einem Schritt verfügbar, wenn alle Zutaten den Ausgangszustand unverändert lassen. Explizit eingegebene eigene Rezepte werden weiterhin Schritt für Schritt einschließlich solcher Wiederholungen berechnet. Cache-Verdrängung erzwingt gegebenenfalls Neuberechnung und verwirft keinen Suchzweig. Eine Heuristik darf niemals als stiller Ersatz für die exakte Suche dienen.
 
