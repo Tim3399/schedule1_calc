@@ -174,3 +174,8 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+.claude/worktrees/
+.worktrees/
+.claude/settings.local.json
+team/team.config.local.json
+team/sync.local.json

@@ -1,0 +1,95 @@
+{
+  "model": "opus",
+  "effortLevel": "medium",
+  "worktree": {
+    "baseRef": "head"
+  },
+  "permissions": {
+    "additionalDirectories": [
+      "C:/Users/timra/git/agent-team/schedule1calc-project/schedule1calc-kb"
+    ],
+    "allow": [
+      "mcp__ccd_session_mgmt__list_sessions",
+      "mcp__ccd_session_mgmt__get_session",
+      "mcp__ccd_session_mgmt__list_events",
+      "mcp__ccd_session_mgmt__search_session_transcripts",
+      "mcp__ccd_session_mgmt__set_session_title",
+      "mcp__ccd_session_mgmt__set_session_output_style",
+      "mcp__ccd_session_mgmt__set_session_model",
+      "mcp__ccd_session_mgmt__set_session_effort",
+      "mcp__ccd_session_mgmt__stop_session",
+      "mcp__ccd_session_mgmt__archive_session",
+      "mcp__ccd_session_mgmt__clear_session",
+      "mcp__ccd_session_mgmt__send_message",
+      "SendMessage",
+      "ListAgents",
+      "Bash(node team/bootstrap.mjs*)",
+      "Bash(.venv/Scripts/python.exe -B tools/project.py test)"
+    ],
+    "deny": [
+      "mcp__ccd_session_mgmt__delete_session",
+      "mcp__ccd_session_mgmt__set_session_permission_mode",
+      "mcp__ccd_session_mgmt__set_session_fast_mode",
+      "mcp__ccd_session__move_to_cloud"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/team/hooks/session-start.mjs\""
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/team/hooks/subagent-start.mjs\""
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "^(mcp__ccd_session_mgmt__.*|mcp__scheduled-tasks__.*|Agent|Write|Edit|NotebookEdit|Bash|PowerShell)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/team/hooks/policy.mjs\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "mcp__ccd_session_mgmt__set_session_title",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/team/hooks/registry-title.mjs\""
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/team/hooks/pre-compact.mjs\""
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "3",
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "0",
+    "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS": "1"
+  }
+}
