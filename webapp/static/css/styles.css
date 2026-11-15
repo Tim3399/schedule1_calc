@@ -1162,6 +1162,7 @@
   }
 
   .chips--ordered li {
+    gap: var(--space-1);
     counter-increment: chip;
   }
 
