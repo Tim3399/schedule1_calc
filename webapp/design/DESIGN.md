@@ -142,7 +142,7 @@ All colour values below are identical to `tokens.css` (section 9 lists them as t
 | Header switch ink                     | Unselected theme labels (both themes)                                      | `#e9e6dc`                         | `#e9e6dc`                         | [Ref `.h .theme span`]                                                                                                     |
 | Header switch selected / selected ink | Selected theme segment and its label (both themes)                         | `#f2efe6` / `#17181b`             | `#f2efe6` / `#17181b`             | [Ref `.h .theme .on`]                                                                                                      |
 
-⚑ marks a value adjusted from the reference so that its section 8 pair reaches the target; the reason is in the source column. `--profit-text`, `--profit-surface` and `--selected-border` are legacy names that `tokens.css` still defines until the T-14 integration removes them (section 9.3); no component uses them as a role. The effect label colours are not roles (see below).
+⚑ marks a value adjusted from the reference so that its section 8 pair reaches the target; the reason is in the source column. The version 3 names `--profit-text`, `--profit-surface` and `--selected-border` are removed (section 9.3). The effect label colours are not roles (see below).
 
 **Status carriers** (no state by colour alone) [HIG Color], [WCAG 1.4.1], [User 2026-09-12] (v2 §4):
 
@@ -516,7 +516,6 @@ The `/ -line / -weight` rows stand for three tokens each, e.g. `--type-body-size
 | `--action-primary-ink`     | `#f4efd6`                                              | `#0f1a08`                     |
 | `--selected-surface`       | `#1f2219`                                              | `#f2efe6`                     |
 | `--selected-ink`           | `#fbf8ef`                                              | `#17181b`                     |
-| `--selected-border`        | `#1f2219`                                              | `#f2efe6`                     |
 | `--status-success`         | `#4a6340`                                              | `#9fb58f`                     |
 | `--status-success-soft`    | `rgb(74 99 64 / 10%)`                                  | `rgb(159 181 143 / 14%)`      |
 | `--progress-fill-start`    | `#b9cfa4`                                              | `#3f5733`                     |
@@ -525,8 +524,6 @@ The `/ -line / -weight` rows stand for three tokens each, e.g. `--type-body-size
 | `--status-warning-soft`    | `rgb(138 81 0 / 10%)`                                  | `rgb(255 179 64 / 14%)`       |
 | `--status-error`           | `#b3101c`                                              | `#ff8a82`                     |
 | `--status-error-soft`      | `rgb(179 16 28 / 8%)`                                  | `rgb(255 138 130 / 14%)`      |
-| `--profit-text`            | `#16290f`                                              | `#16290f`                     |
-| `--profit-surface`         | `#a9cf8c`                                              | `#a9cf8c`                     |
 | `--scene-sky-top`          | `#c9c1dc`                                              | `#07080d`                     |
 | `--scene-sky-bottom`       | `#efcdb0`                                              | `#1b1730`                     |
 | `--scene-far`              | `#a59fbf`                                              | `#1a1a2a`                     |
@@ -596,6 +593,14 @@ Every custom property of `tokens.css` on main @ 078fd3a:
 | `--shadow-card`                    | `--shadow-raised`         | dark is `none` as before                                                                                                                                                                                                                                                            |
 
 New without predecessor: `--gap-*`, `--weight-*`, all `--type-*-weight`, `--type-headline-*`, `--type-caption-*`, `--surface-field`, `--text-link`, `--border-control-hover`, `--action-primary-pressed`, `--selected-surface`, `--selected-border`, `--status-success`, `--status-success-soft`, `--profit-text`, `--profit-surface`, `--shadow-popover`, `--control-min`, `--focus-ring-width`, `--focus-ring-offset`.
+
+Version 3 → version 4 (T-14): every version 3 name stays with the values of section 9.2, except:
+
+| Old token (`tokens.css` v3) | New token            | Note                                                                 |
+| --------------------------- | -------------------- | -------------------------------------------------------------------- |
+| `--profit-text`             | `--money-ink`        | the profit figure is dark ink on the banknote in both themes         |
+| `--profit-surface`          | `--money-surface`    | the banknote fill, with `--money-border` and `--money-guilloche`     |
+| `--selected-border`         | `--selected-surface` | selection is a neutral inverted fill; no separate boundary is needed |
 
 ## 10. Brand-asset limits
 

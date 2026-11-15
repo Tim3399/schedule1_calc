@@ -136,8 +136,6 @@
     /* Selection is neutral and inverted. */
     --selected-surface: #1f2219;
     --selected-ink: #fbf8ef;
-    /* Legacy until the T-14 integration; replaced by --selected-surface. */
-    --selected-border: #1f2219;
     /* Success is the muted green: Optimality proven, Want. */
     --status-success: #4a6340;
     --status-success-soft: rgb(74 99 64 / 10%);
@@ -147,9 +145,6 @@
     --status-warning-soft: rgb(138 81 0 / 10%);
     --status-error: #b3101c;
     --status-error-soft: rgb(179 16 28 / 8%);
-    /* Legacy until the T-14 integration; replaced by --money-*. */
-    --profit-text: #16290f;
-    --profit-surface: #a9cf8c;
     /* Header scene band (own drawing): dusk in light, night in dark. */
     --scene-sky-top: #c9c1dc;
     --scene-sky-bottom: #efcdb0;
@@ -188,8 +183,6 @@
     /* Selection is neutral and inverted. */
     --selected-surface: #1f2219;
     --selected-ink: #fbf8ef;
-    /* Legacy until the T-14 integration; replaced by --selected-surface. */
-    --selected-border: #1f2219;
     /* Success is the muted green: Optimality proven, Want. */
     --status-success: #4a6340;
     --status-success-soft: rgb(74 99 64 / 10%);
@@ -199,9 +192,6 @@
     --status-warning-soft: rgb(138 81 0 / 10%);
     --status-error: #b3101c;
     --status-error-soft: rgb(179 16 28 / 8%);
-    /* Legacy until the T-14 integration; replaced by --money-*. */
-    --profit-text: #16290f;
-    --profit-surface: #a9cf8c;
     /* Header scene band (own drawing): dusk in light, night in dark. */
     --scene-sky-top: #c9c1dc;
     --scene-sky-bottom: #efcdb0;
@@ -241,8 +231,6 @@
       /* Selection is neutral and inverted. */
       --selected-surface: #f2efe6;
       --selected-ink: #17181b;
-      /* Legacy until the T-14 integration; replaced by --selected-surface. */
-      --selected-border: #f2efe6;
       /* Success is the muted green: Optimality proven, Want. */
       --status-success: #9fb58f;
       --status-success-soft: rgb(159 181 143 / 14%);
@@ -252,9 +240,6 @@
       --status-warning-soft: rgb(255 179 64 / 14%);
       --status-error: #ff8a82;
       --status-error-soft: rgb(255 138 130 / 14%);
-      /* Legacy until the T-14 integration; replaced by --money-*. */
-      --profit-text: #16290f;
-      --profit-surface: #a9cf8c;
       /* Header scene band (own drawing): dusk in light, night in dark. */
       --scene-sky-top: #07080d;
       --scene-sky-bottom: #1b1730;
@@ -294,8 +279,6 @@
     /* Selection is neutral and inverted. */
     --selected-surface: #f2efe6;
     --selected-ink: #17181b;
-    /* Legacy until the T-14 integration; replaced by --selected-surface. */
-    --selected-border: #f2efe6;
     /* Success is the muted green: Optimality proven, Want. */
     --status-success: #9fb58f;
     --status-success-soft: rgb(159 181 143 / 14%);
@@ -305,9 +288,6 @@
     --status-warning-soft: rgb(255 179 64 / 14%);
     --status-error: #ff8a82;
     --status-error-soft: rgb(255 138 130 / 14%);
-    /* Legacy until the T-14 integration; replaced by --money-*. */
-    --profit-text: #16290f;
-    --profit-surface: #a9cf8c;
     /* Header scene band (own drawing): dusk in light, night in dark. */
     --scene-sky-top: #07080d;
     --scene-sky-bottom: #1b1730;
