@@ -323,7 +323,7 @@ Result: 67 pairs, 0 below target. No decorative separator role exists (section 4
 
 ## 9. Token plan
 
-T-3 implements these names and values in `webapp/static/css/tokens.css` as written. Names are final. [Own: one plan keeps T-3..T-7 consistent], brief T-2, [MG DESIGN.md:80] and [QT README.md:46] (structure: roles, not values, in components).
+Version 4 (T-14, Studio direction, decision D-12): `webapp/static/css/tokens.css` holds these names and values; light is the "Dusk" theme, dark the "Night" theme. T-3 implemented the version 3 names. [Own: one plan keeps T-3..T-7 consistent], brief T-2, [MG DESIGN.md:80] and [QT README.md:46] (structure: roles, not values, in components).
 
 ### 9.1 Theme-independent tokens
 
@@ -336,14 +336,17 @@ T-3 implements these names and values in `webapp/static/css/tokens.css` as writt
 | `--gap-regular`                                 | 16px                                                                                                    |
 | `--gap-section`                                 | 32px                                                                                                    |
 | `--radius-small`                                | 6px                                                                                                     |
-| `--radius-control`                              | 10px                                                                                                    |
-| `--radius-card`                                 | 16px                                                                                                    |
+| `--radius-control`                              | 8px                                                                                                     |
+| `--radius-card`                                 | 10px                                                                                                    |
+| `--radius-screen`                               | 12px                                                                                                    |
 | `--radius-pill`                                 | 999px                                                                                                   |
 | `--font-ui`                                     | `system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif` |
+| `--font-display`                                | `"Barlow", var(--font-ui)`                                                                              |
 | `--weight-regular`                              | 400                                                                                                     |
 | `--weight-medium`                               | 500                                                                                                     |
 | `--weight-semibold`                             | 600                                                                                                     |
 | `--weight-bold`                                 | 700                                                                                                     |
+| `--weight-heavy`                                | 800                                                                                                     |
 | `--type-large-title-size` / `-line` / `-weight` | 2.125rem / 1.2 / 700                                                                                    |
 | `--type-page-title-size` / `-line` / `-weight`  | 1.375rem / 1.27 / 700                                                                                   |
 | `--type-title-size` / `-line` / `-weight`       | 1.25rem / 1.25 / 600                                                                                    |
@@ -356,10 +359,26 @@ T-3 implements these names and values in `webapp/static/css/tokens.css` as writt
 | `--control-min`                                 | 44px                                                                                                    |
 | `--focus-ring-width`                            | 2px (3px under `prefers-contrast: more`)                                                                |
 | `--focus-ring-offset`                           | 2px                                                                                                     |
+| `--focus-ring-header`                           | `#ffd257`                                                                                               |
 | `--motion-fast`                                 | 100ms                                                                                                   |
 | `--motion-base`                                 | 150ms                                                                                                   |
+| `--motion-reveal`                               | 300ms                                                                                                   |
+| `--motion-count`                                | 550ms                                                                                                   |
+| `--motion-progress`                             | 1600ms                                                                                                  |
 | `--ease-standard`                               | `cubic-bezier(0.25, 0.1, 0.25, 1)`                                                                      |
+| `--ease-emphasized`                             | `cubic-bezier(0.2, 0, 0, 1)`                                                                            |
 | `--content-max`                                 | 1120px                                                                                                  |
+| `--scene-height`                                | 96px                                                                                                    |
+| `--screen-rim-width`                            | 4px                                                                                                     |
+| `--brand-cream`                                 | `#efe8c6`                                                                                               |
+| `--brand-outline`                               | `#2c4526`                                                                                               |
+| `--money-surface`                               | `#a9cf8c`                                                                                               |
+| `--money-border`                                | `#2c4526`                                                                                               |
+| `--money-ink`                                   | `#16290f`                                                                                               |
+| `--money-guilloche`                             | `rgb(44 69 38 / 9%)`                                                                                    |
+| `--header-switch-ink`                           | `#e9e6dc`                                                                                               |
+| `--header-switch-selected`                      | `#f2efe6`                                                                                               |
+| `--header-switch-selected-ink`                  | `#17181b`                                                                                               |
 
 The `/ -line / -weight` rows stand for three tokens each, e.g. `--type-body-size`, `--type-body-line`, `--type-body-weight`.
 
@@ -369,32 +388,44 @@ The `/ -line / -weight` rows stand for three tokens each, e.g. `--type-body-size
 
 | Token                      | Light                                                  | Dark                          |
 | -------------------------- | ------------------------------------------------------ | ----------------------------- |
-| `--surface-canvas`         | `#f2f2f5`                                              | `#161618`                     |
-| `--surface-panel`          | `#ffffff`                                              | `#1e1e21`                     |
-| `--surface-raised`         | `#ffffff`                                              | `#28282c`                     |
-| `--surface-sunken`         | `#e8e8ed`                                              | `#0f0f11`                     |
-| `--surface-field`          | `#ffffff`                                              | `#0f0f11`                     |
-| `--text-primary`           | `#1d1d1f`                                              | `#f5f5f7`                     |
-| `--text-secondary`         | `#48484e`                                              | `#b8b8bf`                     |
-| `--text-tertiary`          | `#5f5f66`                                              | `#98989f`                     |
-| `--text-link`              | `#0060c0`                                              | `#6cb4ff`                     |
-| `--border-control`         | `#808087`                                              | `#7c7c84`                     |
-| `--border-control-hover`   | `#5c5c63`                                              | `#a0a0a8`                     |
-| `--focus-ring`             | `#0066cc`                                              | `#4aa3ff`                     |
-| `--action-primary`         | `#3f6f10`                                              | `#87c72c`                     |
-| `--action-primary-hover`   | `#365f0d`                                              | `#98d443`                     |
-| `--action-primary-pressed` | `#2d500a`                                              | `#77b322`                     |
-| `--action-primary-ink`     | `#ffffff`                                              | `#161618`                     |
-| `--selected-surface`       | `#ffffff`                                              | `#3a3a40`                     |
-| `--selected-border`        | `#6e6e75`                                              | `#a0a0a8`                     |
-| `--status-success`         | `#0b7364`                                              | `#3cc8b0`                     |
-| `--status-success-soft`    | `rgb(11 115 100 / 10%)`                                | `rgb(60 200 176 / 14%)`       |
+| `--surface-canvas`         | `#e9e4d6`                                              | `#0b0b0f`                     |
+| `--surface-screen`         | `#fbf8ef`                                              | `#17181b`                     |
+| `--surface-panel`          | `#f1ecdd`                                              | `#202125`                     |
+| `--surface-raised`         | `#fbf8ef`                                              | `#17181b`                     |
+| `--surface-sunken`         | `#e3dccb`                                              | `#2e2f34`                     |
+| `--surface-field`          | `#ffffff`                                              | `#0f1012`                     |
+| `--border-subtle`          | `#ddd5bf`                                              | `#2e2f34`                     |
+| `--screen-rim`             | `#d9cfa8`                                              | `#4a4536`                     |
+| `--text-primary`           | `#1f2219`                                              | `#f2efe6`                     |
+| `--text-secondary`         | `#4b4d43`                                              | `#bdbab0`                     |
+| `--text-tertiary`          | `#5d5f54`                                              | `#a3a097`                     |
+| `--text-link`              | `#1f2219`                                              | `#f2efe6`                     |
+| `--border-control`         | `#7f7c6e`                                              | `#86847c`                     |
+| `--border-control-hover`   | `#5d5f54`                                              | `#a3a097`                     |
+| `--focus-ring`             | `#1f2219`                                              | `#ffd257`                     |
+| `--action-primary`         | `#2f5a22`                                              | `#9bcf63`                     |
+| `--action-primary-hover`   | `#3a6b2b`                                              | `#aad977`                     |
+| `--action-primary-pressed` | `#264a1b`                                              | `#8bbf52`                     |
+| `--action-primary-ink`     | `#f4efd6`                                              | `#0f1a08`                     |
+| `--selected-surface`       | `#1f2219`                                              | `#f2efe6`                     |
+| `--selected-ink`           | `#fbf8ef`                                              | `#17181b`                     |
+| `--selected-border`        | `#1f2219`                                              | `#f2efe6`                     |
+| `--status-success`         | `#4a6340`                                              | `#9fb58f`                     |
+| `--status-success-soft`    | `rgb(74 99 64 / 10%)`                                  | `rgb(159 181 143 / 14%)`      |
+| `--progress-fill-start`    | `#b9cfa4`                                              | `#3f5733`                     |
+| `--progress-fill-end`      | `#8fb07c`                                              | `#6b8a57`                     |
 | `--status-warning`         | `#8a5100`                                              | `#ffb340`                     |
 | `--status-warning-soft`    | `rgb(138 81 0 / 10%)`                                  | `rgb(255 179 64 / 14%)`       |
-| `--status-error`           | `#c1121f`                                              | `#ff8a82`                     |
-| `--status-error-soft`      | `rgb(193 18 31 / 8%)`                                  | `rgb(255 138 130 / 14%)`      |
-| `--profit-text`            | `#1d1d1f`                                              | `#f5f5f7`                     |
-| `--profit-surface`         | `#e8e8ed`                                              | `#0f0f11`                     |
+| `--status-error`           | `#b3101c`                                              | `#ff8a82`                     |
+| `--status-error-soft`      | `rgb(179 16 28 / 8%)`                                  | `rgb(255 138 130 / 14%)`      |
+| `--profit-text`            | `#16290f`                                              | `#16290f`                     |
+| `--profit-surface`         | `#a9cf8c`                                              | `#a9cf8c`                     |
+| `--scene-sky-top`          | `#c9c1dc`                                              | `#07080d`                     |
+| `--scene-sky-bottom`       | `#efcdb0`                                              | `#1b1730`                     |
+| `--scene-far`              | `#a59fbf`                                              | `#1a1a2a`                     |
+| `--scene-mid`              | `#8a84a6`                                              | `#131320`                     |
+| `--scene-near`             | `#6c6884`                                              | `#0c0c15`                     |
+| `--header-switch-surface`  | `rgb(0 0 0 / 60%)`                                     | `rgb(0 0 0 / 40%)`            |
 | `--shadow-raised`          | `0 1px 2px rgb(0 0 0 / 6%), 0 2px 8px rgb(0 0 0 / 6%)` | `none`                        |
 | `--shadow-popover`         | `0 8px 24px rgb(0 0 0 / 14%)`                          | `0 8px 24px rgb(0 0 0 / 50%)` |
 
@@ -440,7 +471,7 @@ Every custom property of `tokens.css` on main @ 078fd3a:
 | `--surface`                        | `--surface-panel`         | cards and panels                                                                                                                                                                                                                                                                    |
 | `--surface-raised`                 | `--surface-raised`        | new values                                                                                                                                                                                                                                                                          |
 | `--surface-sunken`                 | `--surface-sunken`        | new values; field fills move to `--surface-field`                                                                                                                                                                                                                                   |
-| `--border-subtle`                  | removed                   | no separator lines; grouping by surface steps and spacing (section 4); a control boundary uses `--border-control`                                                                                                                                                                   |
+| `--border-subtle`                  | `--border-subtle`         | removed in v3; v4 brings it back with new values for the screen's separator lines (section 4, version 4)                                                                                                                                                                            |
 | `--border-strong`                  | `--border-control`        | control boundaries                                                                                                                                                                                                                                                                  |
 | `--text-primary`                   | `--text-primary`          | new values                                                                                                                                                                                                                                                                          |
 | `--text-secondary`                 | `--text-secondary`        | new values                                                                                                                                                                                                                                                                          |
