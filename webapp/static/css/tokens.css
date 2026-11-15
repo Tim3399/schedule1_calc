@@ -6,9 +6,9 @@
  * do not copy values there.
  *
  * Theme resolution (both themes are first-class, the system decides by default):
- *   :root                                                               -> light values
+ *   :root                                                               -> light values (Dusk)
  *   :root[data-theme="light"]                                           -> light values (explicit choice wins)
- *   @media (prefers-color-scheme: dark) :root:not([data-theme="light"]) -> dark values
+ *   @media (prefers-color-scheme: dark) :root:not([data-theme="light"]) -> dark values (Night)
  *   :root[data-theme="dark"]                                            -> dark values (explicit choice wins)
  * A missing attribute or data-theme="system" means "follow the system".
  */
@@ -34,18 +34,21 @@
 
     /* Theme-independent: radii */
     --radius-small: 6px;
-    --radius-control: 10px;
-    --radius-card: 16px;
+    --radius-control: 8px;
+    --radius-card: 10px;
+    --radius-screen: 12px;
     --radius-pill: 999px;
 
-    /* Theme-independent: type */
+    /* Theme-independent: type. Barlow (OFL, self-hosted) is for the wordmark and figures only. */
     --font-ui:
       system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
       sans-serif;
+    --font-display: "Barlow", var(--font-ui);
     --weight-regular: 400;
     --weight-medium: 500;
     --weight-semibold: 600;
     --weight-bold: 700;
+    --weight-heavy: 800;
     --type-large-title-size: 2.125rem;
     --type-large-title-line: 1.2;
     --type-large-title-weight: 700;
@@ -78,77 +81,124 @@
     --control-min: 44px;
     --focus-ring-width: 2px;
     --focus-ring-offset: 2px;
+    /* Controls on the header scene band; the band is dark enough in both themes. */
+    --focus-ring-header: #ffd257;
 
     /* Theme-independent: motion */
     --motion-fast: 100ms;
     --motion-base: 150ms;
+    --motion-reveal: 300ms;
+    --motion-count: 550ms;
+    --motion-progress: 1600ms;
     --ease-standard: cubic-bezier(0.25, 0.1, 0.25, 1);
+    --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
 
     /* Theme-independent: layout */
     --content-max: 1120px;
+    --scene-height: 96px;
+    --screen-rim-width: 4px;
 
-    /* Light theme (also the values without a system preference) */
+    /* Theme-independent: identity (own lettering and banknote, same in both themes) */
+    --brand-cream: #efe8c6;
+    --brand-outline: #2c4526;
+    --money-surface: #a9cf8c;
+    --money-border: #2c4526;
+    --money-ink: #16290f;
+    --money-guilloche: rgb(44 69 38 / 9%);
+    --header-switch-ink: #e9e6dc;
+    --header-switch-selected: #f2efe6;
+    --header-switch-selected-ink: #17181b;
+
+    /* Light theme "Dusk" (also the values without a system preference) */
     color-scheme: light;
-    --surface-canvas: #f2f2f5;
-    --surface-panel: #ffffff;
-    --surface-raised: #ffffff;
-    --surface-sunken: #e8e8ed;
+    /* Surfaces: canvas behind the screen, the screen itself, panels on it. */
+    --surface-canvas: #e9e4d6;
+    --surface-screen: #fbf8ef;
+    --surface-panel: #f1ecdd;
+    --surface-raised: #fbf8ef;
+    --surface-sunken: #e3dccb;
     --surface-field: #ffffff;
-    --text-primary: #1d1d1f;
-    --text-secondary: #48484e;
-    --text-tertiary: #5f5f66;
-    --text-link: #0060c0;
+    --border-subtle: #ddd5bf;
+    --screen-rim: #d9cfa8;
+    --text-primary: #1f2219;
+    --text-secondary: #4b4d43;
+    --text-tertiary: #5d5f54;
+    --text-link: #1f2219;
     /* Control borders carry control boundaries and must stay at 3:1 (WCAG 1.4.11). */
-    --border-control: #808087;
-    --border-control-hover: #5c5c63;
-    --focus-ring: #0066cc;
-    /* The game green: fill of the one primary button of a view, nothing else. */
-    --action-primary: #3f6f10;
-    --action-primary-hover: #365f0d;
-    --action-primary-pressed: #2d500a;
-    --action-primary-ink: #ffffff;
-    --selected-surface: #ffffff;
-    --selected-border: #6e6e75;
-    --status-success: #0b7364;
-    --status-success-soft: rgb(11 115 100 / 10%);
+    --border-control: #7f7c6e;
+    --border-control-hover: #5d5f54;
+    --focus-ring: #1f2219;
+    /* The logo green: fill of the one primary button of a view and its states, nothing else. */
+    --action-primary: #2f5a22;
+    --action-primary-hover: #3a6b2b;
+    --action-primary-pressed: #264a1b;
+    --action-primary-ink: #f4efd6;
+    /* Selection is neutral and inverted. */
+    --selected-surface: #1f2219;
+    --selected-ink: #fbf8ef;
+    /* Success is the muted green: Optimality proven, Want. */
+    --status-success: #4a6340;
+    --status-success-soft: rgb(74 99 64 / 10%);
+    --progress-fill-start: #b9cfa4;
+    --progress-fill-end: #8fb07c;
     --status-warning: #8a5100;
     --status-warning-soft: rgb(138 81 0 / 10%);
-    --status-error: #c1121f;
-    --status-error-soft: rgb(193 18 31 / 8%);
-    --profit-text: #1d1d1f;
-    --profit-surface: #e8e8ed;
+    --status-error: #b3101c;
+    --status-error-soft: rgb(179 16 28 / 8%);
+    /* Header scene band (own drawing): dusk in light, night in dark. */
+    --scene-sky-top: #c9c1dc;
+    --scene-sky-bottom: #efcdb0;
+    --scene-far: #a59fbf;
+    --scene-mid: #8a84a6;
+    --scene-near: #6c6884;
+    --header-switch-surface: rgb(0 0 0 / 60%);
     --shadow-raised: 0 1px 2px rgb(0 0 0 / 6%), 0 2px 8px rgb(0 0 0 / 6%);
     --shadow-popover: 0 8px 24px rgb(0 0 0 / 14%);
   }
 
   :root[data-theme="light"] {
     color-scheme: light;
-    --surface-canvas: #f2f2f5;
-    --surface-panel: #ffffff;
-    --surface-raised: #ffffff;
-    --surface-sunken: #e8e8ed;
+    /* Surfaces: canvas behind the screen, the screen itself, panels on it. */
+    --surface-canvas: #e9e4d6;
+    --surface-screen: #fbf8ef;
+    --surface-panel: #f1ecdd;
+    --surface-raised: #fbf8ef;
+    --surface-sunken: #e3dccb;
     --surface-field: #ffffff;
-    --text-primary: #1d1d1f;
-    --text-secondary: #48484e;
-    --text-tertiary: #5f5f66;
-    --text-link: #0060c0;
-    --border-control: #808087;
-    --border-control-hover: #5c5c63;
-    --focus-ring: #0066cc;
-    --action-primary: #3f6f10;
-    --action-primary-hover: #365f0d;
-    --action-primary-pressed: #2d500a;
-    --action-primary-ink: #ffffff;
-    --selected-surface: #ffffff;
-    --selected-border: #6e6e75;
-    --status-success: #0b7364;
-    --status-success-soft: rgb(11 115 100 / 10%);
+    --border-subtle: #ddd5bf;
+    --screen-rim: #d9cfa8;
+    --text-primary: #1f2219;
+    --text-secondary: #4b4d43;
+    --text-tertiary: #5d5f54;
+    --text-link: #1f2219;
+    /* Control borders carry control boundaries and must stay at 3:1 (WCAG 1.4.11). */
+    --border-control: #7f7c6e;
+    --border-control-hover: #5d5f54;
+    --focus-ring: #1f2219;
+    /* The logo green: fill of the one primary button of a view and its states, nothing else. */
+    --action-primary: #2f5a22;
+    --action-primary-hover: #3a6b2b;
+    --action-primary-pressed: #264a1b;
+    --action-primary-ink: #f4efd6;
+    /* Selection is neutral and inverted. */
+    --selected-surface: #1f2219;
+    --selected-ink: #fbf8ef;
+    /* Success is the muted green: Optimality proven, Want. */
+    --status-success: #4a6340;
+    --status-success-soft: rgb(74 99 64 / 10%);
+    --progress-fill-start: #b9cfa4;
+    --progress-fill-end: #8fb07c;
     --status-warning: #8a5100;
     --status-warning-soft: rgb(138 81 0 / 10%);
-    --status-error: #c1121f;
-    --status-error-soft: rgb(193 18 31 / 8%);
-    --profit-text: #1d1d1f;
-    --profit-surface: #e8e8ed;
+    --status-error: #b3101c;
+    --status-error-soft: rgb(179 16 28 / 8%);
+    /* Header scene band (own drawing): dusk in light, night in dark. */
+    --scene-sky-top: #c9c1dc;
+    --scene-sky-bottom: #efcdb0;
+    --scene-far: #a59fbf;
+    --scene-mid: #8a84a6;
+    --scene-near: #6c6884;
+    --header-switch-surface: rgb(0 0 0 / 60%);
     --shadow-raised: 0 1px 2px rgb(0 0 0 / 6%), 0 2px 8px rgb(0 0 0 / 6%);
     --shadow-popover: 0 8px 24px rgb(0 0 0 / 14%);
   }
@@ -156,32 +206,47 @@
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --surface-canvas: #161618;
-      --surface-panel: #1e1e21;
-      --surface-raised: #28282c;
-      --surface-sunken: #0f0f11;
-      --surface-field: #0f0f11;
-      --text-primary: #f5f5f7;
-      --text-secondary: #b8b8bf;
-      --text-tertiary: #98989f;
-      --text-link: #6cb4ff;
-      --border-control: #7c7c84;
-      --border-control-hover: #a0a0a8;
-      --focus-ring: #4aa3ff;
-      --action-primary: #87c72c;
-      --action-primary-hover: #98d443;
-      --action-primary-pressed: #77b322;
-      --action-primary-ink: #161618;
-      --selected-surface: #3a3a40;
-      --selected-border: #a0a0a8;
-      --status-success: #3cc8b0;
-      --status-success-soft: rgb(60 200 176 / 14%);
+      /* Surfaces: canvas behind the screen, the screen itself, panels on it. */
+      --surface-canvas: #0b0b0f;
+      --surface-screen: #17181b;
+      --surface-panel: #202125;
+      --surface-raised: #17181b;
+      --surface-sunken: #2e2f34;
+      --surface-field: #0f1012;
+      --border-subtle: #2e2f34;
+      --screen-rim: #4a4536;
+      --text-primary: #f2efe6;
+      --text-secondary: #bdbab0;
+      --text-tertiary: #a3a097;
+      --text-link: #f2efe6;
+      /* Control borders carry control boundaries and must stay at 3:1 (WCAG 1.4.11). */
+      --border-control: #86847c;
+      --border-control-hover: #a3a097;
+      --focus-ring: #ffd257;
+      /* The logo green: fill of the one primary button of a view and its states, nothing else. */
+      --action-primary: #9bcf63;
+      --action-primary-hover: #aad977;
+      --action-primary-pressed: #8bbf52;
+      --action-primary-ink: #0f1a08;
+      /* Selection is neutral and inverted. */
+      --selected-surface: #f2efe6;
+      --selected-ink: #17181b;
+      /* Success is the muted green: Optimality proven, Want. */
+      --status-success: #9fb58f;
+      --status-success-soft: rgb(159 181 143 / 14%);
+      --progress-fill-start: #3f5733;
+      --progress-fill-end: #6b8a57;
       --status-warning: #ffb340;
       --status-warning-soft: rgb(255 179 64 / 14%);
       --status-error: #ff8a82;
       --status-error-soft: rgb(255 138 130 / 14%);
-      --profit-text: #f5f5f7;
-      --profit-surface: #0f0f11;
+      /* Header scene band (own drawing): dusk in light, night in dark. */
+      --scene-sky-top: #07080d;
+      --scene-sky-bottom: #1b1730;
+      --scene-far: #1a1a2a;
+      --scene-mid: #131320;
+      --scene-near: #0c0c15;
+      --header-switch-surface: rgb(0 0 0 / 40%);
       --shadow-raised: none;
       --shadow-popover: 0 8px 24px rgb(0 0 0 / 50%);
     }
@@ -189,32 +254,47 @@
 
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --surface-canvas: #161618;
-    --surface-panel: #1e1e21;
-    --surface-raised: #28282c;
-    --surface-sunken: #0f0f11;
-    --surface-field: #0f0f11;
-    --text-primary: #f5f5f7;
-    --text-secondary: #b8b8bf;
-    --text-tertiary: #98989f;
-    --text-link: #6cb4ff;
-    --border-control: #7c7c84;
-    --border-control-hover: #a0a0a8;
-    --focus-ring: #4aa3ff;
-    --action-primary: #87c72c;
-    --action-primary-hover: #98d443;
-    --action-primary-pressed: #77b322;
-    --action-primary-ink: #161618;
-    --selected-surface: #3a3a40;
-    --selected-border: #a0a0a8;
-    --status-success: #3cc8b0;
-    --status-success-soft: rgb(60 200 176 / 14%);
+    /* Surfaces: canvas behind the screen, the screen itself, panels on it. */
+    --surface-canvas: #0b0b0f;
+    --surface-screen: #17181b;
+    --surface-panel: #202125;
+    --surface-raised: #17181b;
+    --surface-sunken: #2e2f34;
+    --surface-field: #0f1012;
+    --border-subtle: #2e2f34;
+    --screen-rim: #4a4536;
+    --text-primary: #f2efe6;
+    --text-secondary: #bdbab0;
+    --text-tertiary: #a3a097;
+    --text-link: #f2efe6;
+    /* Control borders carry control boundaries and must stay at 3:1 (WCAG 1.4.11). */
+    --border-control: #86847c;
+    --border-control-hover: #a3a097;
+    --focus-ring: #ffd257;
+    /* The logo green: fill of the one primary button of a view and its states, nothing else. */
+    --action-primary: #9bcf63;
+    --action-primary-hover: #aad977;
+    --action-primary-pressed: #8bbf52;
+    --action-primary-ink: #0f1a08;
+    /* Selection is neutral and inverted. */
+    --selected-surface: #f2efe6;
+    --selected-ink: #17181b;
+    /* Success is the muted green: Optimality proven, Want. */
+    --status-success: #9fb58f;
+    --status-success-soft: rgb(159 181 143 / 14%);
+    --progress-fill-start: #3f5733;
+    --progress-fill-end: #6b8a57;
     --status-warning: #ffb340;
     --status-warning-soft: rgb(255 179 64 / 14%);
     --status-error: #ff8a82;
     --status-error-soft: rgb(255 138 130 / 14%);
-    --profit-text: #f5f5f7;
-    --profit-surface: #0f0f11;
+    /* Header scene band (own drawing): dusk in light, night in dark. */
+    --scene-sky-top: #07080d;
+    --scene-sky-bottom: #1b1730;
+    --scene-far: #1a1a2a;
+    --scene-mid: #131320;
+    --scene-near: #0c0c15;
+    --header-switch-surface: rgb(0 0 0 / 40%);
     --shadow-raised: none;
     --shadow-popover: 0 8px 24px rgb(0 0 0 / 50%);
   }

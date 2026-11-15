@@ -14,7 +14,11 @@ from src.functionality.browser_catalog import get_catalog
 
 _IMMUTABLE = "public, max-age=31536000, immutable"
 _REVALIDATE = "no-cache"
-_STABLE_MIMETYPES = {".css": "text/css", ".js": "text/javascript"}
+_STABLE_MIMETYPES = {
+    ".css": "text/css",
+    ".js": "text/javascript",
+    ".woff2": "font/woff2",
+}
 
 
 @dataclass(frozen=True)

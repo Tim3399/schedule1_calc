@@ -67,9 +67,28 @@ function catalog() {
   };
 }
 
+// Records every inline style write (property assignment, setProperty, removeProperty), so a test
+// can show that styling stays in styles.css.
+function inlineStyle() {
+  const writes = [];
+  const target = {
+    writes,
+    setProperty: (name) => writes.push(name),
+    removeProperty: (name) => writes.push(name),
+  };
+  return new Proxy(target, {
+    set(object, name, value) {
+      writes.push(String(name));
+      object[name] = value;
+      return true;
+    },
+  });
+}
+
 function loadUi({
   fetchOutcomes = [catalog()],
   workerAvailable = true,
+  windowProperties = {},
   workerConstructorError = null,
 } = {}) {
   const domReady = [];
@@ -82,7 +101,7 @@ function loadUi({
   let nextTimer = 1;
 
   function element(properties = {}) {
-    return {
+    const node = {
       attributes: {},
       checked: false,
       children: [],
@@ -91,7 +110,7 @@ function loadUi({
       disabled: false,
       hidden: false,
       listeners: {},
-      style: {},
+      style: inlineStyle(),
       textContent: "",
       value: "",
       ...properties,
@@ -103,8 +122,27 @@ function loadUi({
         child.parentNode = this;
         return child;
       },
+      classList: {
+        add(...names) {
+          const classes = new Set(node.className.split(/\s+/).filter(Boolean));
+          for (const name of names) classes.add(name);
+          node.className = [...classes].join(" ");
+        },
+        contains: (name) => node.className.split(/\s+/).includes(name),
+        remove(...names) {
+          node.className = node.className
+            .split(/\s+/)
+            .filter((name) => name && !names.includes(name))
+            .join(" ");
+        },
+      },
       focus() {
         activeElement = this;
+      },
+      remove() {
+        if (!this.parentNode) return;
+        this.parentNode.children = this.parentNode.children.filter((child) => child !== this);
+        this.parentNode = null;
       },
       replaceChildren(...children) {
         this.children = [];
@@ -114,6 +152,7 @@ function loadUi({
         this.attributes[name] = String(value);
       },
     };
+    return node;
   }
 
   const searchSubmit = element({ tagName: "button" });
@@ -201,6 +240,7 @@ function loadUi({
   }
 
   const window = element({
+    ...windowProperties,
     Schedule1Search: {
       ...engine,
       evaluateRecipe(loadedCatalog, request) {
@@ -770,4 +810,125 @@ test("load retry, worker errors, and browsers without workers expose recoverable
   await constructorUi.effectForm.listeners.submit(event());
   assert.match(textOf(constructorUi.elements["effect-result"]), /could not start: worker blocked/);
   assert.equal(constructorUi.elements["effect-form"].attributes["aria-busy"], "false");
+});
+
+function motionStubs({ reduce = false, frames = true } = {}) {
+  const queue = [];
+  const stubs = {
+    matchMedia(query) {
+      stubs.queries.push(query);
+      return { matches: reduce };
+    },
+    queries: [],
+  };
+  if (frames) {
+    stubs.requestAnimationFrame = (callback) => {
+      queue.push(callback);
+      return queue.length;
+    };
+  }
+  stubs.step = (now) => {
+    const callbacks = queue.splice(0);
+    for (const callback of callbacks) callback(now);
+    return callbacks.length;
+  };
+  return stubs;
+}
+
+function descendantsOf(node) {
+  return [node, ...node.children.flatMap(descendantsOf)];
+}
+
+function accessibleText(node) {
+  if (node.attributes?.["aria-hidden"] === "true") return "";
+  return [node.textContent, ...node.children.map(accessibleText)].filter(Boolean).join("");
+}
+
+async function effectResultFor(ui, substances = ["motor_oil"]) {
+  await openEffects(ui);
+  choose(ui, "focused");
+  choose(ui, "bright_eyed");
+  await ui.effectForm.listeners.submit(event());
+  const worker = ui.workers[0];
+  worker.emit({
+    request_id: worker.sent[0].request_id,
+    result: effectResult({ substances, targets: ["focused", "bright_eyed"] }),
+    type: "result",
+  });
+  return ui.elements["effect-result"];
+}
+
+test("two consecutive effect progress messages keep the same status block with the new text", async () => {
+  const ui = loadUi();
+  await openEffects(ui);
+  choose(ui, "calming");
+  await ui.effectForm.listeners.submit(event());
+  const worker = ui.workers[0];
+  const request_id = worker.sent[0].request_id;
+  const output = ui.elements["effect-result"];
+  const block = output.children[0];
+  assert.equal(block.className, "status-block");
+
+  worker.emit({ type: "progress", request_id, progress: { depth: 1 } });
+  assert.equal(output.children.length, 1);
+  assert.equal(output.children[0], block, "first progress message reuses the node");
+  assert.equal(block.children[0].textContent, "Searching locally — depth 1");
+
+  worker.emit({ type: "progress", request_id, progress: { depth: 2 } });
+  assert.equal(output.children[0], block, "second progress message reuses the node");
+  assert.equal(block.children[0].textContent, "Searching locally — depth 2");
+  assert.equal(block.children.length, 2, "text and progress track only");
+});
+
+test("no effect count-up and no reveal when reduced motion is requested or frames are missing", async () => {
+  for (const options of [{ reduce: true }, { frames: false }]) {
+    const stubs = motionStubs(options);
+    const ui = loadUi({ windowProperties: stubs });
+    const output = await effectResultFor(ui);
+    const all = descendantsOf(output);
+    assert.equal(all.filter((node) => node.className === "count-up").length, 0);
+    assert.equal(all.filter((node) => String(node.className).includes("is-revealing")).length, 0);
+    assert.equal(stubs.step(0), 0, "no animation frame was requested");
+  }
+});
+
+test("effect results count up in an overlay while the profit text stays final", async () => {
+  const stubs = motionStubs();
+  const ui = loadUi({ windowProperties: stubs });
+  const output = await effectResultFor(ui);
+  const all = descendantsOf(output);
+  const card = all.find((node) => node.tagName === "article");
+  assert.match(card.className, /(^| )is-revealing( |$)/);
+  const profit = all.find((node) => node.className === "stat stat--primary").children[1];
+  assert.match(profit.textContent, /^-?\$\d[\d,]*\.\d\d$/);
+  const overlays = all.filter((node) => node.className === "count-up");
+  assert.equal(overlays.length, 1);
+  assert.equal(overlays[0].attributes["aria-hidden"], "true");
+  assert.equal(accessibleText(profit), profit.textContent);
+  assert.equal(profit.children.includes(overlays[0]), true, "the overlay sits inside the dd");
+  assert.deepEqual(overlays[0].style.writes, [], "the overlay gets no inline style");
+  assert.deepEqual(profit.style.writes, [], "the value gets no inline style");
+  stubs.step(0);
+  stubs.step(700);
+  assert.equal(profit.children.includes(overlays[0]), false, "overlay is removed at the end");
+  assert.deepEqual(profit.style.writes, [], "the value has no inline style to clean up");
+  card.listeners.animationend();
+  assert.doesNotMatch(card.className, /is-revealing/);
+});
+
+test("effect results show the base tile and step prices", async () => {
+  const ui = loadUi();
+  const output = await effectResultFor(ui, ["motor_oil"]);
+  const list = descendantsOf(output).find((node) => node.tagName === "ol");
+  assert.equal(list.className, "chips chips--ordered mix");
+  assert.deepEqual(
+    list.children.map((tile) => [
+      tile.className,
+      ...tile.children.map((part) => `${part.className}=${part.textContent}`),
+    ]),
+    [
+      ["mix__item mix__item--base", "mix__step=Base", "mix__name=OG Kush"],
+      ["mix__item", "mix__step=1", "mix__name=Motor Oil", "mix__price=$1.00"],
+    ],
+  );
 });

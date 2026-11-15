@@ -196,12 +196,113 @@ document.addEventListener("DOMContentLoaded", function () {
     card.appendChild(row);
   }
 
+  function formatMoney(value) {
+    const cents = Math.round(Math.abs(value) * 100);
+    const whole = String(Math.floor(cents / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    const fraction = String(cents % 100).padStart(2, "0");
+    return `${value < 0 && cents > 0 ? "-" : ""}$${whole}.${fraction}`;
+  }
+
+  function motionAllowed() {
+    return (
+      typeof window.requestAnimationFrame === "function" &&
+      typeof window.matchMedia === "function" &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    );
+  }
+
+  function motionDuration(property, fallback) {
+    try {
+      const raw = window
+        .getComputedStyle(document.documentElement)
+        .getPropertyValue(property)
+        .trim();
+      const parsed = /^([0-9.]+)(ms|s)$/.exec(raw);
+      if (parsed) {
+        const milliseconds = Number(parsed[1]) * (parsed[2] === "s" ? 1000 : 1);
+        if (Number.isFinite(milliseconds) && milliseconds > 0) return milliseconds;
+      }
+    } catch (error) {
+      // No computed style available: use the documented default.
+    }
+    return fallback;
+  }
+
+  // The overlay is positioned and the final text hidden by styles.css (`.count-up` and
+  // `.stat--primary dd:has(> .count-up)`); no inline styles are set here.
+  function startCountUp(valueElement, finalValue) {
+    const duration = motionDuration("--motion-count", 550);
+    const overlay = document.createElement("span");
+    overlay.className = "count-up";
+    overlay.setAttribute("aria-hidden", "true");
+    overlay.textContent = formatMoney(0);
+    valueElement.appendChild(overlay);
+    let startedAt = null;
+    function frame(now) {
+      if (startedAt === null) startedAt = now;
+      const progress = Math.min(1, Math.max(0, (now - startedAt) / duration));
+      if (progress >= 1) {
+        overlay.remove();
+        return;
+      }
+      const eased = 1 - (1 - progress) ** 3;
+      overlay.textContent = formatMoney(finalValue * eased);
+      window.requestAnimationFrame(frame);
+    }
+    window.requestAnimationFrame(frame);
+  }
+
+  function startReveal(card) {
+    const duration = motionDuration("--motion-reveal", 450);
+    card.classList.add("is-revealing");
+    let done = false;
+    function finish() {
+      if (done) return;
+      done = true;
+      card.classList.remove("is-revealing");
+    }
+    card.addEventListener("animationend", finish);
+    setTimeout(finish, duration);
+  }
+
   function appendStat(stats, label, value, primary = false) {
     const entry = document.createElement("div");
     entry.className = primary ? "stat stat--primary" : "stat";
     appendTextElement(entry, "dt", label);
-    appendTextElement(entry, "dd", value);
+    const valueElement = appendTextElement(entry, "dd", value);
     stats.appendChild(entry);
+    return valueElement;
+  }
+
+  function appendMixRow(card, combination, catalog, baseProduct) {
+    const row = document.createElement("div");
+    row.className = "chips-row";
+    appendTextElement(row, "span", "Ingredients", "chips-label");
+    if (combination.substances.length === 0) {
+      appendTextElement(row, "span", "None", "chips__empty");
+      card.appendChild(row);
+      return;
+    }
+    const list = document.createElement("ol");
+    list.className = "chips chips--ordered mix";
+    if (baseProduct) {
+      const base = appendTextElement(list, "li", "", "mix__item mix__item--base");
+      appendTextElement(base, "span", "Base", "mix__step");
+      appendTextElement(base, "span", displayName(catalog, "products", baseProduct), "mix__name");
+      const type = catalogItem(catalog, "products", baseProduct)?.type;
+      if (typeof type === "string" && type) appendTextElement(base, "span", type, "mix__meta");
+    }
+    for (const [index, name] of combination.substances.entries()) {
+      const item = appendTextElement(list, "li", "", "mix__item");
+      appendTextElement(item, "span", String(index + 1), "mix__step");
+      appendTextElement(item, "span", displayName(catalog, "substances", name), "mix__name");
+      const priceCents = catalogItem(catalog, "substances", name)?.price_cents;
+      if (Number.isFinite(priceCents)) {
+        appendTextElement(item, "span", formatMoney(priceCents / 100), "mix__price");
+      }
+    }
+    row.appendChild(list);
+    card.appendChild(row);
   }
 
   function appendEffectGuide(card, effectNames, catalog) {
@@ -231,7 +332,15 @@ document.addEventListener("DOMContentLoaded", function () {
     card.appendChild(guide);
   }
 
-  function renderCombination(title, combination, catalog, destination = resultDiv, status = null) {
+  function renderCombination(
+    title,
+    combination,
+    catalog,
+    destination = resultDiv,
+    status = null,
+    { animate = false, baseProduct = null } = {},
+  ) {
+    const animated = animate && motionAllowed();
     const card = document.createElement("article");
     card.className = "card result-card";
     const head = document.createElement("header");
@@ -243,22 +352,13 @@ document.addEventListener("DOMContentLoaded", function () {
     card.appendChild(head);
     const stats = document.createElement("dl");
     stats.className = "stats";
-    appendStat(
-      stats,
-      "Profit",
-      `${(combination.sell_price - combination.substance_cost).toFixed(2)}$`,
-      true,
-    );
-    appendStat(stats, "Sell Price", `${combination.sell_price.toFixed(2)}$`);
-    appendStat(stats, "Ingredient Cost", `${combination.substance_cost.toFixed(2)}$`);
+    const profit = combination.sell_price - combination.substance_cost;
+    const profitValue = appendStat(stats, "Profit", formatMoney(profit), true);
+    appendStat(stats, "Sell Price", formatMoney(combination.sell_price));
+    appendStat(stats, "Ingredient Cost", formatMoney(combination.substance_cost));
     appendStat(stats, "Modifier", combination.modifier.toFixed(2));
     card.appendChild(stats);
-    appendChipRow(
-      card,
-      "Ingredients",
-      combination.substances.map((name) => displayName(catalog, "substances", name)),
-      true,
-    );
+    appendMixRow(card, combination, catalog, baseProduct);
     appendChipRow(
       card,
       "Effects",
@@ -268,9 +368,23 @@ document.addEventListener("DOMContentLoaded", function () {
     );
     appendEffectGuide(card, combination.effects, catalog);
     destination.appendChild(card);
+    if (animated) {
+      startReveal(card);
+      startCountUp(profitValue, profit);
+    }
+  }
+
+  // Reuses the progress node while it is the only content, so its bar keeps animating.
+  function updateStatusBlock(container, message) {
+    const only = container.children.length === 1 ? container.children[0] : null;
+    const text = only?.className === "status-block" ? only.children[0] : null;
+    if (!text) return false;
+    text.textContent = message;
+    return true;
   }
 
   function renderMessage(message, { error = false, busy = false } = {}) {
+    if (busy && updateStatusBlock(resultDiv, message)) return;
     const element = document.createElement("div");
     element.setAttribute("role", error ? "alert" : "status");
     if (error) {
@@ -360,7 +474,7 @@ document.addEventListener("DOMContentLoaded", function () {
     );
   }
 
-  function renderResult(result, requestedMode, catalog, notice = null) {
+  function renderResult(result, requestedMode, catalog, notice = null, baseProduct = null) {
     resultDiv.replaceChildren();
     if (notice)
       appendTextElement(resultDiv, "p", notice, "status-line").setAttribute("role", "status");
@@ -377,6 +491,7 @@ document.addEventListener("DOMContentLoaded", function () {
       catalog,
       resultDiv,
       status,
+      { animate: true, baseProduct },
     );
     const comparison = document.createElement("details");
     comparison.className = "result-comparison";
@@ -387,6 +502,7 @@ document.addEventListener("DOMContentLoaded", function () {
       catalog,
       comparison,
       status,
+      { baseProduct },
     );
     resultDiv.appendChild(comparison);
   }
@@ -401,6 +517,7 @@ document.addEventListener("DOMContentLoaded", function () {
         run.mode,
         run.catalog,
         `${reason} Showing the best result found so far.`,
+        run.request.product_name,
       );
     } else {
       renderMessage(
@@ -503,7 +620,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
         const result = message.result;
         stopRun(run);
-        renderResult(result, run.mode, catalog);
+        renderResult(result, run.mode, catalog, null, run.request.product_name);
         return;
       }
       if (message.type === "error") {
@@ -641,7 +758,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const substance = catalog.substances.find((candidate) => candidate.name === name);
       return {
         displayName: displayName(catalog, "substances", name),
-        price: `${(substance.price_cents / 100).toFixed(2)}$`,
+        price: formatMoney(substance.price_cents / 100),
       };
     }
 
@@ -657,7 +774,9 @@ document.addEventListener("DOMContentLoaded", function () {
           product_name: product.value,
           substances: recipe,
         });
-        renderCombination("Your Recipe Result", result, catalog, output);
+        renderCombination("Your Recipe Result", result, catalog, output, null, {
+          baseProduct: product.value,
+        });
       } catch (error) {
         const message = error instanceof Error ? error.message : "Could not calculate this recipe.";
         recipeError(readableMessage(message, catalog));
@@ -682,7 +801,7 @@ document.addEventListener("DOMContentLoaded", function () {
         tile.className = "recipe-ingredient-tile";
         tile.dataset.ingredient = substance.name;
         const name = displayName(catalog, "substances", substance.name);
-        const price = `${(substance.price_cents / 100).toFixed(2)}$`;
+        const price = formatMoney(substance.price_cents / 100);
         tile.setAttribute("aria-label", `Add ${name}, ${price}`);
         appendTextElement(tile, "span", name, "recipe-ingredient-tile__name");
         appendTextElement(tile, "span", price, "recipe-ingredient-tile__price");
@@ -1177,6 +1296,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let optionEntries = [];
 
     function effectMessage(message, { busy = false, error = false } = {}) {
+      if (busy && updateStatusBlock(output, message)) return;
       const element = document.createElement("div");
       element.setAttribute("role", error ? "alert" : "status");
       if (error) {
@@ -1515,6 +1635,7 @@ document.addEventListener("DOMContentLoaded", function () {
           : run.mode === "exact"
             ? { label: "Optimality proven", tone: "proven" }
             : { label: "Approximate search — optimality not guaranteed", tone: "approximate" },
+        { animate: true, baseProduct: run.request.product_name },
       );
     }
 

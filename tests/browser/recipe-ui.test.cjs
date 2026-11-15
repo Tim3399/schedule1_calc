@@ -372,7 +372,7 @@ test("renders the catalog shelf and repeated clicks append readable duplicate st
   await openRecipe(ui);
   const shelf = ui.elements["ingredient-shelf"];
   assert.equal(shelf.children.length, 16);
-  assert.equal(shelf.children[0].attributes["aria-label"], "Add Motor Oil, 1.00$");
+  assert.equal(shelf.children[0].attributes["aria-label"], "Add Motor Oil, $1.00");
   assert.deepEqual(
     [...tags(shelf), ...tags(ui.elements["recipe-steps"])].filter((tag) => tag === "select"),
     [],
@@ -386,7 +386,7 @@ test("renders the catalog shelf and repeated clicks append readable duplicate st
   assert.deepEqual(ui.evaluations.at(-1).substances, ["cuke", "cuke"]);
   const firstRowText = textOf(ui.elements["recipe-steps"].children[0]);
   assert.match(firstRowText, /Cuke/);
-  assert.doesNotMatch(firstRowText, /2.00\$/);
+  assert.doesNotMatch(firstRowText, /\$2\.00/);
   assert.match(ui.elements["recipe-announcement"].textContent, /Added Cuke as step 2/);
 });
 
@@ -417,7 +417,10 @@ test("clear and undo restore a 14-step sequence and its selected-row focus", asy
   assert.equal(ui.elements["recipe-steps"].children.length, 14);
   assert.equal(ui.elements["recipe-count"].textContent, "(14 ingredients)");
   assert.deepEqual(ui.evaluations.at(-1), { product_name: "og_kush", substances: recipe });
-  assert.match(textOf(ui.elements["recipe-result"]), /Ingredients\nCuke\nMotor Oil\nMotor Oil/);
+  assert.match(
+    textOf(ui.elements["recipe-result"]),
+    /Ingredients\nBase\nOG Kush\n1\nCuke\n\$2\.00\n2\nMotor Oil\n\$1\.00\n3\nMotor Oil\n\$1\.00/,
+  );
   assert.equal(ui.fetchCalls.length, 1);
   assert.equal(ui.fetchCalls[0].url, "/search-data");
   assert.equal(ui.fetchCalls[0].options.method, "GET");
@@ -466,7 +469,10 @@ test("rows expose only Delete and support focused Alt+Arrow keyboard reordering"
 
   ui.elements["recipe-steps"].children[2].children[1].listeners.click();
   assert.deepEqual(ui.evaluations.at(-1).substances, ["motor_oil", "cuke"]);
-  assert.match(textOf(ui.elements["recipe-result"]), /Ingredients\nMotor Oil/);
+  assert.match(
+    textOf(ui.elements["recipe-result"]),
+    /Ingredients\nBase\nOG Kush\n1\nMotor Oil\n\$1\.00/,
+  );
 
   ui.elements["clear-recipe"].listeners.click();
   assert.equal(ui.elements["restore-recipe"].hidden, false);
@@ -849,4 +855,58 @@ test("catalog rate limit waits for a manual retry and respects Retry-After", asy
   await openRecipe(boundedUi);
   assert.equal(boundedUi.fetchCalls.length, 1);
   assert.match(textOf(boundedUi.elements["recipe-result"]), /Wait 300 seconds/);
+});
+
+test("recipe results show the base tile with step prices and never animate", async () => {
+  const data = catalog();
+  data.products[0].type = "Weed";
+  const ui = loadUi({ fetchOutcomes: [data] });
+  const frames = [];
+  ui.window.requestAnimationFrame = (callback) => frames.push(callback);
+  ui.window.matchMedia = () => ({ matches: false });
+  await openRecipe(ui);
+  addIngredient(ui, "cuke");
+  addIngredient(ui, "motor_oil");
+
+  const descendants = (node) => [node, ...node.children.flatMap(descendants)];
+  const result = ui.elements["recipe-result"];
+  const list = descendants(result).find((node) => node.tagName === "ol");
+  assert.equal(list.className, "chips chips--ordered mix");
+  assert.deepEqual(
+    list.children.map((tile) => [
+      tile.className,
+      ...tile.children.map((part) => `${part.className}=${part.textContent}`),
+    ]),
+    [
+      ["mix__item mix__item--base", "mix__step=Base", "mix__name=OG Kush", "mix__meta=Weed"],
+      ["mix__item", "mix__step=1", "mix__name=Cuke", "mix__price=$2.00"],
+      ["mix__item", "mix__step=2", "mix__name=Motor Oil", "mix__price=$1.00"],
+    ],
+  );
+  const dollars = descendants(result)
+    .filter((node) => node.tagName === "dd")
+    .map((node) => node.textContent);
+  assert.match(dollars[0], /^-?\$\d[\d,]*\.\d\d$/);
+  assert.equal(
+    descendants(result).filter((node) => node.className === "count-up").length,
+    0,
+    "re-rendered recipe results have no count-up even when motion is allowed",
+  );
+  assert.doesNotMatch(
+    descendants(result)
+      .map((node) => node.className)
+      .join(" "),
+    /is-revealing/,
+  );
+  assert.equal(frames.length, 0, "no animation frame is requested while editing a recipe");
+});
+
+test("an empty recipe keeps the None placeholder instead of a mix list", async () => {
+  const ui = loadUi();
+  await openRecipe(ui);
+  addIngredient(ui, "cuke");
+  ui.elements["clear-recipe"].listeners.click();
+  const text = textOf(ui.elements["recipe-result"]);
+  assert.match(text, /Ingredients\nNone/);
+  assert.doesNotMatch(text, /Base/);
 });
