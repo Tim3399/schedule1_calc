@@ -720,14 +720,28 @@
     overflow-wrap: anywhere;
   }
 
-  .result-comparison summary {
-    min-height: 44px;
-    padding: var(--space-3) var(--space-4);
-    border: 1px solid var(--border-control);
-    border-radius: var(--radius-control);
+  /* Disclosure: a 44 px summary row with the native triangle, subhead role. Hover and the open state
+     raise the text; focus-visible comes from the base ring. */
+  .result-comparison summary,
+  .effect-guide summary {
+    display: flex;
+    min-height: var(--control-min);
+    align-items: center;
+    padding-block: var(--space-3);
+    border-radius: var(--radius-small);
     color: var(--text-secondary);
     cursor: pointer;
-    font-size: var(--type-callout-size);
+    font-size: var(--type-subhead-size);
+    font-weight: var(--type-subhead-weight);
+    line-height: var(--type-subhead-line);
+    transition: color var(--motion-fast) var(--ease-standard);
+  }
+
+  .result-comparison summary:hover,
+  .effect-guide summary:hover,
+  .result-comparison[open] summary,
+  .effect-guide[open] summary {
+    color: var(--text-primary);
   }
 
   .result-comparison[open] summary {
@@ -744,13 +758,23 @@
     gap: var(--space-2);
   }
 
+  /* Badge: a pill with soft fill, status text and a glyph (the glyph repeats the text, so it has
+     empty alt text). A stopped search renders as the approximate tone (script.js); `--stopped`
+     is styled in case a caller names it. */
   .badge {
-    padding: var(--space-1) var(--space-2);
-    border: 1px solid currentcolor;
-    border-radius: var(--radius-small);
-    font-size: var(--type-footnote-size);
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-pill);
+    font-size: var(--type-caption-size);
     font-variant-numeric: tabular-nums;
-    line-height: 1.3;
+    font-weight: var(--type-caption-weight);
+    gap: var(--space-1);
+    line-height: var(--type-caption-line);
+  }
+
+  .badge::before {
+    content: "\2713" / "";
   }
 
   .badge--proven {
@@ -758,9 +782,18 @@
     color: var(--status-success);
   }
 
-  .badge--approximate {
+  .badge--approximate,
+  .badge--stopped {
     background: var(--status-warning-soft);
     color: var(--status-warning);
+  }
+
+  .badge--approximate::before {
+    content: "\2248" / "";
+  }
+
+  .badge--stopped::before {
+    content: "\25A0" / "";
   }
 
   .chips-row {
@@ -788,8 +821,10 @@
   }
 
   .chips li {
-    padding: 2px var(--space-2);
-    border: 1px solid transparent;
+    display: inline-flex;
+    min-height: 32px;
+    align-items: center;
+    padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-pill);
     background: var(--surface-sunken);
     color: var(--text-primary);
@@ -803,8 +838,7 @@
 
   /* Effect colours are game data supplied by the shared lookup catalog. */
   .chips .effect-chip {
-    border-color: color-mix(in srgb, var(--effect-color) 45%, var(--border-control));
-    background: color-mix(in srgb, var(--effect-color) 14%, var(--surface-sunken));
+    background: color-mix(in srgb, var(--effect-color) 12%, var(--surface-panel));
   }
 
   .effect-chip::before {
@@ -829,14 +863,6 @@
     margin-top: var(--space-4);
   }
 
-  .effect-guide summary {
-    min-height: 44px;
-    padding-block: var(--space-3);
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: var(--type-callout-size);
-  }
-
   .effect-guide__list {
     margin: 0;
     font-size: var(--type-callout-size);
@@ -846,7 +872,7 @@
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
   }
 
   .effect-guide__list dd {
@@ -899,26 +925,25 @@
     display: flex;
     min-inline-size: 0;
     flex-direction: column;
-    padding: var(--space-3);
-    border: 1px solid transparent;
+    padding: var(--gap-control);
+    border: 2px solid transparent;
     border-radius: var(--radius-control);
     margin: 0;
     background: var(--surface-panel);
     gap: var(--space-2);
     overflow-wrap: anywhere;
-    transition:
-      border-color var(--motion-fast) var(--ease-standard),
-      background-color var(--motion-fast) var(--ease-standard);
   }
 
   .effect-option[data-preference="wanted"] {
     border-color: var(--status-success);
-    background: var(--status-success-soft);
+    background: linear-gradient(var(--status-success-soft), var(--status-success-soft))
+      var(--surface-panel);
   }
 
   .effect-option[data-preference="excluded"] {
     border-color: var(--status-error);
-    background: var(--status-error-soft);
+    background: linear-gradient(var(--status-error-soft), var(--status-error-soft))
+      var(--surface-panel);
   }
 
   .effect-option__heading {
@@ -932,8 +957,9 @@
   }
 
   .effect-option__name {
-    font-size: var(--type-callout-size);
-    font-weight: 600;
+    font-size: var(--type-headline-size);
+    font-weight: var(--type-headline-weight);
+    line-height: var(--type-headline-line);
   }
 
   .effect-option__description {
@@ -946,10 +972,9 @@
   .effect-preference {
     display: grid;
     padding: 2px;
-    border: 1px solid var(--border-control);
     border-radius: var(--radius-control);
     margin-block-start: auto;
-    background: var(--surface-panel);
+    background: var(--surface-sunken);
     gap: 2px;
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -971,38 +996,59 @@
 
   .effect-preference__option span {
     display: flex;
-    min-height: 36px;
+    min-height: var(--control-min);
     align-items: center;
     justify-content: center;
     padding: var(--space-1);
     border-radius: var(--radius-small);
     color: var(--text-secondary);
     font-size: var(--type-footnote-size);
+    gap: var(--space-1);
     line-height: 1.3;
+    transition:
+      background-color var(--motion-fast) var(--ease-standard),
+      color var(--motion-fast) var(--ease-standard);
   }
 
-  .effect-preference__option:hover span {
-    background: var(--surface-sunken);
+  .effect-preference__option:hover input:not(:disabled) + span {
+    color: var(--text-primary);
+  }
+
+  /* Pressed (not selected): a half-strength selected surface, as in the other segmented controls. */
+  .effect-preference__option:active input:not(:checked):not(:disabled) + span {
+    background: color-mix(in srgb, var(--selected-surface) 50%, transparent);
     color: var(--text-primary);
   }
 
   .effect-preference__option input:checked + span {
-    background: var(--surface-sunken);
-    box-shadow: inset 0 0 0 1px var(--border-control);
+    background: var(--selected-surface);
+    box-shadow: inset 0 0 0 1px var(--selected-border);
     color: var(--text-primary);
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
   }
 
   .effect-preference__option input[value="wanted"]:checked + span {
-    background: var(--status-success-soft);
     box-shadow: inset 0 0 0 1px var(--status-success);
     color: var(--status-success);
   }
 
   .effect-preference__option input[value="excluded"]:checked + span {
-    background: var(--status-error-soft);
     box-shadow: inset 0 0 0 1px var(--status-error);
     color: var(--status-error);
+  }
+
+  /* The glyph carries the choice next to the colour; the label text already names it. */
+  .effect-preference__option input[value="wanted"]:checked + span::before {
+    content: "\2713" / "";
+  }
+
+  .effect-preference__option input[value="excluded"]:checked + span::before {
+    content: "\2298" / "";
+  }
+
+  .effect-preference__option input:disabled + span {
+    color: var(--text-tertiary);
+    cursor: not-allowed;
   }
 
   .effect-preference__option input:focus-visible + span {
@@ -1036,9 +1082,12 @@
     margin-block-start: var(--space-3);
   }
 
+  /* The whole chip is the remove button: 32 px visual, 44 px hit area through the pseudo-element.
+     Wanted and excluded keep their status colour in every state (hover, active, focus). */
   .effect-selection-chip {
+    position: relative;
     display: inline-flex;
-    min-height: 36px;
+    min-height: 32px;
     align-items: center;
     padding: var(--space-1) var(--space-3);
     border: 1px solid var(--status-success);
@@ -1046,21 +1095,53 @@
     background: var(--status-success-soft);
     color: var(--status-success);
     font-size: var(--type-footnote-size);
+    font-weight: var(--weight-medium);
     gap: var(--space-2);
     overflow-wrap: anywhere;
   }
 
+  .effect-selection-chip::after {
+    position: absolute;
+    inset: -7px 0;
+    content: "";
+  }
+
+  .effect-selection-chip:hover:not(:disabled),
+  .effect-selection-chip:active:not(:disabled) {
+    border-color: var(--status-success);
+    color: var(--status-success);
+  }
+
+  .effect-selection-chip:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--status-success) 20%, var(--surface-panel));
+  }
+
+  .effect-selection-chip:active:not(:disabled) {
+    background: color-mix(in srgb, var(--status-success) 28%, var(--surface-panel));
+  }
+
   .effect-selection-chip[data-preference="excluded"],
-  .effect-selection-chip[data-preference="excluded"]:hover,
-  .effect-selection-chip[data-preference="excluded"]:active {
+  .effect-selection-chip[data-preference="excluded"]:hover:not(:disabled),
+  .effect-selection-chip[data-preference="excluded"]:active:not(:disabled) {
     border-color: var(--status-error);
     background: var(--status-error-soft);
     color: var(--status-error);
   }
 
+  .effect-selection-chip[data-preference="excluded"]:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--status-error) 20%, var(--surface-panel));
+  }
+
+  .effect-selection-chip[data-preference="excluded"]:active:not(:disabled) {
+    background: color-mix(in srgb, var(--status-error) 28%, var(--surface-panel));
+  }
+
   .effect-options-empty {
+    padding: var(--space-4);
     color: var(--text-secondary);
+    font-size: var(--type-callout-size);
     grid-column: 1 / -1;
+    text-align: center;
   }
 
   #effect-result {
@@ -1077,13 +1158,6 @@
     .effect-options,
     .effect-option {
       padding: var(--space-2);
-    }
-  }
-
-  @media (pointer: coarse) {
-    .effect-preference__option span,
-    .effect-selection-chip {
-      min-height: 44px;
     }
   }
 
@@ -1149,14 +1223,15 @@
 
   .stat dt {
     color: var(--text-secondary);
-    font-size: var(--type-subhead-size);
-    font-weight: var(--type-subhead-weight);
-    line-height: var(--type-subhead-line);
+    font-size: var(--type-footnote-size);
+    font-weight: var(--type-footnote-weight);
+    line-height: var(--type-footnote-line);
   }
 
   .stat dd {
     margin: 0;
     font-size: var(--type-headline-size);
+    font-weight: var(--type-headline-weight);
     font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
   }
@@ -1196,7 +1271,6 @@
   .status-line,
   .status-block {
     padding: var(--space-4);
-    border: 1px dashed var(--border-control);
     border-radius: var(--radius-card);
     background: var(--surface-panel);
     color: var(--text-secondary);
@@ -1206,10 +1280,11 @@
 
   .alert {
     padding: var(--space-4);
-    border: 1px solid var(--status-error);
-    border-left-width: 4px;
+    border: 0;
+    border-left: 4px solid var(--status-error);
     border-radius: var(--radius-control);
-    background: var(--status-error-soft);
+    background: linear-gradient(var(--status-error-soft), var(--status-error-soft))
+      var(--surface-canvas);
     color: var(--text-primary);
   }
 
@@ -1243,8 +1318,8 @@
     display: flex;
     flex-direction: column;
     padding: var(--space-5);
-    border: 1px dashed var(--border-control);
     border-radius: var(--radius-card);
+    background: var(--surface-panel);
     color: var(--text-secondary);
     gap: var(--space-2);
   }
@@ -1286,7 +1361,7 @@
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     padding: var(--space-3);
-    background: var(--surface-sunken);
+    background: var(--surface-panel);
     text-align: left;
     cursor: grab;
     touch-action: manipulation;
@@ -1343,6 +1418,7 @@
   .recipe-step {
     position: relative;
     display: grid;
+    min-height: var(--control-min);
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     padding: var(--space-1) var(--space-2) var(--space-1) var(--space-6);
@@ -1359,9 +1435,10 @@
   .recipe-step::before {
     position: absolute;
     left: var(--space-3);
-    top: var(--space-4);
+    top: 50%;
     color: var(--text-tertiary);
     content: counter(step);
+    transform: translateY(-50%);
     font-size: var(--type-footnote-size);
     font-variant-numeric: tabular-nums;
   }
@@ -1430,7 +1507,7 @@
     color: var(--text-primary);
     font-family: var(--font-ui);
     font-size: var(--type-callout-size);
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
     pointer-events: none;
     transition: none;
     user-select: none;
