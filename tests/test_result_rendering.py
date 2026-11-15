@@ -45,9 +45,9 @@ class ResultRenderingTests(unittest.TestCase):
         positions = [card.index(label) for label in labels]
         self.assertEqual(positions, sorted(positions))
         self.assertRegex(card, ingredients)
-        self.assertRegex(card, rf"<dt>Sell Price</dt>\s*<dd>{sell_price}\$</dd>")
-        self.assertRegex(card, rf"<dt>Ingredient Cost</dt>\s*<dd>{cost}\$</dd>")
-        self.assertRegex(card, rf"<dt>Profit</dt>\s*<dd>{profit}\$</dd>")
+        self.assertRegex(card, rf"<dt>Sell Price</dt>\s*<dd>\${sell_price}</dd>")
+        self.assertRegex(card, rf"<dt>Ingredient Cost</dt>\s*<dd>\${cost}</dd>")
+        self.assertRegex(card, rf"<dt>Profit</dt>\s*<dd>\${profit}</dd>")
         self.assertRegex(card, r"<dt>Modifier</dt>\s*<dd>")
 
     def test_html_post_renders_distinct_modifier_and_profit_winners(self):
@@ -66,14 +66,14 @@ class ResultRenderingTests(unittest.TestCase):
         modifier_result = html[modifier_heading : html.index("</details>", modifier_heading)]
         self.assert_card_layout(
             profit_result,
-            r"<li>Viagra</li>\s*<li>Mega Bean</li>",
+            r'<li class="mix__item">\s*<span class="mix__step">1</span>\s*<span class="mix__name">Viagra</span>\s*</li>\s*<li class="mix__item">\s*<span class="mix__step">2</span>\s*<span class="mix__name">Mega Bean</span>\s*</li>',
             r"83\.30",
             r"11\.00",
             r"72\.30",
         )
         self.assert_card_layout(
             modifier_result,
-            r"<li>Horse Semen</li>\s*<li>Mega Bean</li>",
+            r'<li class="mix__item">\s*<span class="mix__step">1</span>\s*<span class="mix__name">Horse Semen</span>\s*</li>\s*<li class="mix__item">\s*<span class="mix__step">2</span>\s*<span class="mix__name">Mega Bean</span>\s*</li>',
             r"85\.40",
             r"16\.00",
             r"69\.40",
@@ -88,7 +88,7 @@ class ResultRenderingTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertEqual(html.count("Best Modifier Combination"), 1)
         self.assertEqual(html.count("Best Profit Combination"), 1)
-        self.assertEqual(html.count("<li>Mega Bean</li>"), 2)
+        self.assertEqual(html.count('<span class="mix__name">Mega Bean</span>'), 2)
 
     def test_get_renders_readable_product_and_level_names_with_stable_values(self):
         response = self.client.get("/")
