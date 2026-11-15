@@ -236,7 +236,8 @@
   .wordmark {
     color: var(--brand-cream);
     font-family: var(--font-display);
-    font-size: var(--type-page-title-size);
+    /* 26 px, the size of the reference lettering. */
+    font-size: calc(var(--type-page-title-size) + var(--space-1));
     font-weight: var(--weight-heavy);
     letter-spacing: 0.02em;
     line-height: 1.1;
@@ -252,12 +253,6 @@
     font-size: var(--type-footnote-size);
     letter-spacing: 0.06em;
     -webkit-text-stroke-width: 3px;
-  }
-
-  @media (width >= 480px) {
-    .wordmark {
-      font-size: var(--type-large-title-size);
-    }
   }
 
   /* Controls on the scene band use the header ring, which keeps 3:1 on the switch surface. */
@@ -327,6 +322,22 @@
     border-radius: var(--radius-screen);
     background: var(--surface-screen);
     box-shadow: 0 0 0 var(--screen-rim-width) var(--screen-rim);
+  }
+
+  /* Below 480 px the screen, the cards and the effect list give back the 16 px per side that the
+     screen adds, so the Want/Neutral/Avoid segments keep the width they had before (D-5F-3). */
+  @media (width < 480px) {
+    .app-screen {
+      padding: var(--space-2);
+    }
+
+    .app-screen .card {
+      padding: var(--space-3);
+    }
+
+    .app-screen .effect-options {
+      padding: var(--space-2);
+    }
   }
 
   /* Tabs --------------------------------------------------------------- */
@@ -990,7 +1001,7 @@
     background: var(--surface-raised);
     box-shadow: inset 0 0 0 1px var(--border-subtle);
     color: var(--text-primary);
-    font-size: var(--type-footnote-size);
+    font-size: var(--type-callout-size);
     font-variant-numeric: tabular-nums;
     font-weight: var(--weight-semibold);
   }
