@@ -2,13 +2,14 @@
  * Design tokens for the Best Mix Calculator.
  *
  * This file is the single technical source for colour, spacing, type, radius and motion.
- * The decisions behind the values live in webapp/design/DESIGN.md; do not copy values there.
+ * The decisions behind the values live in webapp/design/DESIGN.md (sections 2-4, 7 and 9);
+ * do not copy values there.
  *
- * Theme resolution (dark is the product default):
- *   :root                                              -> dark values
- *   @media (prefers-color-scheme: light) :root:not([data-theme="dark"]) -> light values
- *   :root[data-theme="light"]                          -> light values (explicit choice wins)
- *   :root[data-theme="dark"]                           -> dark values (explicit choice wins)
+ * Theme resolution (both themes are first-class, the system decides by default):
+ *   :root                                                               -> light values
+ *   :root[data-theme="light"]                                           -> light values (explicit choice wins)
+ *   @media (prefers-color-scheme: dark) :root:not([data-theme="light"]) -> dark values
+ *   :root[data-theme="dark"]                                            -> dark values (explicit choice wins)
  * A missing attribute or data-theme="system" means "follow the system".
  */
 
@@ -24,110 +25,207 @@
     --space-7: 48px;
     --space-8: 64px;
 
+    /* Theme-independent: semantic rhythms */
+    --gap-optical: 4px;
+    --gap-compact: 8px;
+    --gap-control: 12px;
+    --gap-regular: 16px;
+    --gap-section: 32px;
+
     /* Theme-independent: radii */
-    --radius-sm: 4px;
-    --radius-md: 6px;
-    --radius-lg: 10px;
+    --radius-small: 6px;
+    --radius-control: 10px;
+    --radius-card: 16px;
     --radius-pill: 999px;
 
-    /* Theme-independent: type roles */
-    --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    --font-mono:
-      ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-    --text-page-size: 1.75rem;
-    --text-page-line: 1.2;
-    --text-section-size: 1.125rem;
-    --text-section-line: 1.3;
-    --text-body-size: 1rem;
-    --text-body-line: 1.6;
-    --text-control-size: 0.9375rem;
-    --text-label-size: 0.8125rem;
-    --text-label-tracking: 0.06em;
-    --text-meta-size: 0.8125rem;
-    --text-profit-size: 2rem;
+    /* Theme-independent: type */
+    --font-ui:
+      system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+      sans-serif;
+    --weight-regular: 400;
+    --weight-medium: 500;
+    --weight-semibold: 600;
+    --weight-bold: 700;
+    --type-large-title-size: 2.125rem;
+    --type-large-title-line: 1.2;
+    --type-large-title-weight: 700;
+    --type-page-title-size: 1.375rem;
+    --type-page-title-line: 1.27;
+    --type-page-title-weight: 700;
+    --type-title-size: 1.25rem;
+    --type-title-line: 1.25;
+    --type-title-weight: 600;
+    --type-headline-size: 1.0625rem;
+    --type-headline-line: 1.3;
+    --type-headline-weight: 600;
+    --type-body-size: 1.0625rem;
+    --type-body-line: 1.47;
+    --type-body-weight: 400;
+    --type-callout-size: 1rem;
+    --type-callout-line: 1.3;
+    --type-callout-weight: 400;
+    --type-subhead-size: 0.9375rem;
+    --type-subhead-line: 1.33;
+    --type-subhead-weight: 600;
+    --type-footnote-size: 0.8125rem;
+    --type-footnote-line: 1.38;
+    --type-footnote-weight: 400;
+    --type-caption-size: 0.75rem;
+    --type-caption-line: 1.33;
+    --type-caption-weight: 600;
+
+    /* Theme-independent: controls and focus */
+    --control-min: 44px;
+    --focus-ring-width: 2px;
+    --focus-ring-offset: 2px;
 
     /* Theme-independent: motion */
-    --motion-fast: 90ms;
-    --motion-base: 140ms;
-    --motion-enter: 220ms;
-    --ease-standard: cubic-bezier(0.2, 0.6, 0.2, 1);
+    --motion-fast: 100ms;
+    --motion-base: 150ms;
+    --ease-standard: cubic-bezier(0.25, 0.1, 0.25, 1);
 
     /* Theme-independent: layout */
     --content-max: 1120px;
 
-    /* Dark theme (default) */
-    color-scheme: dark;
-    --ground: #0b0e0b;
-    --surface: #12170f;
-    --surface-raised: #171e13;
-    --surface-sunken: #080a07;
-    /* border-strong carries control boundaries and must stay at 3:1 (WCAG 1.4.11);
-       border-subtle is a decorative separator on surfaces that differ on their own. */
-    --border-subtle: #3a4a31;
-    --border-strong: #617355;
-    --text-primary: #e8f0e2;
-    --text-secondary: #a8b79e;
-    --text-muted: #8b9a81;
-    --action-primary: #9dff6b;
-    --action-primary-hover: #b6ff8c;
-    --action-primary-ink: #08120a;
-    --action-primary-quiet: rgb(157 255 107 / 12%);
-    --status-warn: #ffc24b;
-    --status-warn-quiet: rgb(255 194 75 / 14%);
-    --status-danger: #ff8080;
-    --status-danger-quiet: rgb(255 128 128 / 12%);
-    --status-neutral: #a8b79e;
-    --focus-ring: #9dff6b;
-    --shadow-card: none;
-  }
-
-  @media (prefers-color-scheme: light) {
-    :root:not([data-theme="dark"]) {
-      color-scheme: light;
-      --ground: #f4f6f2;
-      --surface: #ffffff;
-      --surface-raised: #ffffff;
-      --surface-sunken: #edf1e9;
-      --border-subtle: #c6d0be;
-      --border-strong: #76836c;
-      --text-primary: #14180f;
-      --text-secondary: #48533f;
-      --text-muted: #5b6752;
-      --action-primary: #2f6b12;
-      --action-primary-hover: #24540d;
-      --action-primary-ink: #ffffff;
-      --action-primary-quiet: rgb(47 107 18 / 10%);
-      --status-warn: #7a4f00;
-      --status-warn-quiet: rgb(122 79 0 / 10%);
-      --status-danger: #b3261e;
-      --status-danger-quiet: rgb(179 38 30 / 8%);
-      --status-neutral: #48533f;
-      --focus-ring: #2f6b12;
-      --shadow-card: 0 1px 2px rgb(20 24 15 / 8%);
-    }
+    /* Light theme (also the values without a system preference) */
+    color-scheme: light;
+    --surface-canvas: #f2f2f5;
+    --surface-panel: #ffffff;
+    --surface-raised: #ffffff;
+    --surface-sunken: #e8e8ed;
+    --surface-field: #ffffff;
+    --text-primary: #1d1d1f;
+    --text-secondary: #48484e;
+    --text-tertiary: #5f5f66;
+    --text-link: #0060c0;
+    /* Control borders carry control boundaries and must stay at 3:1 (WCAG 1.4.11). */
+    --border-control: #808087;
+    --border-control-hover: #5c5c63;
+    --focus-ring: #0066cc;
+    /* The game green: fill of the one primary button of a view, nothing else. */
+    --action-primary: #3f6f10;
+    --action-primary-hover: #365f0d;
+    --action-primary-pressed: #2d500a;
+    --action-primary-ink: #ffffff;
+    --selected-surface: #ffffff;
+    --selected-border: #6e6e75;
+    --status-success: #0b7364;
+    --status-success-soft: rgb(11 115 100 / 10%);
+    --status-warning: #8a5100;
+    --status-warning-soft: rgb(138 81 0 / 10%);
+    --status-error: #c1121f;
+    --status-error-soft: rgb(193 18 31 / 8%);
+    --profit-text: #1d1d1f;
+    --profit-surface: #e8e8ed;
+    --shadow-raised: 0 1px 2px rgb(0 0 0 / 6%), 0 2px 8px rgb(0 0 0 / 6%);
+    --shadow-popover: 0 8px 24px rgb(0 0 0 / 14%);
   }
 
   :root[data-theme="light"] {
     color-scheme: light;
-    --ground: #f4f6f2;
-    --surface: #ffffff;
+    --surface-canvas: #f2f2f5;
+    --surface-panel: #ffffff;
     --surface-raised: #ffffff;
-    --surface-sunken: #edf1e9;
-    --border-subtle: #c6d0be;
-    --border-strong: #76836c;
-    --text-primary: #14180f;
-    --text-secondary: #48533f;
-    --text-muted: #5b6752;
-    --action-primary: #2f6b12;
-    --action-primary-hover: #24540d;
+    --surface-sunken: #e8e8ed;
+    --surface-field: #ffffff;
+    --text-primary: #1d1d1f;
+    --text-secondary: #48484e;
+    --text-tertiary: #5f5f66;
+    --text-link: #0060c0;
+    --border-control: #808087;
+    --border-control-hover: #5c5c63;
+    --focus-ring: #0066cc;
+    --action-primary: #3f6f10;
+    --action-primary-hover: #365f0d;
+    --action-primary-pressed: #2d500a;
     --action-primary-ink: #ffffff;
-    --action-primary-quiet: rgb(47 107 18 / 10%);
-    --status-warn: #7a4f00;
-    --status-warn-quiet: rgb(122 79 0 / 10%);
-    --status-danger: #b3261e;
-    --status-danger-quiet: rgb(179 38 30 / 8%);
-    --status-neutral: #48533f;
-    --focus-ring: #2f6b12;
-    --shadow-card: 0 1px 2px rgb(20 24 15 / 8%);
+    --selected-surface: #ffffff;
+    --selected-border: #6e6e75;
+    --status-success: #0b7364;
+    --status-success-soft: rgb(11 115 100 / 10%);
+    --status-warning: #8a5100;
+    --status-warning-soft: rgb(138 81 0 / 10%);
+    --status-error: #c1121f;
+    --status-error-soft: rgb(193 18 31 / 8%);
+    --profit-text: #1d1d1f;
+    --profit-surface: #e8e8ed;
+    --shadow-raised: 0 1px 2px rgb(0 0 0 / 6%), 0 2px 8px rgb(0 0 0 / 6%);
+    --shadow-popover: 0 8px 24px rgb(0 0 0 / 14%);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --surface-canvas: #161618;
+      --surface-panel: #1e1e21;
+      --surface-raised: #28282c;
+      --surface-sunken: #0f0f11;
+      --surface-field: #0f0f11;
+      --text-primary: #f5f5f7;
+      --text-secondary: #b8b8bf;
+      --text-tertiary: #98989f;
+      --text-link: #6cb4ff;
+      --border-control: #7c7c84;
+      --border-control-hover: #a0a0a8;
+      --focus-ring: #4aa3ff;
+      --action-primary: #87c72c;
+      --action-primary-hover: #98d443;
+      --action-primary-pressed: #77b322;
+      --action-primary-ink: #161618;
+      --selected-surface: #3a3a40;
+      --selected-border: #a0a0a8;
+      --status-success: #3cc8b0;
+      --status-success-soft: rgb(60 200 176 / 14%);
+      --status-warning: #ffb340;
+      --status-warning-soft: rgb(255 179 64 / 14%);
+      --status-error: #ff8a82;
+      --status-error-soft: rgb(255 138 130 / 14%);
+      --profit-text: #f5f5f7;
+      --profit-surface: #0f0f11;
+      --shadow-raised: none;
+      --shadow-popover: 0 8px 24px rgb(0 0 0 / 50%);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-canvas: #161618;
+    --surface-panel: #1e1e21;
+    --surface-raised: #28282c;
+    --surface-sunken: #0f0f11;
+    --surface-field: #0f0f11;
+    --text-primary: #f5f5f7;
+    --text-secondary: #b8b8bf;
+    --text-tertiary: #98989f;
+    --text-link: #6cb4ff;
+    --border-control: #7c7c84;
+    --border-control-hover: #a0a0a8;
+    --focus-ring: #4aa3ff;
+    --action-primary: #87c72c;
+    --action-primary-hover: #98d443;
+    --action-primary-pressed: #77b322;
+    --action-primary-ink: #161618;
+    --selected-surface: #3a3a40;
+    --selected-border: #a0a0a8;
+    --status-success: #3cc8b0;
+    --status-success-soft: rgb(60 200 176 / 14%);
+    --status-warning: #ffb340;
+    --status-warning-soft: rgb(255 179 64 / 14%);
+    --status-error: #ff8a82;
+    --status-error-soft: rgb(255 138 130 / 14%);
+    --profit-text: #f5f5f7;
+    --profit-surface: #0f0f11;
+    --shadow-raised: none;
+    --shadow-popover: 0 8px 24px rgb(0 0 0 / 50%);
+  }
+
+  /* Increased contrast reuses existing values (DESIGN.md section 2). The doubled :root raises the
+     specificity to that of the theme blocks above, and the later position wins. */
+  @media (prefers-contrast: more) {
+    :root:root {
+      --text-tertiary: var(--text-secondary);
+      --border-control: var(--border-control-hover);
+      --focus-ring-width: 3px;
+    }
   }
 }
