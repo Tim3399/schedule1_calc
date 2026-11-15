@@ -2,6 +2,8 @@
 
 from pathlib import Path
 from html import unescape
+import posixpath
+import re
 import sys
 import unittest
 from unittest import mock
@@ -39,8 +41,8 @@ class ResultRenderingTests(unittest.TestCase):
             "<dt>Sell Price</dt>",
             "<dt>Ingredient Cost</dt>",
             "<dt>Modifier</dt>",
-            '<span class="chips-label">Ingredients</span>',
-            '<span class="chips-label">Effects</span>',
+            '<span class="chips-label">Mix</span>',
+            '<span class="chips-label">Effects · ',
         ]
         positions = [card.index(label) for label in labels]
         self.assertEqual(positions, sorted(positions))
@@ -48,7 +50,8 @@ class ResultRenderingTests(unittest.TestCase):
         self.assertRegex(card, rf"<dt>Sell Price</dt>\s*<dd>\${sell_price}</dd>")
         self.assertRegex(card, rf"<dt>Ingredient Cost</dt>\s*<dd>\${cost}</dd>")
         self.assertRegex(card, rf"<dt>Profit</dt>\s*<dd>\${profit}</dd>")
-        self.assertRegex(card, r"<dt>Modifier</dt>\s*<dd>")
+        self.assertRegex(card, r"<dt>Modifier</dt>\s*<dd>×\d+\.\d{2}</dd>")
+        self.assertRegex(card, r'<span class="chips-label">Effects · \d+</span>')
 
     def test_html_post_renders_distinct_modifier_and_profit_winners(self):
         response = self.post_mix(2, "green_crack", "hustler_iii")
@@ -80,6 +83,28 @@ class ResultRenderingTests(unittest.TestCase):
         )
         self.assertEqual(profit_result.count("Optimality proven"), 1)
         self.assertEqual(modifier_result.count("Optimality proven"), 1)
+
+    def test_barlow_700_is_preloaded_with_the_url_the_stylesheet_resolves_to(self):
+        html = self.client.get("/").get_data(as_text=True)
+        links = re.findall(r"<link\s[^>]*rel=\"preload\"[^>]*>", html)
+        self.assertEqual(len(links), 1)
+        link = links[0]
+        self.assertRegex(link, r'as="font"')
+        self.assertRegex(link, r'type="font/woff2"')
+        self.assertRegex(link, r"\scrossorigin")
+        href = re.search(r'href="([^"]+)"', link).group(1)
+        css_href = re.search(r'<link rel="stylesheet" href="([^"]+/css/styles\.css)"', html).group(
+            1
+        )
+        resolved = posixpath.normpath(
+            posixpath.join(posixpath.dirname(css_href), "../fonts/barlow-latin-700-normal.woff2")
+        )
+        self.assertEqual(href, resolved)
+        self.assertEqual(self.client.get(href).status_code, 200)
+
+    def test_recipe_result_is_a_result_surface(self):
+        html = self.client.get("/").get_data(as_text=True)
+        self.assertRegex(html, r'id="recipe-result"\s+class="result-stack result-surface"')
 
     def test_html_post_keeps_both_headings_for_an_identical_winner(self):
         response = self.post_mix(1, "green_crack", "hustler_iii")
