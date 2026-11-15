@@ -99,7 +99,7 @@
   .container {
     width: 100%;
     max-width: var(--content-max);
-    padding-inline: var(--space-5);
+    padding-inline: var(--space-4);
     margin-inline: auto;
   }
 
@@ -144,17 +144,15 @@
     }
   }
 
-  @media (width >= 640px) {
+  @media (width >= 480px) {
+    .container {
+      padding-inline: var(--space-5);
+    }
+
     .field-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: var(--space-4);
-    }
-  }
-
-  @media (width < 480px) {
-    .container {
-      padding-inline: var(--space-4);
     }
   }
 }
@@ -163,7 +161,7 @@
   /* Header ------------------------------------------------------------- */
 
   .app-header {
-    background: var(--surface-panel);
+    background: none;
   }
 
   .app-header__bar {
@@ -176,15 +174,7 @@
   }
 
   .app-header__identity {
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-3);
-  }
-
-  .app-header__mark {
-    color: var(--text-secondary);
-    font-size: var(--type-page-title-size);
-    line-height: var(--type-page-title-line);
+    min-width: 0;
   }
 
   /* Theme switch ------------------------------------------------------- */
@@ -302,7 +292,7 @@
   /* Cards -------------------------------------------------------------- */
 
   .card {
-    padding: var(--gap-regular);
+    padding: var(--space-4);
     border-radius: var(--radius-card);
     background: var(--surface-panel);
     box-shadow: var(--shadow-raised);
@@ -903,7 +893,7 @@
     border-radius: var(--radius-card);
     background: var(--surface-sunken);
     gap: var(--space-2);
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
     overscroll-behavior-y: contain;
     scrollbar-color: var(--border-control) var(--surface-sunken);
     scrollbar-gutter: stable;
@@ -929,7 +919,7 @@
     display: flex;
     min-inline-size: 0;
     flex-direction: column;
-    padding: var(--gap-control);
+    padding: var(--space-3);
     border: 2px solid transparent;
     border-radius: var(--radius-control);
     margin: 0;
@@ -973,20 +963,55 @@
     line-height: var(--type-body-line);
   }
 
+  /*
+   * Segments of a row are equal: each grows from a zero basis. A segment is never narrower than its
+   * label, so whole segments wrap to the next row when the labels do not fit side by side (large text).
+   */
   .effect-preference {
-    display: grid;
+    display: flex;
+    flex-wrap: wrap;
     padding: 2px;
     border-radius: var(--radius-control);
     margin-block-start: auto;
     background: var(--surface-sunken);
     gap: 2px;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .effect-preference__option {
     position: relative;
-    min-width: 0;
+    display: grid;
+    flex: 1 1 0;
     cursor: pointer;
+  }
+
+  /*
+   * An invisible copy of the selected label (glyph, gap and weight 600) in the same cell keeps the
+   * segment's minimum width independent of the selection, so a click never moves the wrap point.
+   * The texts mirror the labels in script.js.
+   */
+  .effect-preference__option::after {
+    padding: 0 2px;
+    font-size: var(--type-footnote-size);
+    font-weight: var(--weight-semibold);
+    grid-area: 1 / 1;
+    line-height: 1.3;
+    pointer-events: none;
+    visibility: hidden;
+    white-space: nowrap;
+  }
+
+  .effect-preference__option:has(input[value="wanted"])::after {
+    content: "\2713" "Want" / "";
+    padding-inline-end: calc(2px + var(--space-1));
+  }
+
+  .effect-preference__option:has(input[value="neutral"])::after {
+    content: "Neutral" / "";
+  }
+
+  .effect-preference__option:has(input[value="excluded"])::after {
+    content: "\2298" "Avoid" / "";
+    padding-inline-end: calc(2px + var(--space-1));
   }
 
   .effect-preference__option input {
@@ -1003,15 +1028,18 @@
     min-height: var(--control-min);
     align-items: center;
     justify-content: center;
-    padding: var(--space-1);
+    padding: var(--space-1) 2px;
     border-radius: var(--radius-small);
     color: var(--text-secondary);
     font-size: var(--type-footnote-size);
     gap: var(--space-1);
+    grid-area: 1 / 1;
     line-height: 1.3;
+    overflow-wrap: normal;
     transition:
       background-color var(--motion-fast) var(--ease-standard),
       color var(--motion-fast) var(--ease-standard);
+    white-space: nowrap;
   }
 
   .effect-preference__option:hover input:not(:disabled) + span {
@@ -1159,19 +1187,6 @@
     scroll-margin-block: var(--space-5);
   }
 
-  @media (width < 640px) {
-    .effect-options {
-      grid-template-columns: minmax(0, 1fr);
-    }
-  }
-
-  @media (width < 400px) {
-    .effect-options,
-    .effect-option {
-      padding: var(--space-2);
-    }
-  }
-
   .chips--ordered li {
     gap: var(--space-1);
     counter-increment: chip;
@@ -1188,7 +1203,7 @@
   }
 
   /* Below this width the reserved label column costs the chips more room than it is worth. */
-  @media (width < 560px) {
+  @media (width < 480px) {
     .chips-row {
       flex-direction: column;
       align-items: stretch;
@@ -1208,7 +1223,7 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  @media (width < 560px) {
+  @media (width < 480px) {
     .stats {
       grid-template-columns: minmax(0, 1fr);
     }
@@ -1329,11 +1344,17 @@
   .empty-state {
     display: flex;
     flex-direction: column;
-    padding: var(--space-5);
+    padding: var(--space-4);
     border-radius: var(--radius-card);
     background: var(--surface-panel);
     color: var(--text-secondary);
     gap: var(--space-2);
+  }
+
+  @media (width >= 480px) {
+    .empty-state {
+      padding: var(--space-5);
+    }
   }
 
   .empty-state__hint {
@@ -1536,10 +1557,6 @@
   }
 
   @media (width < 480px) {
-    #recipe-form {
-      padding: var(--space-4);
-    }
-
     .ingredient-shelf {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
