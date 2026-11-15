@@ -598,10 +598,15 @@
     border-color: var(--text-tertiary);
   }
 
-  /* Error: the border only; a message linked with aria-describedby is added where markup has one. */
+  /* Error: the border plus the message linked with aria-describedby. */
   select[aria-invalid="true"],
   input[aria-invalid="true"] {
     border-color: var(--status-error);
+  }
+
+  .field__error {
+    color: var(--status-error);
+    font-size: var(--type-footnote-size);
   }
 
   /* Buttons ------------------------------------------------------------ */
