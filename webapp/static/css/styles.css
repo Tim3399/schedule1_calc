@@ -963,7 +963,10 @@
     line-height: var(--type-body-line);
   }
 
-  /* Whole segments wrap to the next row when the labels do not fit side by side (large text). */
+  /*
+   * Segments of a row are equal: each grows from a zero basis. A segment is never narrower than its
+   * label, so whole segments wrap to the next row when the labels do not fit side by side (large text).
+   */
   .effect-preference {
     display: flex;
     flex-wrap: wrap;
@@ -976,8 +979,39 @@
 
   .effect-preference__option {
     position: relative;
-    flex: 1 1 auto;
+    display: grid;
+    flex: 1 1 0;
     cursor: pointer;
+  }
+
+  /*
+   * An invisible copy of the selected label (glyph, gap and weight 600) in the same cell keeps the
+   * segment's minimum width independent of the selection, so a click never moves the wrap point.
+   * The texts mirror the labels in script.js.
+   */
+  .effect-preference__option::after {
+    padding: 0 2px;
+    font-size: var(--type-footnote-size);
+    font-weight: var(--weight-semibold);
+    grid-area: 1 / 1;
+    line-height: 1.3;
+    pointer-events: none;
+    visibility: hidden;
+    white-space: nowrap;
+  }
+
+  .effect-preference__option:has(input[value="wanted"])::after {
+    content: "\2713" "Want" / "";
+    padding-inline-end: calc(2px + var(--space-1));
+  }
+
+  .effect-preference__option:has(input[value="neutral"])::after {
+    content: "Neutral" / "";
+  }
+
+  .effect-preference__option:has(input[value="excluded"])::after {
+    content: "\2298" "Avoid" / "";
+    padding-inline-end: calc(2px + var(--space-1));
   }
 
   .effect-preference__option input {
@@ -994,11 +1028,12 @@
     min-height: var(--control-min);
     align-items: center;
     justify-content: center;
-    padding: var(--space-1);
+    padding: var(--space-1) 2px;
     border-radius: var(--radius-small);
     color: var(--text-secondary);
     font-size: var(--type-footnote-size);
     gap: var(--space-1);
+    grid-area: 1 / 1;
     line-height: 1.3;
     overflow-wrap: normal;
     transition:
