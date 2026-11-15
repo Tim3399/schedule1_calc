@@ -71,14 +71,23 @@
     z-index: 10;
     top: var(--space-2);
     left: var(--space-2);
+    display: inline-flex;
+    min-height: var(--control-min);
+    align-items: center;
     padding: var(--space-2) var(--space-4);
     border: 1px solid var(--border-control);
     border-radius: var(--radius-control);
     background: var(--surface-raised);
     color: var(--text-link);
     font-size: var(--type-callout-size);
-    text-decoration: none;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
     transform: translateY(-200%);
+  }
+
+  .skip-link:hover {
+    border-color: var(--border-control-hover);
+    text-decoration-thickness: 2px;
   }
 
   .skip-link:focus-visible {
@@ -181,15 +190,17 @@
   /* Theme switch ------------------------------------------------------- */
 
   .theme-switch {
-    display: flex;
+    display: grid;
     padding: 3px;
     border-radius: var(--radius-control);
     background: var(--surface-sunken);
     gap: 2px;
+    grid-auto-columns: 1fr;
+    grid-auto-flow: column;
   }
 
   .theme-switch__option {
-    min-height: 44px;
+    min-height: var(--control-min);
     padding: var(--space-1) var(--space-3);
     border: 0;
     border-radius: var(--radius-small);
@@ -203,15 +214,28 @@
       color var(--motion-fast) var(--ease-standard);
   }
 
-  .theme-switch__option:hover {
+  .theme-switch__option:hover:not(:disabled) {
     color: var(--text-primary);
   }
 
-  .theme-switch__option[aria-checked="true"] {
+  /* Pressed (not selected): a half-strength selected surface, so it never reads as selected. */
+  .theme-switch .theme-switch__option:active:not(:disabled, [aria-checked="true"]) {
+    background: color-mix(in srgb, var(--selected-surface) 50%, transparent);
+    color: var(--text-primary);
+  }
+
+  /* Selected wins over hover and pressed: the extra class outranks the generic button rules. */
+  .theme-switch .theme-switch__option[aria-checked="true"] {
     background: var(--selected-surface);
     box-shadow: inset 0 0 0 1px var(--selected-border);
     color: var(--text-primary);
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
+  }
+
+  .theme-switch .theme-switch__option:disabled {
+    background: none;
+    color: var(--text-tertiary);
+    cursor: not-allowed;
   }
 
   /* Tabs --------------------------------------------------------------- */
@@ -224,30 +248,40 @@
   }
 
   .calculator-tabs button {
-    min-height: 44px;
+    min-height: var(--control-min);
     padding: var(--space-2) var(--space-4);
     border: 0;
-    border-radius: var(--radius-small) var(--radius-small) 0 0;
-    margin-bottom: -1px;
+    border-radius: var(--radius-small);
     background: none;
     color: var(--text-secondary);
     cursor: pointer;
     font-family: var(--font-ui);
     font-size: var(--type-callout-size);
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
     white-space: nowrap;
     transition:
       background-color var(--motion-fast) var(--ease-standard),
       color var(--motion-fast) var(--ease-standard);
   }
 
-  .calculator-tabs button:hover {
-    background: var(--surface-panel);
+  .calculator-tabs button:hover:not(:disabled) {
     color: var(--text-primary);
   }
 
-  .calculator-tabs [aria-selected="true"] {
-    box-shadow: inset 0 -2px 0 var(--text-primary);
+  .calculator-tabs button:active:not(:disabled, [aria-selected="true"]) {
+    background: var(--surface-sunken);
+    color: var(--text-primary);
+  }
+
+  .calculator-tabs button:disabled {
+    background: none;
+    color: var(--text-tertiary);
+    cursor: not-allowed;
+  }
+
+  .calculator-tabs button[role="tab"][aria-selected="true"] {
+    background: none;
+    box-shadow: inset 0 -3px 0 var(--text-primary);
     color: var(--text-primary);
   }
 
@@ -268,10 +302,16 @@
   /* Cards -------------------------------------------------------------- */
 
   .card {
-    padding: var(--space-5);
+    padding: var(--gap-regular);
     border-radius: var(--radius-card);
     background: var(--surface-panel);
     box-shadow: var(--shadow-raised);
+  }
+
+  @media (width >= 480px) {
+    .card {
+      padding: var(--space-5);
+    }
   }
 
   .card__title {
@@ -290,11 +330,19 @@
 
   .jump-link {
     display: inline-flex;
-    min-height: 44px;
+    min-height: var(--control-min);
     align-items: center;
     color: var(--text-link);
     font-size: var(--type-callout-size);
     text-underline-offset: 0.2em;
+  }
+
+  .jump-link:hover {
+    text-decoration-thickness: 2px;
+  }
+
+  .jump-link:active {
+    color: var(--text-primary);
   }
 
   #recipe-result,
@@ -328,7 +376,7 @@
   input[type="number"],
   input[type="search"] {
     width: 100%;
-    min-height: 44px;
+    min-height: var(--control-min);
     padding: var(--space-2) var(--space-3);
     border: 1px solid var(--border-control);
     border-radius: var(--radius-control);
@@ -409,7 +457,7 @@
     }
 
     select option {
-      min-height: 44px;
+      min-height: var(--control-min);
       padding: var(--space-2) var(--space-3);
       border-radius: var(--radius-small);
       font-family: var(--font-ui);
@@ -451,7 +499,6 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     padding: var(--space-1);
-    border: 1px solid var(--border-control);
     border-radius: var(--radius-control);
     background: var(--surface-sunken);
     gap: var(--space-1);
@@ -460,6 +507,10 @@
   .mode-switch__option {
     position: relative;
     cursor: pointer;
+  }
+
+  .mode-switch__option:has(input:disabled) {
+    cursor: not-allowed;
   }
 
   .mode-switch__option input {
@@ -472,7 +523,7 @@
 
   .mode-switch__option span {
     display: flex;
-    min-height: 44px;
+    min-height: var(--control-min);
     align-items: center;
     justify-content: center;
     padding: var(--space-2);
@@ -480,6 +531,9 @@
     color: var(--text-secondary);
     font-size: var(--type-callout-size);
     gap: var(--space-2);
+    transition:
+      background-color var(--motion-fast) var(--ease-standard),
+      color var(--motion-fast) var(--ease-standard);
   }
 
   .mode-switch__option span::before {
@@ -496,14 +550,20 @@
     background: var(--selected-surface);
     box-shadow: inset 0 0 0 1px var(--selected-border);
     color: var(--text-primary);
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
   }
 
   .mode-switch__option input:checked + span::before {
     opacity: 1;
   }
 
-  .mode-switch__option:hover span {
+  .mode-switch__option:hover input:not(:disabled) + span {
+    color: var(--text-primary);
+  }
+
+  /* Pressed (not selected): a half-strength selected surface; selected keeps its own look. */
+  .mode-switch__option:active input:not(:checked):not(:disabled) + span {
+    background: color-mix(in srgb, var(--selected-surface) 50%, transparent);
     color: var(--text-primary);
   }
 
@@ -514,7 +574,6 @@
 
   .mode-switch__option input:disabled + span {
     color: var(--text-tertiary);
-    cursor: not-allowed;
   }
 
   select:hover:not(:disabled),
@@ -523,17 +582,38 @@
     border-color: var(--border-control-hover);
   }
 
+  select:open {
+    border-color: var(--border-control-hover);
+  }
+
   select:disabled,
   input:disabled {
     border-color: var(--border-control);
+    background: var(--surface-sunken);
     color: var(--text-tertiary);
     cursor: not-allowed;
+  }
+
+  .select-control:has(select:disabled)::after {
+    border-color: var(--text-tertiary);
+  }
+
+  /* Error: the border plus the message linked with aria-describedby. */
+  select[aria-invalid="true"],
+  input[aria-invalid="true"] {
+    border-color: var(--status-error);
+  }
+
+  .field__error {
+    color: var(--status-error);
+    font-size: var(--type-footnote-size);
   }
 
   /* Buttons ------------------------------------------------------------ */
 
   button {
-    min-height: 44px;
+    min-width: var(--control-min);
+    min-height: var(--control-min);
     padding: var(--space-2) var(--space-4);
     border: 1px solid var(--border-control);
     border-radius: var(--radius-control);
@@ -542,7 +622,7 @@
     cursor: pointer;
     font-family: var(--font-ui);
     font-size: var(--type-callout-size);
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
     transition:
       background-color var(--motion-fast) var(--ease-standard),
       border-color var(--motion-fast) var(--ease-standard),
@@ -560,10 +640,12 @@
 
   button:disabled {
     border-color: var(--border-control);
+    background: var(--surface-sunken);
     color: var(--text-tertiary);
     cursor: not-allowed;
   }
 
+  /* Primary button: the same box as a secondary button, only fill and ink differ. */
   .btn--primary {
     border-color: var(--action-primary);
     background: var(--action-primary);
@@ -584,8 +666,39 @@
 
   .btn--primary:disabled {
     border-color: var(--border-control);
-    background: var(--surface-raised);
+    background: var(--surface-sunken);
     color: var(--text-tertiary);
+  }
+
+  /* Loading: script.js sets aria-busy on the form and disables the button. The label stays in the
+     DOM (and in the accessible name) but is hidden, so the width does not change; a ring spins in
+     its place. The status line carries the words. */
+  [aria-busy="true"] .btn--primary:disabled {
+    position: relative;
+    border-color: var(--action-primary);
+    background: var(--action-primary);
+    color: transparent;
+    cursor: progress;
+  }
+
+  [aria-busy="true"] .btn--primary:disabled::after {
+    position: absolute;
+    top: calc(50% - 9px);
+    left: calc(50% - 9px);
+    width: 18px;
+    height: 18px;
+    box-sizing: border-box;
+    border: 2px solid color-mix(in srgb, var(--action-primary-ink) 30%, transparent);
+    border-top-color: var(--action-primary-ink);
+    border-radius: var(--radius-pill);
+    animation: spinner-rotate 800ms linear infinite;
+    content: "";
+  }
+
+  @keyframes spinner-rotate {
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .form-actions {
@@ -612,14 +725,27 @@
     overflow-wrap: anywhere;
   }
 
-  .result-comparison summary {
-    min-height: 44px;
-    padding: var(--space-3) var(--space-4);
-    border: 1px solid var(--border-control);
-    border-radius: var(--radius-control);
+  /* Disclosure: a 44 px summary row with the native triangle, subhead role. Hover and the open state
+     raise the text; focus-visible comes from the base ring. */
+  .result-comparison summary,
+  .effect-guide summary {
+    display: list-item;
+    min-height: var(--control-min);
+    padding-block: var(--space-3);
+    border-radius: var(--radius-small);
     color: var(--text-secondary);
     cursor: pointer;
-    font-size: var(--type-callout-size);
+    font-size: var(--type-subhead-size);
+    font-weight: var(--type-subhead-weight);
+    line-height: var(--type-subhead-line);
+    transition: color var(--motion-fast) var(--ease-standard);
+  }
+
+  .result-comparison summary:hover,
+  .effect-guide summary:hover,
+  .result-comparison[open] summary,
+  .effect-guide[open] summary {
+    color: var(--text-primary);
   }
 
   .result-comparison[open] summary {
@@ -636,13 +762,23 @@
     gap: var(--space-2);
   }
 
+  /* Badge: a pill with soft fill, status text and a glyph (the glyph repeats the text, so it has
+     empty alt text). A stopped search renders as the approximate tone (script.js); `--stopped`
+     is styled in case a caller names it. */
   .badge {
-    padding: var(--space-1) var(--space-2);
-    border: 1px solid currentcolor;
-    border-radius: var(--radius-small);
-    font-size: var(--type-footnote-size);
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-pill);
+    font-size: var(--type-caption-size);
     font-variant-numeric: tabular-nums;
-    line-height: 1.3;
+    font-weight: var(--type-caption-weight);
+    gap: var(--space-1);
+    line-height: var(--type-caption-line);
+  }
+
+  .badge::before {
+    content: "\2713" / "";
   }
 
   .badge--proven {
@@ -650,9 +786,18 @@
     color: var(--status-success);
   }
 
-  .badge--approximate {
+  .badge--approximate,
+  .badge--stopped {
     background: var(--status-warning-soft);
     color: var(--status-warning);
+  }
+
+  .badge--approximate::before {
+    content: "\2248" / "";
+  }
+
+  .badge--stopped::before {
+    content: "\25A0" / "";
   }
 
   .chips-row {
@@ -680,8 +825,10 @@
   }
 
   .chips li {
-    padding: 2px var(--space-2);
-    border: 1px solid transparent;
+    display: inline-flex;
+    min-height: 32px;
+    align-items: center;
+    padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-pill);
     background: var(--surface-sunken);
     color: var(--text-primary);
@@ -695,8 +842,7 @@
 
   /* Effect colours are game data supplied by the shared lookup catalog. */
   .chips .effect-chip {
-    border-color: color-mix(in srgb, var(--effect-color) 45%, var(--border-control));
-    background: color-mix(in srgb, var(--effect-color) 14%, var(--surface-sunken));
+    background: color-mix(in srgb, var(--effect-color) 12%, var(--surface-panel));
   }
 
   .effect-chip::before {
@@ -721,14 +867,6 @@
     margin-top: var(--space-4);
   }
 
-  .effect-guide summary {
-    min-height: 44px;
-    padding-block: var(--space-3);
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: var(--type-callout-size);
-  }
-
   .effect-guide__list {
     margin: 0;
     font-size: var(--type-callout-size);
@@ -738,7 +876,7 @@
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
   }
 
   .effect-guide__list dd {
@@ -791,26 +929,25 @@
     display: flex;
     min-inline-size: 0;
     flex-direction: column;
-    padding: var(--space-3);
-    border: 1px solid transparent;
+    padding: var(--gap-control);
+    border: 2px solid transparent;
     border-radius: var(--radius-control);
     margin: 0;
     background: var(--surface-panel);
     gap: var(--space-2);
     overflow-wrap: anywhere;
-    transition:
-      border-color var(--motion-fast) var(--ease-standard),
-      background-color var(--motion-fast) var(--ease-standard);
   }
 
   .effect-option[data-preference="wanted"] {
     border-color: var(--status-success);
-    background: var(--status-success-soft);
+    background: linear-gradient(var(--status-success-soft), var(--status-success-soft))
+      var(--surface-panel);
   }
 
   .effect-option[data-preference="excluded"] {
     border-color: var(--status-error);
-    background: var(--status-error-soft);
+    background: linear-gradient(var(--status-error-soft), var(--status-error-soft))
+      var(--surface-panel);
   }
 
   .effect-option__heading {
@@ -824,8 +961,9 @@
   }
 
   .effect-option__name {
-    font-size: var(--type-callout-size);
-    font-weight: 600;
+    font-size: var(--type-headline-size);
+    font-weight: var(--type-headline-weight);
+    line-height: var(--type-headline-line);
   }
 
   .effect-option__description {
@@ -838,10 +976,9 @@
   .effect-preference {
     display: grid;
     padding: 2px;
-    border: 1px solid var(--border-control);
     border-radius: var(--radius-control);
     margin-block-start: auto;
-    background: var(--surface-panel);
+    background: var(--surface-sunken);
     gap: 2px;
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -863,38 +1000,59 @@
 
   .effect-preference__option span {
     display: flex;
-    min-height: 36px;
+    min-height: var(--control-min);
     align-items: center;
     justify-content: center;
     padding: var(--space-1);
     border-radius: var(--radius-small);
     color: var(--text-secondary);
     font-size: var(--type-footnote-size);
+    gap: var(--space-1);
     line-height: 1.3;
+    transition:
+      background-color var(--motion-fast) var(--ease-standard),
+      color var(--motion-fast) var(--ease-standard);
   }
 
-  .effect-preference__option:hover span {
-    background: var(--surface-sunken);
+  .effect-preference__option:hover input:not(:disabled) + span {
+    color: var(--text-primary);
+  }
+
+  /* Pressed (not selected): a half-strength selected surface, as in the other segmented controls. */
+  .effect-preference__option:active input:not(:checked):not(:disabled) + span {
+    background: color-mix(in srgb, var(--selected-surface) 50%, transparent);
     color: var(--text-primary);
   }
 
   .effect-preference__option input:checked + span {
-    background: var(--surface-sunken);
-    box-shadow: inset 0 0 0 1px var(--border-control);
+    background: var(--selected-surface);
+    box-shadow: inset 0 0 0 1px var(--selected-border);
     color: var(--text-primary);
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
   }
 
   .effect-preference__option input[value="wanted"]:checked + span {
-    background: var(--status-success-soft);
     box-shadow: inset 0 0 0 1px var(--status-success);
     color: var(--status-success);
   }
 
   .effect-preference__option input[value="excluded"]:checked + span {
-    background: var(--status-error-soft);
     box-shadow: inset 0 0 0 1px var(--status-error);
     color: var(--status-error);
+  }
+
+  /* The glyph carries the choice next to the colour; the label text already names it. */
+  .effect-preference__option input[value="wanted"]:checked + span::before {
+    content: "\2713" / "";
+  }
+
+  .effect-preference__option input[value="excluded"]:checked + span::before {
+    content: "\2298" / "";
+  }
+
+  .effect-preference__option input:disabled + span {
+    color: var(--text-tertiary);
+    cursor: not-allowed;
   }
 
   .effect-preference__option input:focus-visible + span {
@@ -921,16 +1079,20 @@
   .effect-selection-summary {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-2);
+    /* Row pitch 44 px (32 px chip + 12 px gap) keeps the 44 px hit areas of wrapped rows apart. */
+    gap: var(--space-3) var(--space-2);
   }
 
   .effect-selection-summary:not(:empty) {
     margin-block-start: var(--space-3);
   }
 
+  /* The whole chip is the remove button: 32 px visual, 44 px hit area through the pseudo-element.
+     Wanted and excluded keep their status colour in every state (hover, active, focus). */
   .effect-selection-chip {
+    position: relative;
     display: inline-flex;
-    min-height: 36px;
+    min-height: 32px;
     align-items: center;
     padding: var(--space-1) var(--space-3);
     border: 1px solid var(--status-success);
@@ -938,21 +1100,59 @@
     background: var(--status-success-soft);
     color: var(--status-success);
     font-size: var(--type-footnote-size);
+    font-weight: var(--weight-medium);
     gap: var(--space-2);
     overflow-wrap: anywhere;
   }
 
+  .effect-selection-chip::after {
+    position: absolute;
+    inset: -7px 0;
+    content: "";
+  }
+
+  .effect-selection-chip:hover:not(:disabled),
+  .effect-selection-chip:active:not(:disabled) {
+    border-color: var(--status-success);
+    color: var(--status-success);
+  }
+
+  .effect-selection-chip:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--status-success) 12%, var(--surface-panel));
+  }
+
+  .effect-selection-chip:active:not(:disabled) {
+    background: color-mix(in srgb, var(--status-success) 14%, var(--surface-panel));
+  }
+
+  /* Hover and pressed add an inset ring; the fill steps stay small so the text keeps 4.5:1. */
+  .effect-selection-chip:hover:not(:disabled),
+  .effect-selection-chip:active:not(:disabled) {
+    box-shadow: inset 0 0 0 1px currentcolor;
+  }
+
   .effect-selection-chip[data-preference="excluded"],
-  .effect-selection-chip[data-preference="excluded"]:hover,
-  .effect-selection-chip[data-preference="excluded"]:active {
+  .effect-selection-chip[data-preference="excluded"]:hover:not(:disabled),
+  .effect-selection-chip[data-preference="excluded"]:active:not(:disabled) {
     border-color: var(--status-error);
     background: var(--status-error-soft);
     color: var(--status-error);
   }
 
+  .effect-selection-chip[data-preference="excluded"]:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--status-error) 12%, var(--surface-panel));
+  }
+
+  .effect-selection-chip[data-preference="excluded"]:active:not(:disabled) {
+    background: color-mix(in srgb, var(--status-error) 14%, var(--surface-panel));
+  }
+
   .effect-options-empty {
+    padding: var(--space-4);
     color: var(--text-secondary);
+    font-size: var(--type-callout-size);
     grid-column: 1 / -1;
+    text-align: center;
   }
 
   #effect-result {
@@ -972,14 +1172,8 @@
     }
   }
 
-  @media (pointer: coarse) {
-    .effect-preference__option span,
-    .effect-selection-chip {
-      min-height: 44px;
-    }
-  }
-
   .chips--ordered li {
+    gap: var(--space-1);
     counter-increment: chip;
   }
 
@@ -1041,14 +1235,15 @@
 
   .stat dt {
     color: var(--text-secondary);
-    font-size: var(--type-subhead-size);
-    font-weight: var(--type-subhead-weight);
-    line-height: var(--type-subhead-line);
+    font-size: var(--type-footnote-size);
+    font-weight: var(--type-footnote-weight);
+    line-height: var(--type-footnote-line);
   }
 
   .stat dd {
     margin: 0;
     font-size: var(--type-headline-size);
+    font-weight: var(--type-headline-weight);
     font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
   }
@@ -1088,7 +1283,6 @@
   .status-line,
   .status-block {
     padding: var(--space-4);
-    border: 1px dashed var(--border-control);
     border-radius: var(--radius-card);
     background: var(--surface-panel);
     color: var(--text-secondary);
@@ -1098,10 +1292,11 @@
 
   .alert {
     padding: var(--space-4);
-    border: 1px solid var(--status-error);
-    border-left-width: 4px;
+    border: 0;
+    border-left: 4px solid var(--status-error);
     border-radius: var(--radius-control);
-    background: var(--status-error-soft);
+    background: linear-gradient(var(--status-error-soft), var(--status-error-soft))
+      var(--surface-canvas);
     color: var(--text-primary);
   }
 
@@ -1135,8 +1330,8 @@
     display: flex;
     flex-direction: column;
     padding: var(--space-5);
-    border: 1px dashed var(--border-control);
     border-radius: var(--radius-card);
+    background: var(--surface-panel);
     color: var(--text-secondary);
     gap: var(--space-2);
   }
@@ -1178,7 +1373,7 @@
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     padding: var(--space-3);
-    background: var(--surface-sunken);
+    background: var(--surface-panel);
     text-align: left;
     cursor: grab;
     touch-action: manipulation;
@@ -1235,6 +1430,7 @@
   .recipe-step {
     position: relative;
     display: grid;
+    min-height: var(--control-min);
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     padding: var(--space-1) var(--space-2) var(--space-1) var(--space-6);
@@ -1251,9 +1447,10 @@
   .recipe-step::before {
     position: absolute;
     left: var(--space-3);
-    top: var(--space-4);
+    top: 50%;
     color: var(--text-tertiary);
     content: counter(step);
+    transform: translateY(-50%);
     font-size: var(--type-footnote-size);
     font-variant-numeric: tabular-nums;
   }
@@ -1262,11 +1459,26 @@
     overflow-wrap: anywhere;
   }
 
+  /* Quiet destructive button: no fill, no border; error colour on hover and focus. */
   .recipe-step__remove {
-    min-width: 44px;
+    min-width: var(--control-min);
     padding: var(--space-1) var(--space-2);
+    border-color: transparent;
+    background: none;
+    color: var(--text-secondary);
     font-size: var(--type-footnote-size);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
+  }
+
+  .recipe-step__remove:hover:not(:disabled),
+  .recipe-step__remove:focus-visible {
+    border-color: transparent;
+    color: var(--status-error);
+  }
+
+  .recipe-step__remove:active:not(:disabled) {
+    background: color-mix(in srgb, var(--status-error) 6%, var(--surface-sunken));
+    color: var(--status-error);
   }
 
   .recipe-drop-before::after,
@@ -1307,7 +1519,7 @@
     color: var(--text-primary);
     font-family: var(--font-ui);
     font-size: var(--type-callout-size);
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
     pointer-events: none;
     transition: none;
     user-select: none;
@@ -1376,5 +1588,10 @@
     width: 100%;
     animation: none;
     opacity: 0.5;
+  }
+
+  /* The spinner stays visible as a static ring segment; the status line carries the words. */
+  [aria-busy="true"] .btn--primary:disabled::after {
+    animation: none;
   }
 }

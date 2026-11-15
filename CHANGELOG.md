@@ -9,3 +9,4 @@
 ### Changed
 
 - Design tokens follow the HIG-first token plan of `webapp/design/DESIGN.md` v3: neutral light and dark surfaces, system font without monospace, the game green only on the primary button, blue focus ring and links, teal success; the system colour scheme now decides by default and the explicit theme choice still wins (T-3).
+- Controls and content components follow the HIG-first component table of `webapp/design/DESIGN.md` v3: one 44 px target height, flat segmented controls, quiet destructive buttons, pill chips and badges with status glyphs, soft-fill option cards and alerts, and a loading spinner in the primary button; the game green is used only for the primary action (T-4).

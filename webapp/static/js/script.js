@@ -9,6 +9,88 @@ document.addEventListener("DOMContentLoaded", function () {
   let activeRun = null;
   let nextRequestId = 1;
 
+  function validationMessage(field) {
+    const validity = field.validity;
+    if (field.tagName && field.tagName.toLowerCase() === "select") {
+      return "Choose an option.";
+    }
+    if (validity.valueMissing) return "Enter a number.";
+    if (validity.badInput || validity.stepMismatch) return "Enter a whole number.";
+    if (validity.rangeUnderflow || validity.rangeOverflow) {
+      const hasMax = field.max !== undefined && field.max !== "";
+      return hasMax
+        ? "Enter a whole number from " + field.min + " to " + field.max + "."
+        : "Enter a whole number of at least " + field.min + ".";
+    }
+    return "Check this value.";
+  }
+
+  function describedByTokens(field) {
+    return (field.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean);
+  }
+
+  function setFieldError(field, message) {
+    const messageElement = document.getElementById(field.id + "-error");
+    if (!messageElement) return;
+    messageElement.textContent = message;
+    messageElement.hidden = false;
+    field.setAttribute("aria-invalid", "true");
+    const tokens = describedByTokens(field);
+    if (!tokens.includes(messageElement.id)) tokens.push(messageElement.id);
+    field.setAttribute("aria-describedby", tokens.join(" "));
+  }
+
+  function clearFieldError(field) {
+    const messageElement = document.getElementById(field.id + "-error");
+    if (!messageElement) return;
+    messageElement.textContent = "";
+    messageElement.hidden = true;
+    field.removeAttribute("aria-invalid");
+    const tokens = describedByTokens(field).filter((token) => token !== messageElement.id);
+    if (tokens.length) {
+      field.setAttribute("aria-describedby", tokens.join(" "));
+    } else {
+      field.removeAttribute("aria-describedby");
+    }
+  }
+
+  // Shows the native validation result (existing min/max/step/required rules) on the field.
+  function initializeFieldErrors(targetForm) {
+    if (!targetForm || typeof targetForm.addEventListener !== "function") return;
+    let firstInvalidFocused = false;
+    targetForm.addEventListener(
+      "invalid",
+      function (event) {
+        const field = event.target;
+        if (!field || !field.id || !field.validity) return;
+        setFieldError(field, validationMessage(field));
+        if (!firstInvalidFocused) {
+          firstInvalidFocused = true;
+          field.focus();
+          setTimeout(function () {
+            firstInvalidFocused = false;
+          }, 0);
+        }
+      },
+      true,
+    );
+    function revalidate(event) {
+      const field = event.target;
+      if (!field || !field.id || typeof field.getAttribute !== "function") return;
+      if (field.getAttribute("aria-invalid") !== "true") return;
+      if (field.validity && field.validity.valid) {
+        clearFieldError(field);
+      } else if (field.validity) {
+        setFieldError(field, validationMessage(field));
+      }
+    }
+    targetForm.addEventListener("input", revalidate);
+    targetForm.addEventListener("change", revalidate);
+  }
+
+  initializeFieldErrors(form);
+  initializeFieldErrors(document.getElementById("effect-form"));
+
   function appendTextElement(parent, tagName, text, className) {
     const element = document.createElement(tagName);
     element.textContent = text;
