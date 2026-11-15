@@ -963,19 +963,20 @@
     line-height: var(--type-body-line);
   }
 
+  /* Whole segments wrap to the next row when the labels do not fit side by side (large text). */
   .effect-preference {
-    display: grid;
+    display: flex;
+    flex-wrap: wrap;
     padding: 2px;
     border-radius: var(--radius-control);
     margin-block-start: auto;
     background: var(--surface-sunken);
     gap: 2px;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .effect-preference__option {
     position: relative;
-    min-width: 0;
+    flex: 1 1 auto;
     cursor: pointer;
   }
 
