@@ -11,3 +11,8 @@
 .git/
 # Reviewed baseline and templates; prevent incidental formatter rewrites.
 docs/standards/
+# Managed by agent-team (package and generated files); `agent-team update` owns their format.
+team/
+.claude/
+AGENTS.md
+CLAUDE.md

@@ -1,0 +1,20 @@
+{
+    "kbRoot": "C:/Users/timra/git/agent-team/schedule1calc-project/schedule1calc-kb",
+    "targets": ["claude"],
+    "devPool": 6,
+    "claude": {
+        "model": "opus",
+        "effortLevel": "medium"
+    },
+    "codex": {
+        "model": "gpt-6.1-sol",
+        "effort": "medium",
+        "reviewModel": "gpt-6.1-sol",
+        "webSearch": "cached",
+        "maxThreads": 4
+    },
+    "project": {
+        "name": "schedule1calc",
+        "testCommand": ".venv/Scripts/python.exe -B tools/project.py test"
+    }
+}

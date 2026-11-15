@@ -138,9 +138,9 @@ Es gibt keine Frontend-Bundles oder getrackten Buildausgaben. Der Server liest d
 
 ## Agent workflow
 
-`AGENTS.md` binds agents to this profile, its command map and the adopted baseline. Handle small or tightly coupled changes directly. For substantial work with independently useful subtasks, use the available `orchestrated-development` skill when delegation adds clear value. Assign self-contained scopes and exclusive file ownership, preserve other contributors' changes, and review actual diffs and verification evidence before accepting worker output. Workers do not delegate further. Retain the configured model and reasoning defaults unless the user chooses otherwise; if delegation is unavailable, complete the work directly.
+`AGENTS.md` binds agents to this profile, its command map and the adopted baseline. The agent team (roles, hooks, knowledge base) comes from the package `@tim/agent-team`: its shared rules are in the package part of `AGENTS.md` and in `team/roles/`, the project rules in the project block of `AGENTS.md`. Preserve other contributors' changes, and review actual diffs and verification evidence before accepting work.
 
-The shared workflow is maintained in `../ai-infra/codex/AGENTS.md`; repository instructions remain a thin project binding. Reapplying `project-start` 1.1.0 retains the adopted baseline **1.0.0**. The skill's bundled baseline 1.1.0 is not an automatic migration of this repository.
+Reapplying `project-start` 1.1.0 retains the adopted baseline **1.0.0**. The skill's bundled baseline 1.1.0 is not an automatic migration of this repository.
 
 ## Verification on 2026-09-10
 

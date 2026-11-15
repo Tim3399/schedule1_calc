@@ -1,0 +1,1 @@
+Join the team: run `node team/bootstrap.mjs claim` and then follow the printed steps exactly, without asking back. If the script reports that all roles are taken or that this chat already has a role, do nothing else. If the script ends with an error, report its output to the user and do nothing else.

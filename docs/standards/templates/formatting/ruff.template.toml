@@ -1,0 +1,24 @@
+# Destination: `ruff.toml` in the target repository root. Inside `pyproject.toml`, put the same
+# keys under `[tool.ruff]` and `[tool.ruff.format]` instead.
+# Set this to the oldest Python version the application supports.
+target-version = "py312"
+line-length = 100
+indent-width = 4
+extend-exclude = [
+    "*.md",
+    "node_modules",
+    "dist",
+    "build",
+    "coverage",
+    ".venv*",
+    "venv",
+    "target",
+    "runtime",
+    "test-results",
+    "playwright-report",
+]
+
+[format]
+indent-style = "space"
+quote-style = "double"
+line-ending = "lf"
