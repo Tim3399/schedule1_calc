@@ -32,7 +32,27 @@ function normalize(value) {
   return value.replace(/\s+/g, " ").trim().toLowerCase();
 }
 
-// Returns [{ context: ["@media ..."], selector, decls: Map<name, value> }] for every rule.
+// Splits a selector list at top-level commas (not inside parentheses or brackets).
+function splitSelectors(prelude) {
+  const entries = [];
+  let depth = 0;
+  let current = "";
+  for (const char of prelude) {
+    if (char === "(" || char === "[") depth += 1;
+    if (char === ")" || char === "]") depth -= 1;
+    if (char === "," && depth === 0) {
+      entries.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  entries.push(current.trim());
+  return entries;
+}
+
+// Returns [{ context: ["@media ..."], selector, decls: Map<name, value> }]; a selector list
+// yields one entry per list item.
 function parseCss(source) {
   const text = source.replace(/\/\*[\s\S]*?\*\//g, "");
   const rules = [];
@@ -67,7 +87,9 @@ function parseCss(source) {
           if (colon === -1) continue;
           decls.set(part.slice(0, colon).trim(), part.slice(colon + 1).trim());
         }
-        rules.push({ context, selector: prelude, decls });
+        for (const selector of splitSelectors(prelude)) {
+          rules.push({ context, selector, decls });
+        }
       }
       position = close;
     }
