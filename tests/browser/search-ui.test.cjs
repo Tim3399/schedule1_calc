@@ -11,11 +11,30 @@ const scriptSource = fs.readFileSync(
   "utf8",
 );
 
+// Records every inline style write (property assignment, setProperty, removeProperty), so a test
+// can show that styling stays in styles.css.
+function inlineStyle() {
+  const writes = [];
+  const target = {
+    writes,
+    setProperty: (name) => writes.push(name),
+    removeProperty: (name) => writes.push(name),
+  };
+  return new Proxy(target, {
+    set(object, name, value) {
+      writes.push(String(name));
+      object[name] = value;
+      return true;
+    },
+  });
+}
+
 function element(properties = {}) {
   const node = {
     children: [],
     attributes: {},
     listeners: {},
+    style: inlineStyle(),
     ...properties,
     addEventListener(type, listener) {
       this.listeners[type] = listener;
@@ -644,6 +663,13 @@ test("with motion allowed the overlay counts up while the value text stays final
   assert.equal(overlays.length, 1);
   assert.equal(overlays[0].attributes["aria-hidden"], "true");
   assert.equal(accessibleText(value), "$40.70", "assistive technology sees the final value only");
+  assert.deepEqual(overlays[0].style.writes, [], "the overlay gets no inline style");
+  assert.deepEqual(value.style.writes, [], "the value gets no inline style");
+  assert.equal(
+    value.children.includes(overlays[0]),
+    true,
+    "the overlay sits inside the dd, which styles.css hides while it is there",
+  );
   assert.equal(
     descendants(comparison).filter((node) => node.className === "count-up").length,
     0,
@@ -658,6 +684,7 @@ test("with motion allowed the overlay counts up while the value text stays final
   assert.equal(value.children.includes(overlays[0]), true);
   stubs.step(600);
   assert.equal(value.children.includes(overlays[0]), false, "overlay is removed at the end");
+  assert.deepEqual(value.style.writes, [], "the value has no inline style to clean up");
   assert.equal(value.textContent, "$40.70");
 
   assert.ok(

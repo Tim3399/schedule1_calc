@@ -1,7 +1,8 @@
 "use strict";
 
 // Checks the Studio stylesheet (T-14, plan section 5) by parsing webapp/static/css/styles.css:
-// the action colour has one user, Barlow is self-hosted, motion is off under reduced motion, the
+// the action colour has one user, Barlow is self-hosted and set only on the wordmark and the stat
+// figures, motion is off under reduced motion, the
 // Want/Neutral/Avoid width reservation matches the labels in script.js (F-5-6), background tokens
 // are not blue, and width media queries use only the 480/900 breakpoints.
 //
@@ -171,6 +172,24 @@ test("Barlow 700 and 800 are self-hosted woff2 files, and styles.css loads nothi
   assert.deepEqual(weights.sort(), ["700", "800"]);
   assert.doesNotMatch(stylesSource, /https?:/i, "styles.css references a remote URL");
   assert.doesNotMatch(stylesSource, /@import/, "styles.css imports another stylesheet");
+});
+
+// T-14 brief item 7: Barlow for the wordmark and figures, the system UI font for text.
+test("--font-display is used only by the wordmark and the stat figures", (t) => {
+  const users = styles.rules.filter((rule) =>
+    rule.decls.some((decl) => /var\(\s*--font-display\b/.test(decl.value)),
+  );
+  for (const rule of users) t.diagnostic(`font-display: ${rule.selector}`);
+  assert.deepEqual(users.map((rule) => rule.selector).sort(), [".stat dd", ".wordmark"]);
+  for (const selector of [".btn--primary", ".stat--primary dt"]) {
+    for (const rule of styles.rules.filter((candidate) => candidate.selector === selector)) {
+      const family = rule.decls.find((decl) => decl.name === "font-family");
+      assert.ok(
+        !family || family.value === "var(--font-ui)",
+        `${selector} sets font-family ${family?.value}; its label is text`,
+      );
+    }
+  }
 });
 
 test("every animation is switched off under prefers-reduced-motion: reduce", (t) => {

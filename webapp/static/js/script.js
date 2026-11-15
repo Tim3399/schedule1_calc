@@ -228,38 +228,21 @@ document.addEventListener("DOMContentLoaded", function () {
     return fallback;
   }
 
-  function setStyleProperty(element, name, value) {
-    if (typeof element.style?.setProperty === "function") element.style.setProperty(name, value);
-  }
-
-  function clearStyleProperty(element, name) {
-    if (typeof element.style?.removeProperty === "function") element.style.removeProperty(name);
-  }
-
+  // The overlay is positioned and the final text hidden by styles.css (`.count-up` and
+  // `.stat--primary dd:has(> .count-up)`); no inline styles are set here.
   function startCountUp(valueElement, finalValue) {
     const duration = motionDuration("--motion-count", 550);
     const overlay = document.createElement("span");
     overlay.className = "count-up";
     overlay.setAttribute("aria-hidden", "true");
     overlay.textContent = formatMoney(0);
-    setStyleProperty(overlay, "position", "absolute");
-    setStyleProperty(overlay, "left", "0");
-    setStyleProperty(overlay, "top", "0");
-    setStyleProperty(overlay, "-webkit-text-fill-color", "currentcolor");
-    setStyleProperty(valueElement, "position", "relative");
-    setStyleProperty(valueElement, "-webkit-text-fill-color", "transparent");
     valueElement.appendChild(overlay);
     let startedAt = null;
-    function finish() {
-      overlay.remove();
-      clearStyleProperty(valueElement, "position");
-      clearStyleProperty(valueElement, "-webkit-text-fill-color");
-    }
     function frame(now) {
       if (startedAt === null) startedAt = now;
       const progress = Math.min(1, Math.max(0, (now - startedAt) / duration));
       if (progress >= 1) {
-        finish();
+        overlay.remove();
         return;
       }
       const eased = 1 - (1 - progress) ** 3;

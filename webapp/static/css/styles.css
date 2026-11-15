@@ -5,8 +5,8 @@
 
 @layer base, layout, components, utilities;
 
-/* Barlow (OFL, self-hosted in webapp/static/fonts) for the wordmark, figures and the primary
-   action. Until it has loaded, --font-display falls back to --font-ui. */
+/* Barlow (OFL, self-hosted in webapp/static/fonts) for the wordmark and figures only; text stays
+   in --font-ui. Until it has loaded, --font-display falls back to --font-ui. */
 @font-face {
   font-display: swap;
   font-family: "Barlow";
@@ -762,12 +762,12 @@
     cursor: not-allowed;
   }
 
-  /* Primary button: the only user of the action colour (the logo green), in Barlow. */
+  /* Primary button: the only user of the action colour (the logo green). Its label is text, so it
+     stays in the UI font. */
   .btn--primary {
     border-color: var(--action-primary);
     background: var(--action-primary);
     color: var(--action-primary-ink);
-    font-family: var(--font-display);
     font-size: var(--type-headline-size);
     font-weight: var(--weight-bold);
   }
@@ -1493,9 +1493,9 @@
     grid-column: 1 / -1;
   }
 
+  /* The label "Profit" is text and stays in the UI font; only the figure is set in Barlow. */
   .stat--primary dt {
     color: var(--money-ink);
-    font-family: var(--font-display);
     font-size: var(--type-subhead-size);
     font-weight: var(--weight-bold);
     letter-spacing: 0.06em;

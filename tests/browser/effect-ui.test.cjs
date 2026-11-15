@@ -67,6 +67,24 @@ function catalog() {
   };
 }
 
+// Records every inline style write (property assignment, setProperty, removeProperty), so a test
+// can show that styling stays in styles.css.
+function inlineStyle() {
+  const writes = [];
+  const target = {
+    writes,
+    setProperty: (name) => writes.push(name),
+    removeProperty: (name) => writes.push(name),
+  };
+  return new Proxy(target, {
+    set(object, name, value) {
+      writes.push(String(name));
+      object[name] = value;
+      return true;
+    },
+  });
+}
+
 function loadUi({
   fetchOutcomes = [catalog()],
   workerAvailable = true,
@@ -92,7 +110,7 @@ function loadUi({
       disabled: false,
       hidden: false,
       listeners: {},
-      style: {},
+      style: inlineStyle(),
       textContent: "",
       value: "",
       ...properties,
@@ -887,9 +905,13 @@ test("effect results count up in an overlay while the profit text stays final", 
   assert.equal(overlays.length, 1);
   assert.equal(overlays[0].attributes["aria-hidden"], "true");
   assert.equal(accessibleText(profit), profit.textContent);
+  assert.equal(profit.children.includes(overlays[0]), true, "the overlay sits inside the dd");
+  assert.deepEqual(overlays[0].style.writes, [], "the overlay gets no inline style");
+  assert.deepEqual(profit.style.writes, [], "the value gets no inline style");
   stubs.step(0);
   stubs.step(700);
   assert.equal(profit.children.includes(overlays[0]), false, "overlay is removed at the end");
+  assert.deepEqual(profit.style.writes, [], "the value has no inline style to clean up");
   card.listeners.animationend();
   assert.doesNotMatch(card.className, /is-revealing/);
 });
