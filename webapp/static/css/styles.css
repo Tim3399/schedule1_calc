@@ -1758,6 +1758,7 @@
     display: flex;
     flex-direction: column;
     margin-block: var(--space-3);
+    container-type: inline-size;
     gap: var(--space-2);
     list-style: none;
   }
@@ -1822,6 +1823,45 @@
   .recipe-step__remove:active:not(:disabled) {
     background: color-mix(in srgb, var(--status-error) 6%, var(--surface-sunken));
     color: var(--status-error);
+  }
+
+  /* Large text on a narrow list (under 14em, e.g. 320 px from 125 % text): the price moves under
+     Delete, so number, price and Delete no longer squeeze the name column (F-17-1). The query is
+     in em, so it follows the text size; the list is the container, so a row can restyle itself. */
+  @container (width < 14em) {
+    .recipe-step {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      row-gap: 0;
+    }
+
+    .recipe-step__body {
+      display: contents;
+    }
+
+    .recipe-step__number {
+      min-width: 2ch;
+      align-self: center;
+      grid-column: 1;
+      grid-row: 1 / span 2;
+    }
+
+    .recipe-step__name {
+      align-self: center;
+      grid-column: 2;
+      grid-row: 1 / span 2;
+    }
+
+    .recipe-step__remove {
+      padding-inline: var(--space-1);
+      grid-column: 3;
+      grid-row: 1;
+    }
+
+    .recipe-step__price {
+      grid-column: 3;
+      grid-row: 2;
+      text-align: center;
+    }
   }
 
   .recipe-drop-before::after,
