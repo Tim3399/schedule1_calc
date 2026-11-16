@@ -300,13 +300,13 @@
 
   .theme-switch .theme-switch__option:hover:not(:disabled, [aria-checked="true"]) {
     border-color: transparent;
-    background: color-mix(in srgb, var(--header-switch-selected) 14%, transparent);
+    background: color-mix(in srgb, var(--header-switch-selected) 6%, transparent);
     color: var(--header-switch-ink);
   }
 
   /* Pressed (not selected): a stronger tint of the selected surface, never the selected look. */
   .theme-switch .theme-switch__option:active:not(:disabled, [aria-checked="true"]) {
-    background: color-mix(in srgb, var(--header-switch-selected) 24%, transparent);
+    background: color-mix(in srgb, var(--header-switch-selected) 10%, transparent);
     color: var(--header-switch-ink);
   }
 
@@ -507,6 +507,13 @@
 
   input[type="number"] {
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Placeholders use text tertiary (DESIGN.md section 8, "text tertiary / field"), not the browser default grey; opacity 1 because Firefox dims it. */
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--text-tertiary);
+    opacity: 1;
   }
 
   .select-control {
