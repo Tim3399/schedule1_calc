@@ -6,6 +6,13 @@
     <title>Best Mix Calculator</title>
     <link rel="stylesheet" href="{{ browser_asset_url('css/tokens.css') }}" />
     <link rel="stylesheet" href="{{ browser_asset_url('css/styles.css') }}" />
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="{{ browser_asset_url('fonts/barlow-latin-700-normal.woff2') }}"
+      crossorigin
+    />
     <script>
       (function () {
         try {
@@ -53,7 +60,7 @@
         </div>
       </dl>
       <div class="chips-row">
-        <span class="chips-label">Ingredients</span>
+        <span class="chips-label">Mix</span>
         {% if combination.substances %}
         <ol class="chips chips--ordered mix">
           {% for substance in combination.substances %}
@@ -68,7 +75,7 @@
         {% endif %}
       </div>
       <div class="chips-row">
-        <span class="chips-label">Effects</span>
+        <span class="chips-label">Effects · {{ combination.effects | length }}</span>
         {% if combination.effects %}
         <ul class="chips">
           {% for effect in combination.effects %} {% set color = effect | effect_color %}
@@ -419,7 +426,7 @@
               <div class="panel-column panel-column--recipe-result">
                 <div
                   id="recipe-result"
-                  class="result-stack"
+                  class="result-stack result-surface"
                   role="status"
                   aria-live="polite"
                   aria-atomic="true"

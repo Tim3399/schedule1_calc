@@ -233,6 +233,14 @@ test("cancel retains the latest checkpoint without claiming optimality in either
     assert.match(resultText(ui), /\$60\.00/);
     assert.match(resultText(ui), /Search stopped — optimality not proven/);
     assert.doesNotMatch(resultText(ui), /Optimality proven|Best Profit Combination|No result/);
+    const badges = descendants(ui.result).filter((node) =>
+      String(node.className).startsWith("badge"),
+    );
+    assert.equal(badges.length, 2, "profit card and comparison card");
+    for (const badge of badges) {
+      assert.equal(badge.className, "badge badge--stopped");
+      assert.equal(badge.textContent, "Search stopped — optimality not proven");
+    }
     const stoppedText = resultText(ui);
     worker.emit({ type: "result", request_id, result: successfulResult(mode) });
     assert.equal(resultText(ui), stoppedText);
@@ -384,10 +392,10 @@ test("result IDs render with catalog display names and readable unknown fallback
 
   worker.emit({ type: "result", request_id: worker.sent[0].request_id, result: result });
 
-  assert.match(resultText(ui), /Effects\nEnergizing/);
-  assert.match(resultText(ui), /Ingredients\nBase\nOG Kush\n1\nCuke/);
-  assert.match(resultText(ui), /Effects\nBright Eyed/);
-  assert.match(resultText(ui), /Ingredients\nBase\nOG Kush\n1\nMotor Oil\n2\nConstructor/);
+  assert.match(resultText(ui), /Effects · 1\nEnergizing/);
+  assert.match(resultText(ui), /Mix\nBase\nOG Kush\n1\nCuke/);
+  assert.match(resultText(ui), /Effects · 1\nBright Eyed/);
+  assert.match(resultText(ui), /Mix\nBase\nOG Kush\n1\nMotor Oil\n2\nConstructor/);
   assert.doesNotMatch(resultText(ui), /bright_eyed|motor_oil/);
 });
 
@@ -426,7 +434,10 @@ test("profit leads and the modifier result stays in a labelled native comparison
   assert.equal(textOf(profitCard).match(/Optimality proven/g)?.length, 1);
   assert.equal(textOf(comparison).match(/Optimality proven/g)?.length, 1);
 
-  for (const card of [profitCard, comparison.children[1]]) {
+  for (const [card, modifier] of [
+    [profitCard, "0.42"],
+    [comparison.children[1], "0.91"],
+  ]) {
     const labels = descendants(card)
       .filter((node) => node.tagName === "dt" || node.className === "chips-label")
       .map((node) => node.textContent);
@@ -435,10 +446,20 @@ test("profit leads and the modifier result stays in a labelled native comparison
       "Sell Price",
       "Ingredient Cost",
       "Modifier",
-      "Ingredients",
-      "Effects",
+      "Mix",
+      "Effects · 1",
     ]);
+    const values = descendants(card)
+      .filter((node) => node.tagName === "dd")
+      .map((node) => node.textContent);
+    assert.equal(values[3], modifier);
   }
+  assert.equal(
+    descendants(ui.result).filter((node) => ["progress", "status-block"].includes(node.className))
+      .length,
+    0,
+    "a finished result holds no progress",
+  );
 
   const fastUi = loadUi({}, "fast");
   await fastUi.form.listeners.submit(submitEvent());
@@ -744,6 +765,6 @@ test("money is formatted game-style for profit, sell price, and ingredient cost"
       .filter((node) => node.tagName === "dd")
       .map((node) => node.textContent);
     assert.deepEqual(values.slice(0, 3), [profit, sellText, costText]);
-    assert.equal(values[3], "0.22", "modifier format is unchanged");
+    assert.equal(values[3], "0.22", "modifier is an additive value with two decimals, no ×");
   }
 });

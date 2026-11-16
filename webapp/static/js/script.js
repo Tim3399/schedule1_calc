@@ -277,7 +277,7 @@ document.addEventListener("DOMContentLoaded", function () {
   function appendMixRow(card, combination, catalog, baseProduct) {
     const row = document.createElement("div");
     row.className = "chips-row";
-    appendTextElement(row, "span", "Ingredients", "chips-label");
+    appendTextElement(row, "span", "Mix", "chips-label");
     if (combination.substances.length === 0) {
       appendTextElement(row, "span", "None", "chips__empty");
       card.appendChild(row);
@@ -361,7 +361,7 @@ document.addEventListener("DOMContentLoaded", function () {
     appendMixRow(card, combination, catalog, baseProduct);
     appendChipRow(
       card,
-      "Effects",
+      `Effects · ${combination.effects.length}`,
       combination.effects.map((name) => displayName(catalog, "effects", name)),
       false,
       combination.effects.map((name) => catalogItem(catalog, "effects", name)?.color),
@@ -481,7 +481,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const incomplete = result.search.status === "incomplete";
     const exact = requestedMode === "exact" && !incomplete;
     const status = incomplete
-      ? { tone: "approximate", label: "Search stopped — optimality not proven" }
+      ? { tone: "stopped", label: "Search stopped — optimality not proven" }
       : exact
         ? { tone: "proven", label: "Optimality proven" }
         : { tone: "approximate", label: "Approximate result — optimality not guaranteed" };
@@ -1631,7 +1631,7 @@ document.addEventListener("DOMContentLoaded", function () {
         catalog,
         output,
         incomplete
-          ? { label: "Search stopped — optimality not proven", tone: "approximate" }
+          ? { label: "Search stopped — optimality not proven", tone: "stopped" }
           : run.mode === "exact"
             ? { label: "Optimality proven", tone: "proven" }
             : { label: "Approximate search — optimality not guaranteed", tone: "approximate" },

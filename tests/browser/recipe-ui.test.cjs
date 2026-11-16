@@ -419,7 +419,7 @@ test("clear and undo restore a 14-step sequence and its selected-row focus", asy
   assert.deepEqual(ui.evaluations.at(-1), { product_name: "og_kush", substances: recipe });
   assert.match(
     textOf(ui.elements["recipe-result"]),
-    /Ingredients\nBase\nOG Kush\n1\nCuke\n\$2\.00\n2\nMotor Oil\n\$1\.00\n3\nMotor Oil\n\$1\.00/,
+    /Mix\nBase\nOG Kush\n1\nCuke\n\$2\.00\n2\nMotor Oil\n\$1\.00\n3\nMotor Oil\n\$1\.00/,
   );
   assert.equal(ui.fetchCalls.length, 1);
   assert.equal(ui.fetchCalls[0].url, "/search-data");
@@ -469,10 +469,7 @@ test("rows expose only Delete and support focused Alt+Arrow keyboard reordering"
 
   ui.elements["recipe-steps"].children[2].children[1].listeners.click();
   assert.deepEqual(ui.evaluations.at(-1).substances, ["motor_oil", "cuke"]);
-  assert.match(
-    textOf(ui.elements["recipe-result"]),
-    /Ingredients\nBase\nOG Kush\n1\nMotor Oil\n\$1\.00/,
-  );
+  assert.match(textOf(ui.elements["recipe-result"]), /Mix\nBase\nOG Kush\n1\nMotor Oil\n\$1\.00/);
 
   ui.elements["clear-recipe"].listeners.click();
   assert.equal(ui.elements["restore-recipe"].hidden, false);
@@ -887,6 +884,16 @@ test("recipe results show the base tile with step prices and never animate", asy
     .filter((node) => node.tagName === "dd")
     .map((node) => node.textContent);
   assert.match(dollars[0], /^-?\$\d[\d,]*\.\d\d$/);
+  assert.match(dollars[3], /^\d+\.\d{2}$/, "modifier is an additive value with two decimals, no ×");
+  const effects = descendants(result).find(
+    (node) => node.tagName === "ul" && node.className === "chips",
+  ).children.length;
+  assert.deepEqual(
+    descendants(result)
+      .filter((node) => node.className === "chips-label")
+      .map((node) => node.textContent),
+    ["Mix", `Effects · ${effects}`],
+  );
   assert.equal(
     descendants(result).filter((node) => node.className === "count-up").length,
     0,
@@ -901,12 +908,23 @@ test("recipe results show the base tile with step prices and never animate", asy
   assert.equal(frames.length, 0, "no animation frame is requested while editing a recipe");
 });
 
-test("an empty recipe keeps the None placeholder instead of a mix list", async () => {
+test("an empty recipe shows the base-only result card, not an empty state", async () => {
   const ui = loadUi();
   await openRecipe(ui);
-  addIngredient(ui, "cuke");
-  ui.elements["clear-recipe"].listeners.click();
-  const text = textOf(ui.elements["recipe-result"]);
-  assert.match(text, /Ingredients\nNone/);
-  assert.doesNotMatch(text, /Base/);
+  const descendants = (node) => [node, ...node.children.flatMap(descendants)];
+  for (const step of ["open", "clear"]) {
+    if (step === "clear") {
+      addIngredient(ui, "cuke");
+      ui.elements["clear-recipe"].listeners.click();
+    }
+    const output = ui.elements["recipe-result"];
+    const text = textOf(output);
+    assert.match(text, /Your Recipe Result/, step);
+    assert.match(text, /Mix\nNone/, step);
+    assert.equal(
+      descendants(output).filter((node) => node.className === "empty-state").length,
+      0,
+      step,
+    );
+  }
 });

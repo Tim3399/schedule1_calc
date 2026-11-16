@@ -931,8 +931,8 @@
   }
 
   /* Badge: a pill with soft fill, status text and a glyph (the glyph repeats the text, so it has
-     empty alt text). A stopped search renders as the approximate tone (script.js); `--stopped`
-     is styled in case a caller names it. */
+     empty alt text). A stopped search renders as `--stopped` (script.js): the warning fill with
+     a ■ glyph, so it differs from the approximate ≈ by more than its text. */
   .badge {
     display: inline-flex;
     align-items: center;
@@ -1374,7 +1374,7 @@
   /* Mix: a line of stock tiles (base product, then the steps with prices), joined by "+". The step
      number is visible text in the tile, so the list counter is not drawn. */
   .mix {
-    gap: var(--space-2) var(--space-5);
+    gap: var(--space-2) 0;
   }
 
   .mix .mix__item {
@@ -1395,7 +1395,13 @@
     content: none;
   }
 
-  /* The "+" sits in the gap before every tile but the first; it is decoration (empty alt text). */
+  /* Every tile but the first reserves the "+" column in its own inline-start margin, so the "+"
+     wraps with its tile and never hangs past the list edge (F-14-8). */
+  .mix .mix__item + .mix__item {
+    margin-inline-start: var(--space-5);
+  }
+
+  /* The "+" fills that margin; it is decoration (empty alt text). */
   .mix .mix__item + .mix__item::before {
     position: absolute;
     top: 50%;

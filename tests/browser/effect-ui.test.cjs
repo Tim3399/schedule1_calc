@@ -389,6 +389,12 @@ test("effect cancellation and watchdog preserve validated matches without provin
     assert.match(text, /Motor Oil/);
     assert.match(text, /Search stopped — optimality not proven/);
     assert.doesNotMatch(text, /Optimality proven|Shortest matching recipe|No result was produced/);
+    const badges = descendantsOf(ui.elements["effect-result"]).filter((node) =>
+      String(node.className).startsWith("badge"),
+    );
+    assert.equal(badges.length, 1);
+    assert.equal(badges[0].className, "badge badge--stopped");
+    assert.equal(badges[0].textContent, "Search stopped — optimality not proven");
     assert.equal(worker.terminateCalls, 1);
     assert.equal(ui.elements["find-effects"].disabled, false);
     worker.emit({ type: "result", request_id, result: effectResult({ targets: ["calming"] }) });
@@ -930,5 +936,33 @@ test("effect results show the base tile and step prices", async () => {
       ["mix__item mix__item--base", "mix__step=Base", "mix__name=OG Kush"],
       ["mix__item", "mix__step=1", "mix__name=Motor Oil", "mix__price=$1.00"],
     ],
+  );
+});
+
+test("effect results use the shared Mix, Effects and modifier labels and drop the progress", async () => {
+  const ui = loadUi();
+  const output = await effectResultFor(ui, ["motor_oil"]);
+  const all = descendantsOf(output);
+  const card = all.find((node) => node.tagName === "article");
+  const effects = descendantsOf(card).find(
+    (node) => node.tagName === "ul" && node.className === "chips",
+  ).children.length;
+  assert.ok(effects > 0);
+  const stats = card.children.find((node) => node.className === "stats");
+  assert.deepEqual(
+    [
+      ...stats.children.map((stat) => stat.children[0].textContent),
+      ...descendantsOf(card)
+        .filter((node) => node.className === "chips-label")
+        .map((node) => node.textContent),
+    ],
+    ["Profit", "Sell Price", "Ingredient Cost", "Modifier", "Mix", `Effects · ${effects}`],
+  );
+  const modifier = stats.children[3].children[1].textContent;
+  assert.match(modifier, /^\d+\.\d{2}$/);
+  assert.equal(
+    all.filter((node) => ["progress", "status-block"].includes(node.className)).length,
+    0,
+    "a finished result holds no progress",
   );
 });
