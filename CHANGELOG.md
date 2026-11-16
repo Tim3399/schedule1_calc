@@ -17,4 +17,4 @@
 
 ### Fixed
 
-- With large text on narrow screens the theme switch wraps its segments into equal-width rows instead of letting "System" run out of its segment, and an invalid field keeps its red border while the pointer is over it (T-7).
+- With large text on narrow screens the theme switch wraps its segments into equal-width rows instead of letting "System" run out of its segment, and an invalid field keeps its red border while the pointer is over it (T-7). The theme switch labels stay at 4.5:1 or more on the hover and pressed tints (6 % and 10 % instead of 14 % and 24 %), and every placeholder uses the tertiary text colour instead of the browser default grey; both are covered by the contrast test (T-7).

@@ -65,10 +65,33 @@ const FOREGROUNDS = {
 };
 
 // Background names -> colour spec: a token, { over: alphaToken, base: spec },
-// { scene: layerToken } (the drawing opacity of styles.css over the sky bottom), or
-// { styles: [selector, property] } for a colour that styles.css composes.
+// { scene: layerToken } (the drawing opacity of styles.css over the sky bottom),
+// { styles: [selector, property] } for a colour that styles.css composes, or
+// { tint: [selector, property], base: spec } for a translucent tint of styles.css over a base.
 const SWITCH = "--header-switch-surface";
+const SWITCH_LAYERS = {
+  "sky bottom": "--scene-sky-bottom",
+  "sky top": "--scene-sky-top",
+  far: { scene: "--scene-far" },
+  mid: { scene: "--scene-mid" },
+  near: { scene: "--scene-near" },
+};
+const SWITCH_TINTS = {
+  6: '.theme-switch .theme-switch__option:hover:not(:disabled, [aria-checked="true"])',
+  10: '.theme-switch .theme-switch__option:active:not(:disabled, [aria-checked="true"])',
+};
+// "mix(header switch selected n %, switch surface) over <layer>": the hover (n = 6) and pressed
+// (n = 10) tint of an unselected theme switch segment over the switch surface over a scene layer.
+const SWITCH_TINT_BACKGROUNDS = Object.fromEntries(
+  Object.entries(SWITCH_TINTS).flatMap(([percent, selector]) =>
+    Object.entries(SWITCH_LAYERS).map(([layer, base]) => [
+      `mix(header switch selected ${percent} %, switch surface) over ${layer}`,
+      { tint: [selector, "background"], base: { over: SWITCH, base } },
+    ]),
+  ),
+);
 const BACKGROUNDS = {
+  ...SWITCH_TINT_BACKGROUNDS,
   screen: "--surface-screen",
   panel: "--surface-panel",
   raised: "--surface-raised",
@@ -271,6 +294,7 @@ const truncate = (value) => (Math.floor(value * 100) / 100).toFixed(2);
 
 function background(spec, theme) {
   if (typeof spec === "string") return over(parseColour(`var(${spec})`, theme), [0, 0, 0, 1]);
+  if (spec.tint) return tintBackground(spec, theme);
   if (spec.over) return over(parseColour(`var(${spec.over})`, theme), background(spec.base, theme));
   if (spec.scene) {
     const opacity = Number(declaration(styleRules, ...SCENE_OPACITY, "styles.css"));
@@ -282,6 +306,11 @@ function background(spec, theme) {
   }
   const value = declaration(styleRules, ...spec.styles, "styles.css");
   return over(parseColour(value, theme), [0, 0, 0, 1]);
+}
+
+function tintBackground(spec, theme) {
+  const value = declaration(styleRules, ...spec.tint, "styles.css");
+  return over(parseColour(value, theme), background(spec.base, theme));
 }
 
 function opaque(colour, name) {
@@ -348,6 +377,7 @@ function readTable(sectionText, heading) {
       fg,
       bgs,
       cells: { Dusk: cells[columns.Dusk], Night: cells[columns.Night] },
+      where: cells[columns.Where] ?? "",
     };
   });
 }
@@ -425,6 +455,16 @@ test("mix labels match the color-mix() of styles.css", () => {
     return spec;
   };
   for (const [name, spec] of Object.entries(BACKGROUNDS)) {
+    if (spec.tint) {
+      const tint = /^mix\((.+) (\d+) %, switch surface\) over .+$/.exec(name);
+      assert.ok(tint, `"${name}": expected "mix(<colour> <n> %, switch surface) over <layer>"`);
+      assert.equal(
+        declaration(styleRules, ...spec.tint, "styles.css"),
+        `color-mix(in srgb, var(${tokenOf(tint[1])}) ${tint[2]}%, transparent)`,
+        `"${name}" does not match ${spec.tint.join(" ")}`,
+      );
+      continue;
+    }
     if (!spec.styles) continue;
     const label = /^mix\((.+) (\d+) %, (.+)\)$/.exec(name);
     assert.ok(label, `"${name}": expected "mix(<colour> <n> %, <background>)"`);
@@ -433,6 +473,24 @@ test("mix labels match the color-mix() of styles.css", () => {
       value,
       `color-mix(in srgb, var(${tokenOf(label[1])}) ${label[2]}%, var(${tokenOf(label[3])}))`,
       `"${name}" does not match ${spec.styles.join(" ")}`,
+    );
+  }
+});
+
+test('placeholders use the colour the table row "text tertiary / field" names', () => {
+  const row = readAll()[0].rows.find((entry) => entry.label === "text tertiary / field");
+  assert.ok(row, 'section 8 has no row "text tertiary / field"');
+  assert.match(row.where, /placeholders/, 'the row "text tertiary / field" must name placeholders');
+  for (const selector of ["input::placeholder", "textarea::placeholder"]) {
+    assert.equal(
+      declaration(styleRules, selector, "color", "styles.css"),
+      `var(${FOREGROUNDS["text tertiary"]})`,
+      `${selector} must use the colour of "text tertiary / field"`,
+    );
+    assert.equal(
+      declaration(styleRules, selector, "opacity", "styles.css"),
+      "1",
+      `${selector} needs opacity 1 (Firefox dims placeholders)`,
     );
   }
 });
