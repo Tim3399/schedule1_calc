@@ -115,6 +115,10 @@ const BACKGROUNDS = {
   "success soft over panel": { over: "--status-success-soft", base: "--surface-panel" },
   "warning soft over panel": { over: "--status-warning-soft", base: "--surface-panel" },
   "error soft over panel": { over: "--status-error-soft", base: "--surface-panel" },
+  "match strict soft over field": { over: "--match-strict-soft", base: "--surface-field" },
+  "match strict selected over field": { over: "--match-strict-selected", base: "--surface-field" },
+  "match loose soft over field": { over: "--match-loose-soft", base: "--surface-field" },
+  "match loose selected over field": { over: "--match-loose-selected", base: "--surface-field" },
   "warning soft over screen": { over: "--status-warning-soft", base: "--surface-screen" },
   "error soft over screen": { over: "--status-error-soft", base: "--surface-screen" },
   "mix(error 6 %, sunken)": {

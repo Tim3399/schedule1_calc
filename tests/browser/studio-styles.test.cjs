@@ -371,20 +371,82 @@ test("styles.css no longer uses the retired tokens --profit-* and --selected-bor
   assert.doesNotMatch(stylesSource, /var\(\s*--selected-border\b/);
 });
 
-test('the mix "+" lives in its tile\'s own margin, so a wrapped line keeps it inside the list (F-14-8)', () => {
-  const decl = (selector, name) => {
+test("the mix, the shelf and the mixing order are even grids without separators (T-17)", () => {
+  const rule = (selector) => {
+    const found = styles.rules.find(
+      (entry) => entry.selector === selector && entry.context.length === 1,
+    );
+    assert.ok(found, `${selector} not found`);
+    return found;
+  };
+  const decl = (selector, name) => rule(selector).decls.find((entry) => entry.name === name)?.value;
+  // Equal columns: every track is the same 1fr share of one minimum, capped at the list width.
+  const columns = "repeat(auto-fill, minmax(min(100%, 124px), 1fr))";
+  for (const selector of [".mix", ".ingredient-shelf"]) {
+    assert.equal(decl(selector, "display"), "grid", `${selector} is not a grid`);
+    assert.equal(decl(selector, "grid-template-columns"), columns, selector);
+  }
+  assert.equal(decl(".mix .mix__item", "min-width"), "0", "a long name would widen its column");
+  // No "+" between tiles: the tile pseudo-element draws nothing and no sibling rule adds one.
+  assert.equal(decl(".mix .mix__item::before", "content"), "none");
+  assert.ok(
+    !styles.rules.some((entry) => /\.mix__item\s*\+/.test(entry.selector)),
+    "a sibling rule between mix tiles is back",
+  );
+  // Tiles share surface, radius and type roles; only primary buttons use the action colour.
+  for (const selector of [".mix .mix__item", ".recipe-ingredient-tile", ".recipe-step"]) {
+    assert.equal(decl(selector, "background"), "var(--surface-raised)", selector);
+    const body = rule(selector)
+      .decls.map((entry) => entry.value)
+      .join(";");
+    assert.doesNotMatch(body, /--action-primary/, selector);
+  }
+  assert.equal(decl(".mix .mix__item", "border-radius"), "var(--radius-control)");
+  for (const selector of [".mix__name", ".recipe-ingredient-tile__name", ".recipe-step__name"]) {
+    assert.equal(decl(selector, "font-weight"), "var(--weight-bold)", selector);
+  }
+  for (const selector of [".mix__step", ".recipe-step__number"]) {
+    assert.equal(decl(selector, "font-size"), "var(--type-caption-size)", selector);
+  }
+});
+
+test("a mixing order row keeps its name column at large text on a narrow list (F-17-1)", () => {
+  const top = (selector) => {
     const rule = styles.rules.find(
       (entry) => entry.selector === selector && entry.context.length === 1,
     );
     assert.ok(rule, `${selector} not found`);
-    return rule.decls.find((entry) => entry.name === name)?.value;
+    return rule.decls;
   };
-  const plusWidth = decl(".mix .mix__item + .mix__item::before", "width");
-  assert.ok(plusWidth, 'the "+" has no width');
-  assert.equal(decl(".mix .mix__item + .mix__item", "margin-inline-start"), plusWidth);
-  assert.equal(decl(".mix .mix__item + .mix__item::before", "right"), "100%");
-  const gap = decl(".mix", "gap").split(" ");
-  assert.equal(gap[1], "0", "a column gap would add to the reserved margin");
+  const value = (decls, name) => decls.find((entry) => entry.name === name)?.value;
+  // The list is the query container, so the rows themselves can change their grid.
+  assert.equal(value(top(".recipe-steps"), "container-type"), "inline-size");
+  // The query is in em: it follows the text size, not only the viewport width.
+  const narrow = styles.rules.filter((entry) =>
+    entry.context.some((prelude) => /^@container \(width < \d+(?:\.\d+)?em\)$/.test(prelude)),
+  );
+  const inQuery = (selector) => {
+    const rule = narrow.find((entry) => entry.selector === selector);
+    assert.ok(rule, `${selector} has no rule in the em container query`);
+    return rule.decls;
+  };
+  // Number, name and price stop sharing one line: the body dissolves into the row grid, the name
+  // spans both row lines in the middle column, Delete and price stack in the last column.
+  assert.equal(value(inQuery(".recipe-step"), "grid-template-columns"), "auto minmax(0, 1fr) auto");
+  assert.equal(value(inQuery(".recipe-step__body"), "display"), "contents");
+  assert.equal(value(inQuery(".recipe-step__name"), "grid-column"), "2");
+  assert.equal(value(inQuery(".recipe-step__name"), "grid-row"), "1 / span 2");
+  assert.equal(value(inQuery(".recipe-step__remove"), "grid-column"), "3");
+  assert.equal(value(inQuery(".recipe-step__remove"), "grid-row"), "1");
+  assert.equal(value(inQuery(".recipe-step__price"), "grid-column"), "3");
+  assert.equal(value(inQuery(".recipe-step__price"), "grid-row"), "2");
+  // The query must not resize its own container: no padding, border or width on the list inside it.
+  for (const entry of narrow.filter((rule) => rule.selector === ".recipe-steps")) {
+    assert.ok(
+      !entry.decls.some((decl) => /^(padding|border|width|margin)/.test(decl.name)),
+      "the list changes its own size inside its container query",
+    );
+  }
 });
 
 // Selector specificity as [ids, classes/attributes/pseudo-classes, types]; :not/:is/:has take their

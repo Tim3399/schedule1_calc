@@ -191,10 +191,13 @@ class ResultRenderingTests(unittest.TestCase):
         self.assertRegex(html, r'<button[^>]+id="find-effects"[^>]+disabled')
         self.assertIn('id="effect-filter"', html)
         self.assertIn('id="effect-options"', html)
-        self.assertIn("Only wanted effects. All other effects are excluded.", html)
+        self.assertIn(
+            "Wanted effects must be present; avoided effects must be absent. Other effects are allowed.",
+            " ".join(html.split()),
+        )
         self.assertIn("Fewest steps, then lowest cost.", html)
-        self.assertRegex(html, r'name="effect_match_mode"[^>]*value="exact"[^>]*checked')
-        self.assertRegex(html, r'name="effect_match_mode"[^>]*value="contains"')
+        self.assertRegex(html, r'name="effect_match_mode"[^>]*value="contains"[^>]*checked')
+        self.assertRegex(html, r'name="effect_match_mode"[^>]*value="exact"(?![^>]*checked)')
         self.assertIn('id="effect-selection-summary"', html)
 
     def test_unknown_or_malformed_effect_color_has_a_neutral_fallback(self):

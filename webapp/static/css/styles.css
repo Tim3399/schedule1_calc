@@ -699,6 +699,41 @@
     outline-offset: var(--focus-ring-offset);
   }
 
+  /* Match Effects "Recipe match": soft tints (red: Only these, green: Allow extras). The selected
+     option has the stronger tint, a status-colour ring and the check mark. */
+  .mode-switch__option--strict span,
+  .mode-switch__option--loose span {
+    color: var(--text-primary);
+  }
+
+  .mode-switch__option--strict span {
+    background: var(--match-strict-soft);
+  }
+
+  .mode-switch__option--loose span {
+    background: var(--match-loose-soft);
+  }
+
+  .mode-switch__option--strict input:checked + span,
+  .mode-switch__option--strict:active input:not(:checked):not(:disabled) + span {
+    background: var(--match-strict-selected);
+    color: var(--text-primary);
+  }
+
+  .mode-switch__option--loose input:checked + span,
+  .mode-switch__option--loose:active input:not(:checked):not(:disabled) + span {
+    background: var(--match-loose-selected);
+    color: var(--text-primary);
+  }
+
+  .mode-switch__option--strict input:checked + span {
+    box-shadow: inset 0 0 0 2px var(--status-error);
+  }
+
+  .mode-switch__option--loose input:checked + span {
+    box-shadow: inset 0 0 0 2px var(--status-success);
+  }
+
   .mode-switch__option input:disabled + span {
     color: var(--text-tertiary);
   }
@@ -837,13 +872,13 @@
     }
   }
 
-  /* In a column form (the search form) the automatic margin moves the actions to the bottom; the
-     padding keeps the distance to the last field in every form. */
+  /* The actions follow the last field directly in every form, so a long result in the stretched
+     column beside it never pushes the primary button out of reach; the padding keeps the distance
+     to the last field. */
   .form-actions {
     display: flex;
     flex-wrap: wrap;
     padding-top: var(--space-5);
-    margin-top: auto;
     gap: var(--space-2);
   }
 
@@ -1387,16 +1422,18 @@
     font-size: var(--type-footnote-size);
   }
 
-  /* Mix: a line of stock tiles (base product, then the steps with prices), joined by "+". The step
-     number is visible text in the tile, so the list counter is not drawn. */
+  /* Mix: an even grid of stock tiles (base product, then the steps with prices). Every tile has the
+     column width, the step number gives the order, so no separator can break the columns (T-17).
+     The step number is visible text in the tile, so the list counter is not drawn. */
   .mix {
-    gap: var(--space-2) 0;
+    display: grid;
+    gap: var(--space-2);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 124px), 1fr));
   }
 
   .mix .mix__item {
-    position: relative;
     display: flex;
-    min-width: 100px;
+    min-width: 0;
     flex-direction: column;
     align-items: flex-start;
     padding: var(--space-2) var(--space-3);
@@ -1411,23 +1448,12 @@
     content: none;
   }
 
-  /* Every tile but the first reserves the "+" column in its own inline-start margin, so the "+"
-     wraps with its tile and never hangs past the list edge (F-14-8). */
-  .mix .mix__item + .mix__item {
-    margin-inline-start: var(--space-5);
-  }
-
-  /* The "+" fills that margin; it is decoration (empty alt text). */
-  .mix .mix__item + .mix__item::before {
-    position: absolute;
-    top: 50%;
-    right: 100%;
-    width: var(--space-5);
-    color: var(--text-tertiary);
-    content: "+" / "";
-    font-weight: var(--weight-bold);
-    text-align: center;
-    transform: translateY(-50%);
+  /* The base is the start of the mix: sunken like a slot, with a control-coloured start edge. */
+  .mix .mix__item--base {
+    background: var(--surface-sunken);
+    box-shadow:
+      inset 3px 0 0 var(--border-control),
+      inset 0 0 0 1px var(--border-subtle);
   }
 
   .mix__step {
@@ -1438,8 +1464,10 @@
   }
 
   .mix__name {
+    max-width: 100%;
     color: var(--text-primary);
     font-weight: var(--weight-bold);
+    overflow-wrap: anywhere;
   }
 
   .mix__price,
@@ -1659,44 +1687,53 @@
     line-height: var(--type-title-line);
   }
 
+  /* Shelf and mixing order use the mix tile language: raised tile, name in bold, price and step
+     number in tertiary type, the same column width as the mix (T-17). Tiles are controls, so they
+     keep the control border. */
   .ingredient-shelf {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(116px, 1fr));
     gap: var(--space-2);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 124px), 1fr));
   }
 
   .recipe-ingredient-tile {
     display: grid;
     min-width: 0;
-    min-height: 76px;
+    min-height: 64px;
     grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    padding: var(--space-3);
+    align-content: start;
+    align-items: baseline;
+    padding: var(--space-2) var(--space-3);
     background: var(--surface-raised);
-    text-align: left;
+    column-gap: var(--space-2);
     cursor: grab;
+    text-align: left;
     touch-action: manipulation;
     user-select: none;
   }
 
   .recipe-ingredient-tile__name {
+    color: var(--text-primary);
+    font-weight: var(--weight-bold);
     grid-column: 1 / -1;
     overflow-wrap: anywhere;
   }
 
+  /* "+" says the tile adds a step; it sits on the price line, so it never leaves the tile. */
   .recipe-ingredient-tile::after {
+    color: var(--text-tertiary);
+    content: "+" / "";
+    font-weight: var(--weight-bold);
     grid-column: 2;
     grid-row: 2;
-    color: var(--text-secondary);
-    content: "+";
-    font-size: var(--type-title-size);
   }
 
-  .recipe-ingredient-tile__price {
-    color: var(--text-secondary);
+  .recipe-ingredient-tile__price,
+  .recipe-step__price {
+    color: var(--text-tertiary);
     font-size: var(--type-footnote-size);
     font-variant-numeric: tabular-nums;
-    font-weight: 400;
+    font-weight: var(--weight-semibold);
   }
 
   .recipe-announcement {
@@ -1721,7 +1758,7 @@
     display: flex;
     flex-direction: column;
     margin-block: var(--space-3);
-    counter-reset: step;
+    container-type: inline-size;
     gap: var(--space-2);
     list-style: none;
   }
@@ -1732,29 +1769,37 @@
     min-height: var(--control-min);
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    padding: var(--space-1) var(--space-2) var(--space-1) var(--space-6);
+    padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
     border: 1px solid var(--border-control);
     border-radius: var(--radius-control);
-    background: var(--surface-sunken);
-    counter-increment: step;
+    background: var(--surface-raised);
     cursor: grab;
+    font-size: var(--type-callout-size);
     touch-action: manipulation;
     user-select: none;
     gap: var(--space-2);
   }
 
-  .recipe-step::before {
-    position: absolute;
-    left: var(--space-3);
-    top: 50%;
+  /* Step number, name and price on one line; the name takes the free width and wraps. */
+  .recipe-step__body {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: 2.5ch minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: var(--space-2);
+  }
+
+  .recipe-step__number {
     color: var(--text-tertiary);
-    content: counter(step);
-    transform: translateY(-50%);
-    font-size: var(--type-footnote-size);
+    font-size: var(--type-caption-size);
     font-variant-numeric: tabular-nums;
+    font-weight: var(--weight-bold);
+    line-height: var(--type-caption-line);
   }
 
   .recipe-step__name {
+    color: var(--text-primary);
+    font-weight: var(--weight-bold);
     overflow-wrap: anywhere;
   }
 
@@ -1778,6 +1823,45 @@
   .recipe-step__remove:active:not(:disabled) {
     background: color-mix(in srgb, var(--status-error) 6%, var(--surface-sunken));
     color: var(--status-error);
+  }
+
+  /* Large text on a narrow list (under 14em, e.g. 320 px from 125 % text): the price moves under
+     Delete, so number, price and Delete no longer squeeze the name column (F-17-1). The query is
+     in em, so it follows the text size; the list is the container, so a row can restyle itself. */
+  @container (width < 14em) {
+    .recipe-step {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      row-gap: 0;
+    }
+
+    .recipe-step__body {
+      display: contents;
+    }
+
+    .recipe-step__number {
+      min-width: 2ch;
+      align-self: center;
+      grid-column: 1;
+      grid-row: 1 / span 2;
+    }
+
+    .recipe-step__name {
+      align-self: center;
+      grid-column: 2;
+      grid-row: 1 / span 2;
+    }
+
+    .recipe-step__remove {
+      padding-inline: var(--space-1);
+      grid-column: 3;
+      grid-row: 1;
+    }
+
+    .recipe-step__price {
+      grid-column: 3;
+      grid-row: 2;
+      text-align: center;
+    }
   }
 
   .recipe-drop-before::after,
@@ -1824,20 +1908,10 @@
     user-select: none;
   }
 
-  .recipe-drag-ghost.recipe-step::before {
-    content: attr(data-step-number);
-  }
-
   .recipe-is-dragging,
   .recipe-is-dragging * {
     cursor: grabbing !important;
     user-select: none;
-  }
-
-  @media (width < 480px) {
-    .ingredient-shelf {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
   }
 
   #recipe-count {

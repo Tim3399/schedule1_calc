@@ -843,11 +843,14 @@ document.addEventListener("DOMContentLoaded", function () {
         const row = document.createElement("li");
         row.className = "recipe-step";
         row.dataset.index = String(index);
-        const { displayName: ingredientName } = substanceDetails(name);
+        const { displayName: ingredientName, price } = substanceDetails(name);
         row.tabIndex = 0;
-        row.setAttribute("aria-label", `Step ${index + 1}: ${ingredientName}`);
+        row.setAttribute("aria-label", `Step ${index + 1}: ${ingredientName}, ${price}`);
         row.setAttribute("aria-describedby", "recipe-order-hint");
-        appendTextElement(row, "span", ingredientName, "recipe-step__name");
+        const body = appendTextElement(row, "span", "", "recipe-step__body");
+        appendTextElement(body, "span", String(index + 1), "recipe-step__number");
+        appendTextElement(body, "span", ingredientName, "recipe-step__name");
+        appendTextElement(body, "span", price, "recipe-step__price");
         const removeButton = appendTextElement(row, "button", "Delete", "recipe-step__remove");
         removeButton.type = "button";
         removeButton.setAttribute(
@@ -1039,7 +1042,6 @@ document.addEventListener("DOMContentLoaded", function () {
       ghost.classList.add("recipe-drag-ghost");
       ghost.setAttribute("aria-hidden", "true");
       ghost.inert = true;
-      if (details.type === "row") ghost.dataset.stepNumber = String(details.fromIndex + 1);
       ghost.style.position = "fixed";
       ghost.style.width = `${sourceBounds.width}px`;
       ghost.style.height = `${sourceBounds.height}px`;
@@ -1081,9 +1083,6 @@ document.addEventListener("DOMContentLoaded", function () {
       ghost.classList.add("recipe-drag-ghost");
       ghost.setAttribute("aria-hidden", "true");
       ghost.inert = true;
-      if (touch.details.type === "row") {
-        ghost.dataset.stepNumber = String(touch.details.fromIndex + 1);
-      }
       ghost.style.position = "fixed";
       ghost.style.width = `${sourceBounds.width}px`;
       ghost.style.height = `${sourceBounds.height}px`;
@@ -1615,6 +1614,14 @@ document.addEventListener("DOMContentLoaded", function () {
               ? "No recipe has only the wanted effects within the selected base, rank, and ingredient limit. This is proven for these settings."
               : "The fast search found no recipe with only the wanted effects. This does not prove that no match exists.",
         );
+        if (run.matchMode === "exact") {
+          appendTextElement(
+            output,
+            "p",
+            "“Only these” may be the reason: it excludes every other effect. Try “Allow extras”.",
+            "status-line effect-match-suggestion",
+          );
+        }
         return;
       }
       renderCombination(
