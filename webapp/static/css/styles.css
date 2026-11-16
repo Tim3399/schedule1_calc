@@ -837,13 +837,13 @@
     }
   }
 
-  /* In a column form (the search form) the automatic margin moves the actions to the bottom; the
-     padding keeps the distance to the last field in every form. */
+  /* The actions follow the last field directly in every form, so a long result in the stretched
+     column beside it never pushes the primary button out of reach; the padding keeps the distance
+     to the last field. */
   .form-actions {
     display: flex;
     flex-wrap: wrap;
     padding-top: var(--space-5);
-    margin-top: auto;
     gap: var(--space-2);
   }
 
