@@ -884,7 +884,7 @@ test("recipe results show the base tile with step prices and never animate", asy
     .filter((node) => node.tagName === "dd")
     .map((node) => node.textContent);
   assert.match(dollars[0], /^-?\$\d[\d,]*\.\d\d$/);
-  assert.match(dollars[3], /^×\d+\.\d{2}$/, "modifier is a multiplier with two decimals");
+  assert.match(dollars[3], /^\d+\.\d{2}$/, "modifier is an additive value with two decimals, no ×");
   const effects = descendants(result).find(
     (node) => node.tagName === "ul" && node.className === "chips",
   ).children.length;

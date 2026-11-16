@@ -959,7 +959,7 @@ test("effect results use the shared Mix, Effects and modifier labels and drop th
     ["Profit", "Sell Price", "Ingredient Cost", "Modifier", "Mix", `Effects · ${effects}`],
   );
   const modifier = stats.children[3].children[1].textContent;
-  assert.match(modifier, /^×\d+\.\d{2}$/);
+  assert.match(modifier, /^\d+\.\d{2}$/);
   assert.equal(
     all.filter((node) => ["progress", "status-block"].includes(node.className)).length,
     0,
