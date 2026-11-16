@@ -1,360 +1,723 @@
-# DESIGN.md — Best Mix Calculator (Webapp)
-
-**Stand: 12. September 2026** · Gilt für `webapp/`.
-
-Diese Datei hält die Produktidentität und die begründeten Entscheidungen fest. Die allgemeinen
-Qualitätsanforderungen stehen in [FRONTEND_STYLEGUIDE_v2.1.md](FRONTEND_STYLEGUIDE_v2.1.md), die
-technische Wahrheit in [`webapp/static/css/tokens.css`](../static/css/tokens.css). Werte werden
-hier **nicht** dupliziert; nur Rollen, Gründe und Prüfergebnisse.
-
-## 1. Designbrief
-
-| Frage                        | Festlegung                                                                                                                    |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Wer benutzt die Oberfläche?  | Spieler von Schedule I, die eine Mischung optimieren wollen. _Annahme_ — keine Nutzungsdaten vorhanden.                       |
-| Hauptaufgabe                 | Für Level, Produkt und Kombinationsgröße die beste Mischung finden; alternativ eine eigene Rezeptreihenfolge nachrechnen.     |
-| Häufigkeit und Geräte        | Gelegentlich, oft neben dem laufenden Spiel. Desktop und Handy. _Annahme._                                                    |
-| Teuerster Fehler             | Ein Näherungsergebnis für bewiesen optimal halten, oder `Sell Price` mit `Profit` verwechseln und mit Verlust verkaufen.      |
-| Woran erkennt man den Erfolg | Ein Ergebnisblock mit eindeutig beschrifteten Zahlen, hervorgehobenem Profit und einem Badge, das Beweis von Näherung trennt. |
-
-Daraus folgen die beiden wichtigsten Gestaltungsentscheidungen: **Profit ist die Leitzahl** und
-**der Optimalitätsstatus ist kein Fließtext, sondern ein Badge an der Ergebniskarte**.
-
-## 2. Vier Entscheidungsfelder
-
-| Feld             | Festlegung                                                                                                                                                                                                                                                                |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Typografie**   | System-UI für Bedienung und Fließtext, Monospace mit `tabular-nums` für **jede Zahl, jeden Chip und jedes Badge**. Labels klein, versal, leicht gesperrt — dort sitzt der Terminal-Charakter. Kein Webfont: offlinefähig, keine externe Abhängigkeit, keine CSP-Änderung. |
-| **Farbe**        | Dunkler Grund als Standard, ein einziger Akzent (Acid Green). Grundstimmung ruhig und technisch; Farbe trägt nie allein eine Bedeutung.                                                                                                                                   |
-| **Raum**         | Abstandsskala 4–64px. Dicht, aber nicht gedrängt: Zusammengehöriges teilt Kanten, Gruppen trennen Abstände statt zusätzlicher Linien. Zwei Spalten ab 900px (Eingabe links, Ergebnis rechts), darunter eine Spalte.                                                       |
-| **Ausarbeitung** | Kleine Radienfamilie (4/6/10px, Pille für Chips). Tiefe entsteht über Flächenhelligkeit und Haarlinien, nicht über Schatten — im hellen Theme genau ein sehr weicher Kartenschatten. Bewegung nur als Zustandsrückmeldung.                                                |
-
-## 3. Referenzen
-
-**Übernommen von TUI-Werkzeugen (htop, lazygit):** Monospace-Kennzahlen in ausgerichteten Spalten,
-dichte Zeilen, eine Statuszeile, die den Zustand benennt statt ihn zu färben.
-
-**Übernommen von Linear:** Flächenhierarchie über feine Konturen und Helligkeitsstufen statt
-Schatten; genau ein Akzent, der für Aktion und Auswahl reserviert bleibt.
-
-**Ausdrücklich nicht gewünscht:**
-
-1. **CRT-Nostalgie** — Scanlines, Glow, `text-shadow`, Flacker- oder Tippanimationen. Der
-   Terminal-Charakter kommt aus Schrift, Dichte und Labels, nicht aus Effekten.
-2. **Farbe als einziger Bedeutungsträger** und dekorative Vollflächenverläufe. Jeder Status trägt
-   zusätzlich Text; jede Fläche hat eine Aufgabe.
-
-## 4. Akzent ist nicht Erfolg
-
-Der Fallstrick dieser Richtung: Grün ist hier die **Akzentfarbe** (Aktion, Auswahl, Fokus,
-Profit). Deshalb kodiert Grün **keinen Statuszustand**. Die Statusrollen sind:
-
-| Zustand                        | Träger                                                                                    |
-| ------------------------------ | ----------------------------------------------------------------------------------------- |
-| Optimalität bewiesen           | Badge `badge--proven`, Akzentkontur **plus** der Text „Optimality proven".                |
-| Näherung                       | Badge `badge--approximate`, Amber **plus** der vollständige Warnsatz.                     |
-| Fehler / Abbruch ohne Ergebnis | `alert--error`, roter linker Balken **plus** der Fehlertext und „No result was produced." |
-| Profit                         | Akzentfläche **plus** das Label `Profit` und die größte Zahl der Karte.                   |
-
-Kein Zustand ist allein an seiner Farbe erkennbar. Das erfüllt WCAG 1.4.1 und hält Akzent und
-Status sauber getrennt.
-
-## 5. Themes
-
-Effekt-Chips verwenden zusätzlich die belegten Label-Farben aus den Spieldaten: ein Farbpunkt
-in der Originalfarbe und eine dezente Tönung von Fläche und Kontur. Der lesbare Name bleibt in
-`--text-primary`, damit auch sehr helle oder dunkle Spielfarben in beiden Themes funktionieren.
-Diese Farben sind fachliche Metadaten in `src/lookup/lookup.py`, keine zweite Designpalette.
-`tokens.css` bleibt die Quelle für Oberflächen, Text und alle übrigen Gestaltungsrollen.
-Quelle, Abgleich mit dem Wiki und Grenzen stehen im
-[Farbabgleich vom 12.09.2026](../../docs/reviews/2026-09-12-effect-colors.md).
-
-Dunkel ist der Standard (`:root`). Hell überschreibt dieselben semantischen Rollen — eine
-Komponente, zwei Wertesätze, keine parallele Implementierung. Auflösung:
-
-- Kein Attribut oder `data-theme="system"` → Systemvorgabe über `prefers-color-scheme`.
-- `data-theme="light"` / `data-theme="dark"` → ausdrückliche Wahl, gewinnt in beide Richtungen.
-
-Die Wahl liegt in `localStorage` unter `schedule1-theme` (Wert `light`/`dark`; „System" löscht den
-Eintrag). Ein vierzeiliges Inline-Skript im `<head>` setzt das Attribut vor dem ersten Paint, damit
-das falsche Theme nicht aufblitzt; [`theme.js`](../static/js/theme.js) besitzt nur das Bedienelement.
-
-**Wichtig:** `#9dff6b` ist auf Weiß unlesbar. Das helle Theme verwendet für `--action-primary`
-deshalb ein dunkles Blattgrün mit weißer Schrift. Die Rolle bleibt, der Wert wechselt.
-
-## 6. Zustände
-
-| Ablauf          | Umgesetzte Zustände                                                                                                                                                                                                                           |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Suche           | Leer (erklärt exact vs. fast) · Katalog lädt · Suche läuft (Fortschrittstext mit Tiefe/Operationen, Fortschrittsbalken, `Cancel Search`) · Ergebnis bewiesen · Ergebnis approximativ · Abgebrochen · Fehler · Browser ohne Worker.            |
-| Rezept          | Tab noch nicht geöffnet · Daten laden · geladen mit leerem Rezept (zeigt das Basisprodukt) · Ergebnis · Rechenfehler · Ladefehler mit `Retry Loading`.                                                                                        |
-| Wunscheffekte   | Katalog laden · Filter ohne Treffer · leere/erhaltene Auswahl · Suche läuft/Abbruch · exakt passendes Rezept · bewiesen kein Rezept innerhalb der Einstellungen · Fast ohne Treffer, ohne Unmöglichkeitsbeweis · Ressourcenlimit ohne Rezept. |
-| Nicht anwendbar | Kein Login, keine Berechtigungen, kein Autosave, keine destruktiven Serveraktionen. `Clear Recipe` ist lokal; `Undo clear` stellt die zuletzt geleerte Folge einschließlich Wiederholungen wieder her.                                        |
-
-Eingaben bleiben in **jedem** Fehlerfall erhalten; `#result` ist eine `aria-live="polite"`-Region,
-Fehler tragen zusätzlich `role="alert"`.
-
-### Abbruch mit Zwischenstand
-
-Die vorhandenen Ergebniskarten und das Badge `badge--approximate` werden wiederverwendet;
-es entstehen keine neuen Tokens oder Komponentenvarianten. Der Abbruchgrund steht als
-Statuszeile über der Karte. Der Zustand unterscheidet sich sprachlich von einem erfolgreichen
-Fast-Ergebnis und behauptet auch im Exact-Modus keinen Beweis.
-
-| Zustand                               | Verhalten                                                                                             |
-| ------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Suche läuft                           | Fortschritt und Abbruch bleiben sichtbar; verbesserte Kandidaten werden im Arbeitsspeicher behalten.  |
-| Abbruch / Limit mit Kandidat          | Besten bisherigen Kandidaten und Abbruchgrund zeigen; Badge „Search stopped — optimality not proven“. |
-| Abbruch / Limit ohne Kandidat         | Fehlenden Zwischenstand erklären; keine Unmöglichkeit behaupten.                                      |
-| Vollständig abgeschlossen             | Bisherige Unterscheidung zwischen bewiesenem Exact-Ergebnis und Fast-Näherung.                        |
-| Tabwechsel                            | Abbrechen und bisherigen Kandidaten im verlassenen Suchreiter erhalten.                               |
-| Neuer Lauf / geänderte Effektvorgaben | Vorherige Kandidaten verwerfen; verspätete Nachrichten ignorieren.                                    |
-| Daten- / Protokollfehler              | Fehler ohne Gewinner; Eingaben bleiben erhalten.                                                      |
-
-Zwischenstände überleben keinen Seiten-Reload; serverseitige Speicherung und Synchronisation
-sind für diesen lokalen Rechenablauf nicht vorgesehen.
-
-## 7. Bewegungsvertrag
-
-Bewegung ist bewusst minimal, weil Suche und Rezeptbearbeitung wiederholte Bedienung sind.
-
-- **Buttons, Tabs, Controls:** Farb- und Konturwechsel über `--motion-fast` (90 ms). Kein Scale.
-- **Tabwechsel:** kein räumlicher Übergang — sofortiger Zustandswechsel.
-- **Fortschritt:** ein schmaler indeterminierter Balken im Busy-Block. Er ist `aria-hidden`; die
-  Information steht im Text daneben.
-- **Bewusst nicht animiert:** Ergebniskarten, Rezeptzeilen, Theme-Wechsel, Chips.
-- `prefers-reduced-motion: reduce` setzt Transitions und Animationen auf 1 ms und ersetzt den
-  laufenden Balken durch einen statischen. Es geht dabei keine Information verloren.
-
-## 8. Gemessene Kontrastpaare
-
-Berechnet aus den tatsächlich gesetzten Tokenwerten inklusive Alphamischung der `*-quiet`-Flächen
-(WCAG-Formel). Textziel 4,5:1, Nicht-Text-Ziel 3:1.
-
-| Paar                                         | Dunkel | Hell  |
-| -------------------------------------------- | ------ | ----- |
-| text-primary / surface                       | 15,58  | 17,99 |
-| text-secondary / surface                     | 8,60   | 8,12  |
-| text-muted / surface                         | 6,09   | 5,99  |
-| text-muted / ground (Footer)                 | 6,50   | 5,51  |
-| text-primary / sunken (Chips, Werte)         | 17,03  | 15,73 |
-| Primärbutton: ink / accent                   | 15,39  | 6,50  |
-| Aktiver Tab: accent / ground                 | 15,67  | 5,97  |
-| Inaktiver Tab: secondary / ground            | 9,18   | 7,47  |
-| Badge „proven": accent / accent-quiet        | 10,89  | 5,61  |
-| Badge „approximate": warn / warn-quiet       | 8,38   | 6,13  |
-| Alert-Text / danger-quiet auf ground         | 14,18  | 14,56 |
-| Profitwert / accent-quiet                    | 11,56  | 15,55 |
-| **Nicht-Text (Ziel 3:1)**                    |        |       |
-| Fokusring / surface                          | 14,67  | 6,50  |
-| Fokusring / ground                           | 15,67  | 5,97  |
-| Control-Kontur `border-strong` / surface     | 3,54   | 4,01  |
-| Control-Kontur `border-strong` / Feldfüllung | 3,87   | 3,51  |
-| Fehlerkontur `status-danger` / ground        | 8,00   | 6,01  |
-| Fehlerkontur / danger-quiet auf ground       | 6,82   | 5,29  |
-
-`--border-subtle` liegt bewusst darunter (dunkel 2,04 gegen Ground, hell 1,47). Es ist ein
-dekorativer Trenner zwischen Flächen, die sich zusätzlich durch ihre eigene Füllung unterscheiden —
-kein Merkmal, das ein Bedienelement identifiziert. Bedienelementgrenzen verwenden ausschließlich
-`--border-strong`.
-
-Am 12.09.2026 unabhängig nachgerechnet. Die Alert-Werte berücksichtigen jetzt den tatsächlichen
-Hintergrund `ground`: Ergebniscontainer haben keine eigene Füllung. Die frühere Tabelle hatte
-die transparente Fehlerfläche fälschlich über `surface` gemischt. Die Korrektur ändert das
-Kontrasturteil nicht; alle hier geprüften aktiven Text- und Nicht-Text-Paare erreichen ihr Ziel.
-
-## 9. Prüfungen
-
-### Von Claude dokumentierte Vorprüfung
-
-Die folgenden Angaben stammen aus Claudes ursprünglichem Arbeitsstand, lokal unter
-`http://localhost:5011`, Chromium im Browser-Pane. Sie sind kein Nachweis für spätere Änderungen:
-
-- Suche `fast` und `exact` bis zum Ergebnis; Ergebniskarten in beiden Themes betrachtet.
-- Fehlerfall erzwungen (Kombinationsgröße 20): `role="alert"`, roter Alert, Eingaben erhalten,
-  Submit wieder bedienbar, Cancel verborgen.
-- Rezept-Tab: drei Zutaten hinzugefügt, Zeilen und Ergebniskarte geprüft.
-- Reflow bei **320 px**: `scrollWidth == clientWidth`, kein überlaufendes Element.
-- Tastatur: Tab-Reihenfolge bis zu den Selects; Fokusring gemessen als `2px solid #9dff6b`,
-  Offset 2px, `:focus-visible` greift.
-- Theme-Umschalter: Attribut, `localStorage`, `aria-checked` und Roving-`tabindex` bleiben über
-  alle vier Wechsel synchron; „System" löscht den Eintrag; gespeicherte Wahl überlebt den Reload
-  und schlägt die Systemvorgabe.
-- Kontrast: alle Paare aus Abschnitt 8 rechnerisch aus den Tokens bestimmt.
-- `tools/project.py test` (162 Tests) und `tools/project.py check` grün.
-
-### Unabhängige Fortsetzung am 12.09.2026
-
-Der Abgleich mit Claudes Plan „Redesign der Webapp — Richtung Terminal“, die bewussten
-Abweichungen und die aktuellen Prüfnachweise stehen im
-[Reviewbericht](../../docs/reviews/2026-09-12-terminal-review.md).
-
-Die Suchansicht führt jetzt mit der Profitkarte und bietet den höchsten Modifier als nativen,
-aufklappbaren Vergleich an. Innerhalb beider Karten stehen Profit und Preise vor der nummerierten
-Zutatenfolge und den Effekten. Das Suchformular startet mit drei maximalen Zutaten und erläutert,
-dass auch kürzere Rezepte erlaubt sind. Die kurzen Modusnamen erhalten einen eigenen Erklärungstext.
-
-Die Suche verwendet auf breiten Bildschirmen fünf Spaltenanteile für Eingaben und sieben für das
-Ergebnis. Beim manuellen Rezept bleibt die größere Eingabespalte; das Ergebnis bleibt beim Scrollen
-daneben sichtbar. Sprunglinks verbinden lange Zutatenlisten mit ihrem Ergebnis. Auf kleinen
-Bildschirmen entfallen der zusätzliche Introblock und große Nebenkennzahl-Kacheln. Theme- und
-Rezeptaktionen haben mindestens 44 px Höhe. `Undo clear` gilt bis zur nächsten Rezeptänderung und
-setzt den Fokus nach Wiederherstellung auf die erste Zutat.
-
-**Weiterhin nicht geprüft / offene Lücken:**
-
-- Keine Prüfung mit echter assistiver Technik (Screenreader-Ausgabe nur aus dem Markup abgeleitet).
-- Kein Test auf einem realen Mobilgerät; Touch nur über die Viewport-Emulation betrachtet.
-- `prefers-reduced-motion: reduce` ist im CSS umgesetzt, konnte im Pane aber nicht emuliert und
-  daher nicht gerendert beobachtet werden.
-- Textvergrößerung auf 200 % wurde nicht separat gemessen; geprüft wurde nur der Reflow bei 320 px.
-
-## 10. Umfang und Fachvertrag
-
-Watchdog-Budgets, der ARIA-Tabvertrag, die zentrale Preisberechnung und die Datenquelle bleiben
-erhalten. Die Suchansicht behält ihre Element-IDs. Die ausdrücklich freigegebene neue
-Zutatenauswahl ersetzt dagegen die manuellen Zutaten-Selects und deren DOM-Struktur; die
-zugehörigen UI-Tests prüfen den neuen Bedienvertrag.
-
-Auf den zusätzlichen Nutzerbericht zu wirkungslosen Zutaten wurde der fachliche Auftrag erweitert:
-Bei exakt gleichem Modifier gewinnt zuerst der höhere Profit, danach das kürzere Rezept. Eine
-kostenpflichtige oder kostenlose Wiederholung ohne Änderung der vollständigen geordneten
-Effektfolge wird nicht weiter verlängert. Sie bleibt als zulässiger Ein-Schritt-Kandidat verfügbar.
-Der [Suchvertrag](../../docs/SEARCH_MODES.md) beschreibt die Begründung und Grenzen. Die exakte
-Suche liefert weiterhin nur bewiesene Gewinner oder kein Ergebnis; eigene Rezepte behalten jeden
-explizit eingegebenen Schritt.
-
-`webapp/js/script.js` ist eine ungenutzte Altkopie aus der Zeit der Serverberechnung und gehört
-nicht zu diesem Auftrag.
-
-## 11. Zutatenregal und Drag-and-drop
-
-Der Nutzer hat am 12.09.2026 Konzept 1 aus drei bedienbaren Entwürfen ausgewählt: ein sichtbares
-Zutatenregal, ergänzt um sauberes Drag-and-drop. Die Texteingabe und ein permanentes Brett mit
-Einfügeknöpfen zwischen allen Schritten sind nicht Teil dieser Umsetzung.
-
-- Jede Kachel zeigt den lesbaren Namen und den Zutatenpreis aus dem bestehenden Katalog. Ein
-  Klick fügt einen Schritt am Ende an; wiederholte Klicks ergeben wiederholte Schritte. Die
-  Kachel bleibt fokussiert. Eine Kachel ist keine Checkbox und kein Mengenregler.
-- Auf ausdrücklichen Nutzerwunsch entfallen zusätzliche Insert-/Replace-Aktionen und Drag-Griffe.
-  Ganze Kacheln und ganze Rezeptschritte sind ziehbar. Die nummerierte Rezeptliste zeigt Namen
-  und ausschließlich eine sichtbare Aktion zum Löschen. Preise stehen im Zutatenregal und als
-  Gesamtkosten im Ergebnis, nicht zusätzlich in jedem Mischschritt.
-- Beim Hinzufügen wird die Zutat aus dem Regal
-  kopiert, beim Verschieben ein vorhandener Schritt versetzt. Eine Einfügelinie zeigt das Ziel.
-  Die geordnete Zutatenfolge und das berechnete Ergebnis ändern sich erst beim gültigen Loslassen.
-- Eine Kopie folgt unmittelbar dem Zeiger am ursprünglichen Anfasspunkt. Es gibt keine Feder,
-  dekorative Nachbewegung oder automatische Sortierung. Scrollen am Fensterrand unterstützt
-  lange Rezepte. Normales Wischen über Kacheln bleibt Seitenscrollen; auf Touchscreens startet
-  Ziehen nach kurzem Halten. Es gibt keine flächige Scrollsperre auf Regal und Rezept.
-- Loslassen außerhalb des Rezeptbereichs, Escape und unterbrochene Zeigereingaben verwerfen den
-  Ziehvorgang. Kacheln lassen sich per Klick oder Enter anhängen; Alt + Pfeil hoch/runter
-  verschiebt den fokussierten Rezeptschritt. Einfügen mit einem einzelnen Zeiger erfolgt
-  entsprechend dem Nutzerwunsch ausschließlich durch Ziehen; zusätzliche Positionsknöpfe entfallen.
-- Die vorhandene Rücknahme von Clear stellt die exakte Reihenfolge wieder her. Basisprodukt,
-  Zutatenregal, Mischfolge und Ergebnis bleiben visuell und semantisch getrennt.
-
-Die Implementierung orientiert sich bei Zeigerbindung und Abbruch an
-[Pointer Events](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events) und
-[setPointerCapture](https://developer.mozilla.org/en-US/docs/Web/API/Element/setPointerCapture)
-(geprüft am 12.09.2026). Für die Trennung zwischen Scrollen und Ziehen ohne Griffe ist außerdem
-der dokumentierte Unterschied zwischen
-[Pointer-Sensoren](https://dndkit.com/legacy/api-documentation/sensors/pointer/) und
-[Touch-Sensoren](https://dndkit.com/legacy/api-documentation/sensors/touch/) relevant: Eine
-Scrollsperre lässt sich nicht nachträglich über `touch-action` in einer laufenden Pointer-Geste
-aktivieren. Die Umsetzung verwendet keine zusätzliche UI-Bibliothek.
-
-### Prüfung der Umsetzung am 12.09.2026
-
-- `tools/project.py test`: 165 Tests bestanden, einschließlich der eingebundenen
-  JavaScript-Suiten. Die gezielte Rezept-UI-Suite hat 11 bestandene Fälle für Regal,
-  Reihenfolge, Abbruch, Fokus und Touch-Ereignisse.
-- Im lokalen Chromium-Pane geprüft: ganze Kacheln in das leere Rezept ziehen,
-  Schritte ohne Griff verschieben, Einfügen zwischen Schritten, Loslassen außerhalb
-  verwerfen sowie Hinzufügen per Enter und Umsortieren per Alt + Pfeiltaste.
-- Ein Rezept mit 14 Schritten einschließlich Wiederholungen bleibt nach Clear und
-  Undo clear in identischer Reihenfolge erhalten. Die Zutatenkosten betragen für die
-  geprüfte Folge 36,00 $. Löschen fokussiert einen benachbarten Schritt beziehungsweise
-  nach dem letzten verbleibenden Schritt wieder die erste Regalkachel.
-- Die Rezeptliste zeigt ausschließlich Delete als Aktion pro Schritt. Regal und Liste
-  wurden bei 320 px in Light und Dark ohne horizontalen Überlauf geprüft; die breite
-  Ansicht wurde bei 1440 px betrachtet. Nach abgeschlossenen Ziehvorgängen bleibt
-  keine Ziehkopie im DOM zurück.
-
-Touch-Halten, Wischen vor der Aktivierung, unterbrochene Gesten und verzögerte Klicks
-sind durch simulierte Ereignisse geprüft. Ein reales Touchgerät, Screenreader,
-200-%-Textvergrößerung und gerenderte Reduced-Motion-Emulation bleiben ungeprüft.
-
-## 12. Reduzierte Bedienoberfläche
-
-Auf Nutzerwunsch vom 12.09.2026 beginnt die Oberfläche direkt mit den beiden Rechner-Tabs.
-Der Werbe-Introblock, technische Kopf-/Fußzeilen und der wiederholte Einführungstext des
-Rezept-Tabs entfallen. „Max ingredients“ benennt die Suchgrenze ohne zusätzlichen Hilfsabsatz.
-Die Mischfolge zeigt nur Schritt, Zutatenname und Delete.
-
-Exact und Fast bilden einen Zweifach-Schalter mit nativen Radio-Inputs. Ein gemeinsamer Hinweis
-darunter nennt die garantierte beziehungsweise ungefähre Suche und das Zeitlimit. Der Hinweis
-ändert sich beim Wechsel nicht und wird im leeren Ergebnis nicht wiederholt. Die Auswahl bleibt
-per Tab und Pfeiltasten bedienbar; der gewählte Modus wird beim Suchstart übernommen.
-
-Produkt und Rang behalten native Select-Semantik mit gemeinsam gestalteten Feldern, Pfeilen,
-Fokuszuständen und — in unterstützenden Browsern — geöffneten Optionslisten. Die CSS-Erweiterung
-`appearance: base-select` wird über `@supports` aktiviert. Ältere Browser behalten ihre native
-Optionsliste und den gestalteten geschlossenen Auswahlschalter. Grundlage:
-[MDN: Customizable select elements](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Forms/Customizable_select),
-geprüft am 12.09.2026. Eine zusätzliche JavaScript-Dropdown-Bibliothek ist dafür nicht nötig.
-
-### Verifikation
-
-`tools/project.py test` bestand mit 165 Tests; die gezielten Such- und Rezept-UI-Suiten
-bestanden mit 8 beziehungsweise 11 Fällen. Die Moduswahl wird beim Submit festgehalten,
-einschließlich des zugehörigen Watchdog-Budgets; eine spätere Wahl verändert die laufende
-Suche nicht. Die HTML-Prüfungen decken den gemeinsamen Hinweis und die erhaltene Fast-Wahl
-nach einem Validierungsfehler ab.
-
-Im lokalen Chromium-Pane wurden Exact und Fast für Green Crack, Max und drei Zutaten bis
-zum passend gekennzeichneten Ergebnis ausgeführt. Native Pfeiltasten wechseln den Modus;
-Produkt-/Ranglisten lassen sich per Tastatur auswählen und mit Escape schließen. Light und
-Dark wurden bei 320 px betrachtet, ebenso das Desktopformular bei 1280 px. Der lange Name
-„Meth (High-Quality Pseudo)“ wird geschlossen mit Auslassungspunkten dargestellt und bleibt
-in der geöffneten Liste vollständig lesbar. Es gibt keinen horizontalen Seitenüberlauf.
-Die Mischfolge ohne Preise wurde erneut gezogen; die Browserkonsole meldete keine Fehler
-oder Warnungen. Touchgeräte, Screenreader und die native Fallback-Liste in einem Browser
-ohne `base-select` wurden nicht separat geprüft.
-
-## 13. Wunscheffekte und Beschreibungen
-
-**Match Effects** ist der dritte gleichrangige Reiter. Jede Effektkarte trägt Spielfarbe,
-Name, kurze Erklärung und einen kompakten Dreierschalter **Want / Neutral / Avoid**. Native
-Radiogruppen erhalten die Tastaturbedienung; die sichtbaren Segmente ersetzen die einzelnen
-Checkboxen. Gewünscht verwendet die vorhandene Aktionsfarbe, ausgeschlossen die vorhandene
-Gefahrenfarbe; Text und markiertes Segment machen den Zustand auch ohne Farberkennung klar.
-Die Karte selbst schaltet keinen Zustand durch, damit ein Klick immer eine eindeutige Wahl trifft.
-
-**Recipe match** steht direkt über der Auswahl: **Only these** verlangt genau die Wunscheffekte,
-**Allow extras** erlaubt weitere neutrale Effekte. Ausgeschlossene Effekte fehlen in beiden
-Fällen im Ergebnis. Ein Textfilter reduziert die Liste, ohne ausgeblendete Auswahlen zu löschen.
-Unter der Liste bleiben Wunsch-/Ausschlussanzahl und einzeln entfernbare Auswahlchips sichtbar.
-Ein Moduswechsel bewahrt diese Präferenzen, verwirft jedoch ein veraltetes Ergebnis und beendet
-eine laufende Suche. Bei **Allow extras** ist auch eine reine Ausschlussliste gültig.
-
-Das Ranking steht bei den Rezepteinstellungen: möglichst wenige Schritte, danach niedrige Kosten.
-**Exact / Fast** bleibt davon getrennt. Ein Fast-Treffer erfüllt immer die Effektbedingungen,
-garantiert jedoch nicht das kürzeste oder günstigste Rezept. Die Resultate bewahren dieselbe
-Kartenstruktur.
-
-Unter allen Ergebniskarten stehen Beschreibungen in einem nativen `details`-Element
-„What these effects do“. Der geschlossene Zustand hält das Rezept kompakt; Erklärungen sind
-per Klick, Touch und Tastatur erreichbar und nicht an Hover gebunden. Unbekannte Metadaten
-erzeugen keine leeren Erklärungszeilen. Die Quellen sind im
-[Beschreibungsabgleich](../../docs/reviews/2026-09-12-effect-descriptions.md) dokumentiert.
-
-Am Desktop steht die Effektauswahl zuerst links, Einstellungen und Ergebnis stehen rechts.
-Auf schmalen Bildschirmen folgt dieselbe Reihenfolge untereinander. Die filterbare Liste hat
-eine begrenzte Scrollhöhe mit ruhiger vertiefter Fläche und einer schmalen, themengerechten
-nativen Scrollleiste. Fokus, Tastatur-Scrollen und das automatische Sichtbarwerden fokussierter
-Controls bleiben erhalten. Auswahltext, Chips und Clear bleiben außerhalb dieser Liste. Die drei Tabs
-bleiben auch bei 320 px in einer Zeile mit gegebenenfalls mehrzeiligem Label.
-
-Die Abnahme einschließlich Tastaturbedienung, Light/Dark, 320 px und 175 bestandener Tests ist
-im [Suchvertrag](../../docs/SEARCH_MODES.md#verifikation-der-effektsuche-am-12092026) dokumentiert.
+# DESIGN.md — Best Mix Calculator (web app)
+
+**Version 4 · 2026-11-15** · Applies to `webapp/`. Replaces version 3 of 2026-11-15 (HIG-first neutral identity); version 3 stays readable in the git history.
+
+This file holds the product identity, the visual rules and their sources. General quality requirements are in [FRONTEND_STYLEGUIDE_v2.1.md](FRONTEND_STYLEGUIDE_v2.1.md). [`tokens.css`](../static/css/tokens.css) is the technical truth for every value; section 9 lists its names and values and this file explains them. If the two ever disagree, `tokens.css` wins and this file is corrected (styleguide section 10).
+
+Version 4 describes the **Studio** direction the user chose (decision D-12): the app looks like it belongs to Schedule I while it stays a simple, precise tool. Where version 4 changes a version 3 rule, the new rule replaces it; rules that version 4 does not touch (HIG minimums, both themes first-class, 44 px targets, reduced motion, the theme switch) stay.
+
+## Source references
+
+Every rule names its source in brackets. Source priority: for the **direction** (identity, colour meanings, type, header, components) the user decision D-12 and the binding reference page decide, with D-14 … D-18 where they decide details; for **minimums** (contrast, target size, motion safety, theme behaviour) Apple HIG and WCAG still decide (D-2, D-4, kept by D-12). mediagrab and quiltor give system structure only, never colours.
+
+| Tag                 | Source                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `[D-n]`             | Decision n in `schedule1calc-kb/orchestrator/decisions.md`. D-12 is the source of the v4 direction; D-14 … D-18 settle details of T-14.                                                                                                                                                                                                                    |
+| `[Ref <selector>]`  | The binding visual reference `schedule1calc-kb/orchestrator/briefs/T-14-reference-studio.html` (D-12), CSS rule or element named by its selector. "Dämmerung" there is the Dusk theme, "Nacht" the Night theme.                                                                                                                                            |
+| `[Plan §x]`         | T-14 plan `schedule1calc-kb/implementer/T-14-plan.md`, revision 2, section x (accepted, D-18). §3.1 is the class contract.                                                                                                                                                                                                                                 |
+| `[HIG <Page>]`      | Apple Human Interface Guidelines, `https://developer.apple.com/design/human-interface-guidelines/<page>` (pages: typography, color, dark-mode, layout, buttons, toggles, segmented-controls, accessibility, motion, materials, pickers, text-fields, lists-and-tables). Read for R-1 on 2026-11-15. Only values marked [V] in R-1 are used as hard values. |
+| `[R-1 §x]`          | Research report `schedule1calc-kb/researcher/R-1-redesign-research.md`, section x (measured site/wiki values, conflicts, open points).                                                                                                                                                                                                                     |
+| `[R-2 §x]`          | Research report `schedule1calc-kb/researcher/R-2-schedule1-ingame-ui.md`, section x (in-game UI language, what may be echoed, what must not be copied).                                                                                                                                                                                                    |
+| `[MG DESIGN.md:n]`  | mediagrab `src/design/DESIGN.md`, line n (structure only).                                                                                                                                                                                                                                                                                                 |
+| `[QT README.md:n]`  | quiltor `packages/client/src/design/README.md`, line n (structure only).                                                                                                                                                                                                                                                                                   |
+| `[WCAG x.y.z]`      | WCAG 2.2 success criterion x.y.z, `https://www.w3.org/TR/WCAG22/`.                                                                                                                                                                                                                                                                                         |
+| `[User 2026-09-12]` | A product decision the user made on 2026-09-12, carried over from version 2 of this file.                                                                                                                                                                                                                                                                  |
+| `[Own: <reason>]`   | Own decision; the reason follows in the tag.                                                                                                                                                                                                                                                                                                               |
+
+HIG gives sizes in points; this web app uses CSS pixels. Rule: 1 HIG pt = 1 CSS px. [Own: CSS px are density-independent like pt; Apple's own web pages use the same numbers for type; R-1 Conflict 5 notes the mismatch and no HIG page defines a web mapping.]
+
+## 1. Product brief and principles
+
+| Question               | Decision                                                                                                                                                                                                                                                                                     | Source                            |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| Who uses it?           | Players of Schedule I who want to optimise a mix. _Assumption_, no usage data.                                                                                                                                                                                                               | [User 2026-09-12] (v2 §1)         |
+| Main task              | For level, product and number of ingredients, find the best mix; alternatively recalculate an own recipe order, or find a recipe for wanted effects.                                                                                                                                         | [User 2026-09-12] (v2 §1, §13)    |
+| Frequency and devices  | Occasionally, often next to the running game. Desktop and phone. _Assumption._                                                                                                                                                                                                               | [User 2026-09-12] (v2 §1)         |
+| Most expensive mistake | Taking an approximate result for proven optimal, or confusing `Sell Price` with `Profit` and selling at a loss.                                                                                                                                                                              | [User 2026-09-12] (v2 §1)         |
+| Success looks like     | One result block with clearly labelled numbers, profit as the lead number on a banknote, and a badge that separates proof from approximation.                                                                                                                                                | [User 2026-09-12] (v2 §1), [D-12] |
+| Character              | A studio tool in the Schedule I look: an own wordmark in the style of the game logo, a narrow drawn low-poly scene of Hyland Point in the header, and the calculator on a computer "screen" with a beige rim. Dusk: paper-white screen. Night: near-black screen. Calm, clear, few elements. | [D-12], [Ref `.h`], [R-2 §2]      |
+
+**Principles**
+
+1. **Content first, chrome quiet.** The forms and the result are the page. The header carries the identity (wordmark, scene band, theme switch); below it there is no marketing block and no decorative card. [D-12] (header identity), [HIG Layout] (hierarchy, grouping by negative space), [User 2026-09-12] (v2 §12).
+2. **Profit is the lead number, the optimality status is a badge.** Profit sits on a banknote, the largest figure of the result. [User 2026-09-12] (v2 §1), [D-12] (banknote).
+3. **Green means action and money.** The logo green fills the one primary button of a view; the banknote green carries profit; a muted green, quieter than both, marks success and search progress. Selection is neutral. This replaces the v3 rule "green has exactly one meaning" (D-4 (6)), which D-12 overrides. [D-12], [D-14] (Q3 muted green), [R-2 §2] (in the game, colour follows meaning; money is green).
+4. **Colour never carries meaning alone.** Every state also has text or a glyph. [HIG Color], [HIG Accessibility], [WCAG 1.4.1].
+5. **Both themes are first-class.** Dusk (light) and Night (dark) are tuned separately, not inverted. [HIG Dark Mode], [D-4] (2), kept by [D-12].
+6. **Motion only as feedback.** Three short, purposeful motions (result reveal, profit count-up, progress sweep); all off under reduced motion; nobody waits for them. [D-12] (T-14 brief item 8), [HIG Motion].
+7. **Native controls first.** Native `select`, radio inputs, `details`, buttons; no UI library. [HIG Pickers], [HIG Toggles], styleguide section 10, [User 2026-09-12] (v2 §12).
+
+**Reference table**
+
+| Reference feature                                                       | Decision for schedule1calc                                                                                                                    | Source                                  |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| Logo-style wordmark, cream with dark green outline                      | Live text "Best Mix" + "for Schedule I" in Barlow 800, cream fill, dark green outline; own lettering, not the game logo (sections 5, 10)      | [D-12], [Ref `.h .mark`]                |
+| Narrow low-poly Hyland Point scene band                                 | Inline SVG of own polygons in the header, 96 px high, dusk in Dusk, night in Night, decorative (`aria-hidden`)                                | [D-12], [Ref `.h .scape`]               |
+| The app on an in-game computer screen with a beige rim                  | `.app-screen`: paper-white (Dusk) or near-black (Night) screen, 12 px radius, 4 px beige rim                                                  | [D-12], [Ref `.h .scr`], [R-2 §1 S4]    |
+| One action colour, neutral selection                                    | The logo green fills only the primary button; selected segments are neutral and inverted, the selected tab is neutral (panel fill, underline) | [D-12], [Ref `.h .cta`, `.h .seg .on`]  |
+| Profit as a banknote with a quiet guilloche                             | `.stat--primary` is a mint banknote with a dark green border and a dark figure                                                                | [D-12], [Ref `.h .note`]                |
+| Effects as neutral pills with the game's label colour as a dot          | `.effect-chip`: neutral pill, a dot in the effect's game label colour (`src/lookup/lookup.py`)                                                | [D-12], [Ref `.h .fx span`]             |
+| Muted green progress and "Optimality proven"                            | `--progress-fill-*` and `--status-success`, quieter than profit and action                                                                    | [D-14] (Q3), [Ref `.h .prog`, `.h .ok`] |
+| Form left, result right, equal height, "Get Best Mix" after the fields  | Two stretched columns from 900 px; the primary button follows the last form field directly, the free height stays below it                    | [D-12], [Ref `.st .grid`, `.st .form`]  |
+| HIG hit regions ≥ 44×44 pt                                              | Every interactive target ≥ 44×44 px, also in the header and on the screen (section 5)                                                         | [HIG Buttons], [HIG Accessibility]      |
+| mediagrab: identity doc + one CSS source of roles, components use roles | `tokens.css` is the only value source; components consume roles; Dusk and Night override the same roles                                       | [MG DESIGN.md:80], [MG DESIGN.md:94]    |
+| mediagrab: acceptance widths 320/390/768/1280 px without overflow       | Same acceptance widths (section 6)                                                                                                            | [MG DESIGN.md:73]                       |
+| quiltor: semantic spacing rhythms                                       | Optical / compact / control / regular / section gaps (section 4)                                                                              | [QT README.md:79]                       |
+| quiltor: contrast tests on the real CSS, 4.5:1 text, 3:1 non-text       | Section 8 is computed on the real `tokens.css`; T-7 turns it into a test                                                                      | [QT README.md:67]                       |
+
+**Wanted in version 4** (these were "not wanted" in version 3): the wordmark in the style of the logo, the drawn scene band, the banknote with its guilloche, a web font (Barlow) for the wordmark and figures, and green for action and money. [D-12].
+
+**Not wanted**
+
+1. **Terminal identity** of version 2: monospace everywhere, uppercase tracked labels in the controls, the "Acid Green" accent, htop/lazygit references. [Own: replaced by the HIG redesign of T-2; D-12 does not bring it back.] Uppercase with tracking is allowed only in the wordmark and the banknote label (section 3).
+2. **Game assets:** the Schedule I logo, key art, screenshots, press-kit or Steam files, the game's banknote art, item renders. [R-2 §3], [D-4] (6), kept by [D-12]; section 10.
+3. **CRT effects:** scanlines, glow, `text-shadow`, grain or noise textures, graffiti. [Own: the reference has none; they would hurt legibility], [HIG Materials].
+4. **Colour as the only carrier of meaning**, gradients that carry information. The only gradients are the sky of the scene band, the guilloche and the progress fill, all decorative. [HIG Color], [WCAG 1.4.1].
+5. **Blue backgrounds** and the v3 slate/blue values. [D-12] (T-14 brief item 4), [Plan §5].
+6. **Translucent glass in the content layer.** The one translucent surface is the header switch on the scene band, outside the content layer. [HIG Materials].
+7. **Headings that repeat the wordmark:** no visible "Best Mix Calculator" and no "Set up your mix" (section 14). [D-12].
+
+**Deviations from the reference** (each is intended; D-14-6 lists them next to the screenshots):
+
+| Deviation                                                                                                                                | Reason                                                                                                                                                                                                                                                                                   | Source                                          |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Currency `$70.00` with en-US grouping (`$2,486.00`) and a leading minus (`-$5.50`) in the web app                                        | Game style as in the reference; the minus in front keeps negative profit readable. The CLI keeps its own `38.50$` format (no interface change).                                                                                                                                          | [D-14], [Plan §0, §3.4]                         |
+| The no-JS fallback (server-rendered result) shows the mix tiles without prices and without the base tile                                 | The prices and the base product are only known in the client render; showing them in the fallback would need an API or `app.py` change. The fallback stays usable.                                                                                                                       | [D-15], [Plan §0, §3.1]                         |
+| The recipe result ("Your Recipe") stays sticky instead of an equal-height column                                                         | While a long recipe is built, the result must stay visible; equal height would push it out of view.                                                                                                                                                                                      | [D-14]                                          |
+| The document `<title>` stays "Best Mix Calculator"                                                                                       | Bookmarks and tab names of existing users keep working; the visible name is the wordmark.                                                                                                                                                                                                | [D-14]                                          |
+| The focus ring is near-black `#1f2219` in Dusk; only Night and the header use the reference yellow `#ffd257`                             | Yellow on the paper-white screen would be below 3:1; near-black reaches 15:1 there. On dark surfaces and on the header switch the reference yellow works (section 8). Not blue (D-14).                                                                                                   | [D-14], [Ref `button:focus-visible`], [Plan §2] |
+| Progress is an **indeterminate** sweep, not a fill to 100 %                                                                              | The search engine reports phase, depth and work units but never a total, so there is no fraction to show (`search-engine.js:274-279`).                                                                                                                                                   | [Plan §0, §3.2], [D-17] (F-14-3)                |
+| Targets stay ≥ 44 px (reference tabs 40 px, segments 38 px, header switch segments about 32 px)                                          | HIG minimum, kept by D-12.                                                                                                                                                                                                                                                               | [D-12], [HIG Buttons]                           |
+| Barlow is self-hosted under `webapp/static/fonts/` (the reference loads it from Google Fonts)                                            | No external request, offline use, licence file in the repository.                                                                                                                                                                                                                        | [D-16], section 10                              |
+| Card headings, the primary button label and the banknote label "Profit" stay in the UI font (the reference sets them in Barlow 700)      | Barlow is limited to the wordmark and figures (T-14 brief item 7); headings and labels keep the HIG type roles.                                                                                                                                                                          | [D-12] (T-14 brief item 7)                      |
+| The banknote figure is 34 px below 480 px and 1.4 × large title (47.6 px) from 480 px; stat values are 20 px (reference 48 px and 22 px) | The token plan (section 9) keeps the HIG-derived size scale and adds no display sizes: the wide banknote figure is derived from the large-title token in `styles.css`, the narrow one and the stat values use the existing sizes; the banknote leads by size, weight, fill and position. | section 9, [Plan §2]                            |
+| "Optimality proven" keeps its badge pill (the reference shows bare text)                                                                 | The proven, approximate and stopped badges keep one shape, so the state reads the same in all three cases.                                                                                                                                                                               | [Own: one badge component, section 5]           |
+| The modifier stat reads `1.20` (reference `×1.20`)                                                                                       | D-21: the value is additive (sell = base × (1 + modifier)), so a `×` would suggest a multiplication by 1.20.                                                                                                                                                                             |
+
+## 2. Colour roles
+
+All colour values below are identical to `tokens.css` (section 9 lists them as token names). Every pair that carries information is in section 8.
+
+**Meanings of green** (D-12 overrides D-4 (6)): the **logo green** (`--action-primary*`) fills the one primary button of a view (`Get Best Mix`, `Find Recipe`) and its hover/pressed states, nothing else; the **banknote green** (`--money-*`) carries profit; the **muted green** (`--status-success`, `--progress-fill-*`) marks "Optimality proven", Want and the search progress and is quieter than both. No green is used for selection, focus, links or ordinary figures. [D-12], [D-14] (Q3), [HIG Buttons] (tint the background of a prominent button).
+
+| Role                                  | Use                                                                                                                                           | Dusk                              | Night                             | Source                                                                                                                     |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Canvas                                | Page background behind the screen, below the scene band                                                                                       | `#e9e4d6`                         | `#0b0b0f`                         | [Ref `.h.dusk`/`.h.night` `--base`]                                                                                        |
+| Screen                                | The computer screen that holds tabs and panels                                                                                                | `#fbf8ef`                         | `#17181b`                         | [D-12] (paper white / near black), [Ref `--scr`]                                                                           |
+| Panel                                 | Cards, form panel, result surface, selected tab, effect option cards                                                                          | `#f1ecdd`                         | `#202125`                         | [Ref `--scr2`]                                                                                                             |
+| Raised                                | Secondary buttons, ingredient tiles, open menus, drag copy, items inside the result surface (mix tiles, effect pills, stat boxes, alert base) | `#fbf8ef`                         | `#17181b`                         | [Ref `.st .res .it` (items on `--scr`)]                                                                                    |
+| Sunken                                | Progress track, effect scroll list, recipe steps, disabled controls                                                                           | `#e3dccb`                         | `#2e2f34`                         | [Ref `--track`]                                                                                                            |
+| Field                                 | Input and select fill, segmented-control track                                                                                                | `#ffffff`                         | `#0f1012`                         | [Ref `--fld`, `.h .seg`]                                                                                                   |
+| Subtle border                         | Tab-bar separator, tile and pill hairlines (decorative)                                                                                       | `#ddd5bf`                         | `#2e2f34`                         | [Ref `--scr-line`]                                                                                                         |
+| Screen rim                            | The beige rim around the screen (decorative)                                                                                                  | `#d9cfa8`                         | `#4a4536`                         | [D-12] (beige rim), [Ref `--case`]                                                                                         |
+| Text primary                          | Body text, values, labels, ordinary figures                                                                                                   | `#1f2219`                         | `#f2efe6`                         | [Ref `--tx`]                                                                                                               |
+| Text secondary                        | Supporting text, inactive tabs, unselected segments                                                                                           | `#4b4d43`                         | `#bdbab0`                         | [Ref `--tx2`]                                                                                                              |
+| Text tertiary                         | Help and meta text, captions, tile prices, disabled labels                                                                                    | `#5d5f54`                         | `#a3a097`                         | [Ref `--tx3`]                                                                                                              |
+| Link                                  | Skip link, jump links, inline links — underlined, not blue                                                                                    | `#1f2219`                         | `#f2efe6`                         | [D-14] (links may leave blue), [Own: the underline carries the link, the text colour stays neutral]                        |
+| Control border                        | Visible boundary of fields, selects, segment tracks, secondary buttons                                                                        | `#7f7c6e`                         | `#86847c`                         | [Ref `--bd`] ⚑ darkened for 3:1 on sunken and panel, [Plan §2, §4], [WCAG 1.4.11]                                          |
+| Control border hover                  | Hover boundary; also the increased-contrast border                                                                                            | `#5d5f54`                         | `#a3a097`                         | [Own: the tertiary text value, one step darker resp. lighter], [WCAG 1.4.11]                                               |
+| Focus ring                            | Keyboard focus outline on the screen, drop indicator line                                                                                     | `#1f2219`                         | `#ffd257`                         | [Ref `button:focus-visible`] (Night), [Own: near-black in Dusk, the yellow is below 3:1 on paper white], [D-14] (not blue) |
+| Focus ring header                     | Focus outline of controls on the scene band (both themes)                                                                                     | `#ffd257`                         | `#ffd257`                         | [Ref `button:focus-visible`], [D-17] (F-14-5)                                                                              |
+| Primary action fill                   | Fill of the one primary button — **the logo green**                                                                                           | `#2f5a22`                         | `#9bcf63`                         | [D-12], [Ref `--act`]                                                                                                      |
+| Primary action hover                  | Hover fill                                                                                                                                    | `#3a6b2b`                         | `#aad977`                         | [Ref `--act-h`]                                                                                                            |
+| Primary action pressed                | Pressed fill                                                                                                                                  | `#264a1b`                         | `#8bbf52`                         | [Own: one step darker resp. lighter than the fill], [HIG Buttons] (pressed state)                                          |
+| Primary action ink                    | Label and spinner on the primary fill                                                                                                         | `#f4efd6`                         | `#0f1a08`                         | [Ref `--act-ink`]                                                                                                          |
+| Selected surface                      | Selected segment (Exact/Fast, recipe match, Want/Neutral/Avoid) — inverted; checked option of an open select list                             | `#1f2219`                         | `#f2efe6`                         | [D-12] (neutral selection), [Ref `--sel`]                                                                                  |
+| Selected ink                          | Label and glyph on the selected surface                                                                                                       | `#fbf8ef`                         | `#17181b`                         | [Ref `--sel-ink`]                                                                                                          |
+| Success (muted green)                 | "Optimality proven" badge, wanted effect card edge, wanted selection chip                                                                     | `#4a6340`                         | `#9fb58f`                         | [D-14] (Q3), [Ref `--okc`] ⚑ Dusk `#55704a` → `#4a6340` for 4.5:1 on sunken, [Plan §4]                                     |
+| Success soft                          | Badge fill, wanted effect card fill                                                                                                           | `rgb(74 99 64 / 10%)`             | `rgb(159 181 143 / 14%)`          | [QT README.md:49] (structure: base/soft roles per family)                                                                  |
+| Progress fill start/end               | The muted-green sweep of the progress bar (decorative)                                                                                        | `#b9cfa4` / `#8fb07c`             | `#3f5733` / `#6b8a57`             | [D-14] (Q3), [Ref `--soft1`/`--soft2`]                                                                                     |
+| Warning                               | "Approximate" and "Search stopped" badges; text, glyph and border                                                                             | `#8a5100`                         | `#ffb340`                         | v3 value kept, [HIG Color] (status colours)                                                                                |
+| Warning soft                          | Badge and notice fill                                                                                                                         | `rgb(138 81 0 / 10%)`             | `rgb(255 179 64 / 14%)`           | v3 value kept, [QT README.md:49]                                                                                           |
+| Error                                 | Alert bar, invalid field border, error text, excluded effect card edge                                                                        | `#b3101c`                         | `#ff8a82`                         | [HIG Buttons] (destructive uses red) ⚑ Dusk `#c1121f` → `#b3101c` for 4.5:1 on the pressed `Delete` tint, [Plan §4]        |
+| Error soft                            | Alert fill, excluded effect card fill                                                                                                         | `rgb(179 16 28 / 8%)`             | `rgb(255 138 130 / 14%)`          | [QT README.md:49]                                                                                                          |
+| Money surface                         | Banknote fill (both themes)                                                                                                                   | `#a9cf8c`                         | `#a9cf8c`                         | [D-12] (mint banknote), [Ref `--bill`]                                                                                     |
+| Money border                          | Banknote border (both themes)                                                                                                                 | `#2c4526`                         | `#2c4526`                         | [Ref `.h .note` border (`--outline`)]                                                                                      |
+| Money ink                             | Banknote figure and "Profit" label (both themes)                                                                                              | `#16290f`                         | `#16290f`                         | [Ref `.h .note b`]                                                                                                         |
+| Money guilloche                       | The quiet line pattern on the banknote (decorative)                                                                                           | `rgb(44 69 38 / 9%)`              | `rgb(44 69 38 / 9%)`              | [Ref `.h .note` background]                                                                                                |
+| Brand cream                           | Wordmark fill (both themes)                                                                                                                   | `#efe8c6`                         | `#efe8c6`                         | [D-12] (cream lettering), [Ref `--cream`]                                                                                  |
+| Brand outline                         | Wordmark outline (both themes)                                                                                                                | `#2c4526`                         | `#2c4526`                         | [D-12] (dark green outline), [Ref `--outline`]                                                                             |
+| Scene sky top / bottom                | Sky gradient of the scene band (decorative)                                                                                                   | `#c9c1dc` / `#efcdb0`             | `#07080d` / `#1b1730`             | [D-12] (dusk / night), [Ref `--sky1`/`--sky2`]                                                                             |
+| Scene far / mid / near                | Polygon layers of the scene band (decorative)                                                                                                 | `#a59fbf` / `#8a84a6` / `#6c6884` | `#1a1a2a` / `#131320` / `#0c0c15` | [Ref `--far`/`--mid`/`--near`]                                                                                             |
+| Header switch surface                 | Track of the theme switch on the scene band                                                                                                   | `rgb(0 0 0 / 60%)`                | `rgb(0 0 0 / 40%)`                | [Ref `.h .theme`] ⚑ Dusk 40 % → 60 % for 4.5:1 over the light dusk sky, [Plan §4]                                          |
+| Header switch ink                     | Unselected theme labels (both themes)                                                                                                         | `#e9e6dc`                         | `#e9e6dc`                         | [Ref `.h .theme span`]                                                                                                     |
+| Header switch selected / selected ink | Selected theme segment and its label (both themes)                                                                                            | `#f2efe6` / `#17181b`             | `#f2efe6` / `#17181b`             | [Ref `.h .theme .on`]                                                                                                      |
+
+⚑ marks a value adjusted from the reference so that its section 8 pair reaches the target; the reason is in the source column. The version 3 names `--profit-text`, `--profit-surface` and `--selected-border` are removed (section 9.3). The effect label colours are not roles (see below).
+
+**Status carriers** (no state by colour alone) [HIG Color], [WCAG 1.4.1], [User 2026-09-12] (v2 §4):
+
+| State                       | Carrier                                                                                                                        |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Optimality proven           | `badge--proven`: muted-green success text on the success soft fill **plus** glyph ✓ **plus** the text "Optimality proven".     |
+| Approximation               | `badge--approximate`: warning colour **plus** glyph ≈ **plus** the full warning sentence.                                      |
+| Search stopped              | Warning badge **plus** "Search stopped — optimality not proven".                                                               |
+| Search running              | Status text with depth and operations **plus** the progress sweep (decorative) **plus** `Cancel Search`.                       |
+| Error / stop without result | `alert--error`: error bar **plus** the error text and "No result was produced."                                                |
+| Profit                      | The banknote **plus** the label "Profit" **plus** the largest figure of the result.                                            |
+| Want / Avoid selection      | Neutral inverted segment (selected surface + selected ink) **plus** glyph ✓ / ⊘ **plus** the segment label "Want" / "Avoid".   |
+| Wanted / excluded card      | The selected segment above **plus** a quiet card edge: 2 px success resp. error border with its soft fill (repeats the state). |
+
+**Effect label colours.** Effect chips are neutral pills; the game's documented label colour of the effect appears only as a dot before the name. The name stays in text primary on a neutral fill, so the dot is decorative and needs no contrast pair. The colours are domain metadata in `src/lookup/lookup.py`, not a second design palette, and reach the page as `--effect-color` on each chip. v3's "tint of at most 12 %" is dropped: the pill is neutral. [D-12] (neutral pills with a dot), [Ref `.h .fx span::before`], [User 2026-09-12] (v2 §5), [docs/reviews/2026-09-12-effect-colors.md](../../docs/reviews/2026-09-12-effect-colors.md).
+
+**Increased contrast.** Under `@media (prefers-contrast: more)` text tertiary takes the text-secondary value, the control border takes the control-border-hover value and the focus ring width becomes 3 px. No new colour values. [HIG Color] (custom colours need increased-contrast variants), [HIG Accessibility], [R-1 §3.2].
+
+## 3. Typography
+
+**Families.** Two families, each with one job. [D-12] (T-14 brief item 7), [D-16].
+
+- `--font-ui` (text): `system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`. All running text, labels, controls, headings and badges, including the primary button label and the banknote label "Profit". Resolves to SF on Apple devices without embedding it. [HIG Typography] (system font; do not embed system fonts).
+- `--font-display` (wordmark and figures): `"Barlow", var(--font-ui)`. **Barlow 700 and 800 only**, latin subset, `woff2`, **self-hosted** under `webapp/static/fonts/` with its licence `OFL.txt` (SIL Open Font License 1.1) and a `README.md` naming the source (`@fontsource/barlow` 5.3.0, downloaded 2026-11-15). No CDN, no external request. `font-display: swap`, so text shows at once in the fallback face. [D-16] (download approved), [Ref `--disp`] (Barlow), [Own: two weights keep the download small; swap avoids invisible text].
+
+**Where Barlow is used.** Exactly two rules of `styles.css` set `--font-display`: `.wordmark` (inherited by `.wordmark__sub`) and `.stat dd` (stat values and, through `.stat--primary dd`, the banknote figure); `tests/browser/studio-styles.test.cjs` checks this list.
+
+| Element                                             | Weight | Size                                                                                                         | Source                                            |
+| --------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- |
+| Wordmark "Best Mix"                                 | 800    | 26 px (`.wordmark`: page title + `--space-1`), tracking 0.02em                                               | [Ref `.h .mark`]                                  |
+| Wordmark "for Schedule I"                           | 800    | footnote, 13 px (`.wordmark__sub`), tracking 0.06em                                                          | [Ref `.h .mark small`]                            |
+| Banknote figure (profit)                            | 800    | large title, 2.125rem (34 px) below 480 px; 1.4 × large title (2.975rem, 47.6 px) from 480 px; line height 1 | [Ref `.h .note b`] (800, 48 px), section 9 (size) |
+| Stat values (sell price, ingredient cost, modifier) | 700    | title, 1.25rem (20 px)                                                                                       | [Ref `.h .mrow b`] (700), section 9 (size)        |
+
+The banknote label "Profit" is text: UI font 700 at subhead size (0.9375rem, 15 px), uppercase with 0.06em tracking, in `--money-ink`. [Ref `.h .note small`] (uppercase, tracked), [D-12] (T-14 brief item 7: text in the UI font).
+
+Small inline figures (tile prices, step numbers, progress counts, badge numbers, chip counts) stay in `--font-ui`. [Ref `.h .it .p`, `.h .prog .lb`] (UI font there).
+
+**Figures.** Every number uses `font-variant-numeric: tabular-nums`, in both families, so columns and the count-up do not jitter. [Ref `.h .tn`], [Own: keeps alignment without a monospace face].
+
+**Weights.** `--font-ui`: 400, 500, 600, 700. `--font-display`: 700 and 800 (`--weight-heavy`). Nothing below 400. [HIG Typography] (avoid ultralight, thin and light weights), [D-4] (4).
+
+**Roles of the UI font.** Size / line height / weight. Sizes and leading come from the iOS default ("Large") text styles. [HIG Typography] (iOS table, [V] in R-1 §1.1).
+
+| Role        | HIG style   | Size              | Line height  | Weight | Used for                                                                                                                     | Source                                                                                   |
+| ----------- | ----------- | ----------------- | ------------ | ------ | ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Large title | Large Title | 2.125rem (34 px)  | 1.2 (41 px)  | 700    | Size of the banknote figure only (Barlow 800; × 1.4 from 480 px)                                                             | [HIG Typography] (34/41)                                                                 |
+| Page title  | Title 2     | 1.375rem (22 px)  | 1.27 (28 px) | 700    | No heading in v4 (the wordmark names the page, section 14); the wordmark size is page title + 4 px                           | [HIG Typography] (22/28); token kept in section 9                                        |
+| Title       | Title 3     | 1.25rem (20 px)   | 1.25 (25 px) | 600    | Panel and result headings; size of stat values (Barlow 700)                                                                  | [HIG Typography] (20/25)                                                                 |
+| Headline    | Headline    | 1.0625rem (17 px) | 1.3 (22 px)  | 600    | Card titles, effect option names, primary button label (700)                                                                 | [HIG Typography] (17/22 semibold)                                                        |
+| Body        | Body        | 1.0625rem (17 px) | 1.47 (25 px) | 400    | Running text, effect descriptions, empty states                                                                              | [HIG Typography] (17 pt default)                                                         |
+| Callout     | Callout     | 1rem (16 px)      | 1.3 (21 px)  | 400    | Control text: secondary buttons (600), inputs, selects, Exact/Fast segments (600), effect pills (600), mix tile names (700)  | [HIG Typography] (16/21), [Own: 16 px keeps iOS Safari from zooming into focused fields] |
+| Subhead     | Subhead     | 0.9375rem (15 px) | 1.33 (20 px) | 600    | Field labels, group labels (sentence case, no tracking), tabs and theme switch labels (600), banknote label (700, uppercase) | [HIG Typography] (15/20)                                                                 |
+| Footnote    | Footnote    | 0.8125rem (13 px) | 1.38 (18 px) | 400    | Help text, meta text, tile prices (600), status line, Want/Neutral/Avoid segments, tabs below 480 px                         | [HIG Typography] (13/18), [Ref `.h .it .p`, `.h .help`]                                  |
+| Caption     | Caption 1   | 0.75rem (12 px)   | 1.33 (16 px) | 600    | Badges, chip counts, mix step captions (700)                                                                                 | [HIG Typography] (12/16; above the 11 pt iOS minimum), [Ref `.h .it small`]              |
+
+Rules: hierarchy through size and weight; no letter-spacing changes in the UI font except the uppercase banknote label [HIG Typography] (the system adjusts tracking); uppercase with tracking only in the wordmark (via `text-transform: uppercase`, so the live text stays mixed case) and the banknote label [Ref `.h .mark`, `.h .note small`]; text scales with the browser's text size and stays usable at 200 % [HIG Accessibility], [WCAG 1.4.4].
+
+## 4. Spacing, radii, depth and motion
+
+**Spacing scale** (geometry only): 4, 8, 12, 16, 24, 32, 48, 64 px as `--space-1` … `--space-8`. [Own: unchanged 4 px grid], [R-1 §1.4] (HIG gives no web spacing values).
+
+**Semantic rhythms** (components use these, not raw steps) [QT README.md:79-82] (structure), [HIG Accessibility] (about 12 pt around bezelled elements, about 24 pt around elements without a bezel):
+
+| Rhythm  | Value | Use                                                                                    |
+| ------- | ----- | -------------------------------------------------------------------------------------- |
+| Optical | 4 px  | Glyph to label, badge padding                                                          |
+| Compact | 8 px  | Inside dense groups: chip rows, mix tiles, label to field                              |
+| Control | 12 px | Between adjacent bezelled controls; the header row                                     |
+| Regular | 16 px | Screen padding, narrow card padding; between fields in a form; between the two columns |
+| Section | 32 px | Between unbezelled text blocks (≥ 24 px HIG)                                           |
+
+Padding by width: the screen has 16 px from 480 px and 8 px below; cards on the screen have 24 px (`--space-5`) from 480 px and 12 px below (16 px for a card outside the screen); the result surface has 24 px from 480 px and 16 px below; the effect list has 12 px from 480 px and 8 px below. Below 480 px the screen, the cards and the effect list give back the 16 px per side that the screen adds, so the Want/Neutral/Avoid segments keep their T-5 width. [Ref `.h .scr`, `.st .res`] (16 px), [Own: the screen adds a second inset; giving it back keeps the D-5F-3 segment widths at 320 px].
+
+**Radii.** Small 6 px (effect pills, segments inside their track, focus ring of plain elements), control 8 px (buttons, tabs, fields, segment tracks, theme switch segments, mix tiles, stat boxes, banknote, effect option cards, alert), card 10 px (panels, result surface, effect list, theme switch track), screen 12 px (`.app-screen`), pill 999 px (badges, selection chips, progress track and sweep). Nested shapes use inner radius = outer radius − padding. [Ref `.h .f`, `.h .card`, `.h .scr`, `.h .fx span`] (8 / 10 / 12 / 6 px), [Plan §2].
+
+**Screen rim.** The screen has a 4 px rim in `--screen-rim`, drawn as `box-shadow: 0 0 0 var(--screen-rim-width) var(--screen-rim)`, so it takes no layout space. The rim is decorative: the screen is identified by its fill and position, not by the rim. [D-12] (beige rim), [Ref `.h .scr`], [Plan §3.1].
+
+**Depth and materials.** Grouping comes from surface steps and spacing: canvas → screen → panel → raised items. Separator lines are hairlines in `--border-subtle` and decorative (tab bar, tile and pill outlines). In Night, elevation is a lighter surface and there are no shadows [HIG Dark Mode]. Raised elements have no shadow in either theme (`--shadow-raised` stays a token but no component uses it); only open select lists and the drag copy get `--shadow-popover`. No blur, no translucency in the content layer. [HIG Materials], [Ref `.h .tbar`, `.h .it`].
+
+**Motion.**
+
+- Durations of control feedback: `--motion-fast` 100 ms (colour and border changes), `--motion-base` 150 ms (opening a disclosure or select list). Easing `--ease-standard`. Buttons, tabs, segments: colour change only, no scale; tab change and theme change are instant. Spinner: only inside the loading primary button, 18 px ring with a 2 px stroke in `--action-primary-ink` (30 % track), one rotation per 800 ms, linear. [HIG Motion] (avoid motion for frequent interactions), [User 2026-09-12] (v2 §7).
+- **Reveal** (`is-revealing`): a new result card from Find Best Mix or Match Effects fades in and rises 6 px over `--motion-reveal` (300 ms) with `--ease-emphasized`. Not on Your Recipe (it re-renders on every edit) and not on the closed "Compare highest modifier" card. [D-12] (T-14 brief item 8), [Ref `@keyframes rise`], [Plan §3.3].
+- **Count-up** (`count-up`): on the same two results the banknote figure counts from 0 to its value over `--motion-count` (550 ms, ease-out). The real text (`$70.00`) is the only text of the `dd` for assistive technology and tests; an `aria-hidden` overlay `span.count-up` inside the `dd` shows the counting digits and is removed at the end. `styles.css` alone lays it out: `.count-up` sits absolutely over the figure in `--money-ink`, and `.stat--primary dd:has(> .count-up)` paints the final text transparent while the overlay is there; `script.js` sets no inline styles. [Ref `count()`], [Plan §3.4].
+- **Progress sweep:** while a search runs, a muted-green segment (`--progress-fill-start` → `--progress-fill-end`) sweeps across the 6 px track once per `--motion-progress` (1600 ms) and repeats. The progress node stays in the DOM between messages, so the sweep does not restart. The bar is `aria-hidden`; the status text carries the progress. [D-14] (Q3), [D-17] (F-14-3), [Plan §3.2], [Ref `.h .prog .track`].
+- **Reduced motion:** under `prefers-reduced-motion: reduce` there is no reveal and no count-up (the final figure shows at once), the progress bar is a static full-width fill at reduced opacity, the spinner does not rotate (a static ring segment stays) and all transition durations become 0.01 ms. No information is lost. [HIG Accessibility] (Reduce Motion), [Ref `@media (prefers-reduced-motion: reduce)`], [R-1 §3.2].
+
+## 5. Controls and components
+
+**Target size.** Every interactive target — buttons, tabs, segments (also in the header theme switch), selects, inputs, tiles, summaries, chip remove buttons, links in the app's own UI, the skip link — has a hit area of at least **44 × 44 px**. Where a visual element is smaller, padding or a pseudo-element extends the hit area to 44 px. [HIG Buttons], [HIG Accessibility], [D-4] (5), kept by [D-12].
+
+| Size token            | Value | Use                                                | Source                                         |
+| --------------------- | ----- | -------------------------------------------------- | ---------------------------------------------- |
+| `--control-min`       | 44 px | Minimum height and width of every target           | [HIG Buttons], [HIG Accessibility]             |
+| `--focus-ring-width`  | 2 px  | Focus outline width (3 px with increased contrast) | [R-1 §3.2] (quiltor 2 px / 3 px), [WCAG 2.4.7] |
+| `--focus-ring-offset` | 2 px  | Gap between element and focus outline              | [R-1 §3.2], v2 (measured 2 px)                 |
+
+**Action rows.** All buttons of one action row (`.form-actions`: the primary button next to `Cancel Search`, and the recipe actions) have the same height, at least 44 px. The primary action differs from the secondary buttons by style only. [HIG Buttons] (use style, not size, to distinguish the preferred choice).
+
+**State rules for all components.** Hover changes border or fill one step; `:focus-visible` shows the focus ring (`--focus-ring-width`, offset `--focus-ring-offset`; `--focus-ring-header` in the header) and never removes the hover style; active/pressed uses the pressed fill or the sunken surface; disabled keeps the shape, uses text tertiary on the sunken surface and `cursor: not-allowed`, no opacity on text; error adds the error border plus an error message linked with `aria-describedby`; loading keeps the control's size and shows a spinner instead of the label; the words live in the status line. [HIG Buttons], [HIG Accessibility], [WCAG 2.4.7], [WCAG 3.3.1].
+
+| Component                     | Element / class                                                                                                              | Look                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | States                                                                                                                                                      | Source                                                                                                     |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| App header                    | `header.app-header`                                                                                                          | Full-width band of `--scene-height` (96 px) minimum: sky gradient `--scene-sky-top` → `--scene-sky-bottom`, the scene drawing behind, the wordmark at the leading end and the theme switch at the trailing end. Wordmark and switch share one row and wrap (`flex-wrap`) when they do not fit; at 320 px the switch may sit below the wordmark. Below the band starts the canvas                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | — (the switch has its own states)                                                                                                                           | [D-12], [Ref `.h`, `.h .top`], [Plan §3.1], [HIG Layout] (most important item top and leading)             |
+| Scene band                    | `div.app-header__scene` (`aria-hidden="true"`) with an inline `svg` (`viewBox="0 0 1200 300"`, `preserveAspectRatio="none"`) | Own low-poly polygons: far hills, mid hills, a near rail with posts and a street-level skyline, filled only with `var(--scene-far)`, `var(--scene-mid)`, `var(--scene-near)` at 70 % opacity; no colour literals in the markup; `pointer-events: none`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | — (decorative)                                                                                                                                              | [D-12] (Hyland Point band), [Ref `.h .scape`], [Plan §2] (no colour literals)                              |
+| Wordmark                      | `h1.wordmark` "Best Mix" with `span.wordmark__sub` "for Schedule I"                                                          | Live mixed-case text shown upper case with `text-transform: uppercase`; Barlow 800; fill `--brand-cream`; outline `--brand-outline` drawn as `-webkit-text-stroke` (5 px main, 3 px sub) with `paint-order: stroke fill`; main line 26 px with 0.02em tracking, sub line 13 px with 0.06em tracking. Accessible name "Best Mix for Schedule I". Own lettering, not the game logo                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | —                                                                                                                                                           | [D-12], [Ref `.h .mark`], [Plan §0] (accessible name), section 10                                          |
+| Theme switch                  | `#theme-switch` (`.theme-switch`, `[data-theme-value]`)                                                                      | Segmented control on `--header-switch-surface`, radius 10 px; segments ≥ 44 px of equal width, control radius, subhead 600, labels **Dusk / Night** in `--header-switch-ink`; selected: `--header-switch-selected` fill with `--header-switch-selected-ink`; hover and pressed (not selected) tint the segment with 6 % resp. 10 % of the selected fill (more would take the label below 4.5:1 in Dusk, section 8). The track padding is at least `--focus-ring-width` + `--focus-ring-offset` (4 px, 5 px under `prefers-contrast: more`), so the focus ring lies on the switch surface and never on the scene                                                                                                                                                                                                                                                                                                                                                                                                                                   | default, hover, focus-visible (`--focus-ring-header`), selected                                                                                             | [Ref `.h .theme`], [D-17] (F-14-5), [D-18] (note 2), section 7                                             |
+| Screen                        | `main.app-main.container#main` > `div.app-screen`                                                                            | `--surface-screen` fill, `--radius-screen`, 16 px padding (8 px below 480 px, section 4), rim `0 0 0 var(--screen-rim-width) var(--screen-rim)`; holds the tabs and the three panels; on the canvas below the scene band                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | —                                                                                                                                                           | [D-12], [Ref `.h .scr`], [Plan §3.1]                                                                       |
+| Tabs                          | `.calculator-tabs` (ARIA tabs)                                                                                               | Neutral, not inverted. ≥ 44 px, control radius, subhead 600 (footnote below 480 px, where the three tabs share the row in equal parts and labels may wrap); selected: panel fill, text primary and a 2 px inset bottom line in text primary; unselected: no fill, text secondary; pressed (not selected): sunken fill. A `--border-subtle` hairline separates the tab bar from the panels                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | default, hover (text primary), focus-visible, selected                                                                                                      | [D-12] (neutral selection), [Ref `.h .tabs .on`, `.h .tbar`], [User 2026-09-12] (v2 §10 ARIA tab contract) |
+| Primary button                | `.btn--primary` (`Get Best Mix`, `Find Recipe`)                                                                              | ≥ 44 px, primary action fill and ink, label in the UI font at headline size (17 px) 700, control radius; one per view; in `.form-actions` it grows to fill the row; the only element with `--action-primary*`. "Get Best Mix" is the last row of the form column. Spinner per section 4                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | default, hover, focus-visible, active (pressed fill), disabled, loading (spinner replaces the visible label, width kept, accessible name kept, `aria-busy`) | [D-12] (one action colour), [Ref `.h .cta`, `.st .form .cta`], [HIG Buttons]                               |
+| Secondary button              | `button` (no class; `Cancel Search`, `Clear Recipe`, `Undo clear`, `Retry Loading`)                                          | ≥ 44 px, raised fill, control border, text primary, callout 600                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | default, hover (border hover), focus-visible, active (sunken fill), disabled                                                                                | [HIG Buttons]                                                                                              |
+| Quiet destructive button      | recipe step `Delete`                                                                                                         | 44 × 44 px, no fill, text secondary; error colour on hover and focus; pressed: error text on a 6 % error tint over sunken                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | default, hover, focus-visible, active                                                                                                                       | [HIG Buttons] (destructive uses red, never primary)                                                        |
+| Segmented control             | `.mode-switch`, recipe match, `.effect-preference`                                                                           | Field-filled track with a 1 px inset control border, control radius, 4 px track padding and gap (`.mode-switch`; 2 px for `.effect-preference`), segments ≥ 44 px of equal width with the small radius; Exact/Fast and recipe match: callout 600 in every state, the selected segment adds a ✓ check mark; unselected: text secondary (text primary on hover; pressed: a 12 % tint of the selected surface); selected: **neutral inverted** — selected surface fill, selected ink                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | default, hover, focus-visible (ring on the whole segment), selected, disabled                                                                               | [D-12], [Ref `.h .seg`, `.h .seg .on`], [HIG Segmented controls], [MG DESIGN.md:131]                       |
+| Preference segment Want/Avoid | `.effect-preference__option`                                                                                                 | As segmented control, with footnote-size labels (weight 600 only when selected). Want selected: neutral inverted segment + ✓ + "Want"; Avoid selected: neutral inverted segment + ⊘ + "Avoid"; Neutral selected: neutral inverted segment + "Neutral". The segments keep equal width on click (T-5 fix); the glyph labels are checked against `script.js` by a drift test (F-5-6)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | as above                                                                                                                                                    | [Plan §0] (own decision), [Plan §3.5], [D-13] (F-5-6), [HIG Color] (not colour alone)                      |
+| Select                        | `.select-control` (product, rank)                                                                                            | ≥ 44 px, field fill, control border, control radius, chevron in text secondary (text tertiary when disabled); open list on raised with popover shadow, the checked option on the selected surface                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | default, hover, focus-visible, open, disabled, error                                                                                                        | [Ref `.h .f`], [HIG Pickers], [User 2026-09-12] (v2 §12 `base-select`)                                     |
+| Text / number field           | max ingredients, effect filter                                                                                               | ≥ 44 px, field fill, control border, label above in subhead (text tertiary allowed for captions, section 8)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | default, hover, focus-visible, disabled, error (error border + message)                                                                                     | [Ref `.h .f`, `.h .cap`], [HIG Text fields]                                                                |
+| Result surface                | `#result`, `#effect-result`, `#recipe-result` (`.result-surface`)                                                            | The visible filled panel of the result column (`.result-stack.result-surface`): `--surface-panel`, card radius, 24 px padding (16 px below 480 px), a column with 16 px gap and at least 220 px high; cards, status block and empty state inside it lose their own fill and padding. It holds every state: empty state, status block while running, alert, result cards. From 900 px it stretches to the full height of its column. Items inside (mix tiles, effect pills, stat boxes) sit on the raised fill (the screen value). In the recipe tab the surface is the sticky result column (section 11 lists the states)                                                                                                                                                                                                                                                                                                                                                                                                                         | empty, running, result, error                                                                                                                               | [Ref `.st .res`], [Plan §3.1] (F-14-4)                                                                     |
+| Result card                   | `.result-card`                                                                                                               | Inside the result surface: heading row (title + badge), banknote, stat row, mix, effects. Reveal per section 4 when new                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | proven, approximate, stopped; `is-revealing`                                                                                                                | [Ref `.st .res`, `.st .rh`], [User 2026-09-12] (v2 §1, §9)                                                 |
+| Banknote                      | `.stat--primary`                                                                                                             | `--money-surface` fill under a quiet guilloche (`repeating-radial-gradient` of 1 px rings every 10 px in `--money-guilloche`, centred on the trailing edge), 2 px `--money-border`, control radius, 12 × 16 px padding, spans the full stat row; label "Profit" (UI font 700, subhead size, uppercase, 0.06em tracking) and the figure (Barlow 800, large-title size below 480 px and 1.4 × large title from 480 px, line height 1, tabular) in `--money-ink`. Same look in both themes. Count-up per section 4                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | —                                                                                                                                                           | [D-12] (banknote), [Ref `.h .note`], [Plan §3.4]                                                           |
+| Stat                          | `.stat`                                                                                                                      | A box on the raised fill, control radius, 8 × 12 px padding; label in footnote 600 text tertiary, value in Barlow 700 at title size, tabular, text primary. Three in a row from 480 px; below 480 px, and always in the recipe result column, they stack as label/value rows without a box                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | —                                                                                                                                                           | [Ref `.h .mrow`]                                                                                           |
+| Mix                           | `ol.chips.chips--ordered.mix` > `li.mix__item`                                                                               | An even grid of equal-width tiles (`display: grid`, `repeat(auto-fill, minmax(min(100%, 124px), 1fr))`, `--space-2` gap) without separators; the step number gives the order. Tile: raised fill, `--border-subtle` hairline, control radius; `span.mix__step` (caption 700, text tertiary: "1", "2", …), `span.mix__name` (700, text primary), `span.mix__price` (footnote 600, text tertiary, `$2.00`). The caption above the tiles is "Mix", the one above the pills "Effects · n" (n = number of effects, U+00B7), and the modifier stat reads `1.20` (two decimals, no `×`, because the value is additive: sell = base × (1 + modifier)); the no-JS fallback uses the same three texts. The client render adds a first tile `li.mix__item.mix__item--base` with "Base", the product name and, if the catalog has it, the type (`mix__meta`); it is marked as the start of the mix by the sunken surface and a 3 px start edge in `--border-control`. The no-JS fallback renders the same tiles without `mix__price` and without the base tile | —                                                                                                                                                           | [D-12], [Ref `.h .mix`, `.h .it`], [Plan §3.1], [D-15]                                                     |
+| Badge                         | `.badge--proven`, `.badge--approximate`, `.badge--stopped`                                                                   | Pill, 4 × 12 px padding, caption 600, soft fill + status text + glyph, no border; proven ✓ in the muted green, approximate ≈ in warning, stopped in warning with its own class `.badge--stopped`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | proven, approximate, stopped                                                                                                                                | [D-14] (Q3), [HIG Color]                                                                                   |
+| Alert                         | `.alert--error`                                                                                                              | Error soft fill over raised, 4 px leading bar in error, control radius, text primary, `role="alert"`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | —                                                                                                                                                           | [WCAG 4.1.3], [User 2026-09-12] (v2 §6)                                                                    |
+| Status line and progress      | `.status-block`, `.status-line`, `.progress`                                                                                 | Status text in footnote, text secondary, with depth and operations (tabular); below it a 6 px track in sunken, pill radius, with the muted-green sweep (`.progress span`) per section 4; `aria-hidden` bar. The `.status-block` node persists while messages change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | running (indeterminate sweep), reduced motion (static fill)                                                                                                 | [D-14] (Q3), [Ref `.h .prog`], [Plan §3.2]                                                                 |
+| Effect chip                   | `.effect-chip`                                                                                                               | Neutral pill: raised fill (the screen value) inside the result surface, `--border-subtle` hairline, small radius, ≥ 32 px visual height, name in callout 600 text primary; a `::before` dot of 10 px in `--effect-color` (the game label colour) with a faint dark ring                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | —                                                                                                                                                           | [D-12], [Ref `.h .fx span`], [Plan §3.1]                                                                   |
+| Selection chip                | `.effect-selection-chip`                                                                                                     | Pill with the status text colour, a remove button with a 44 × 44 px hit area; wrapped rows have a 44 px pitch; hover and pressed keep the status text colour on a 12 % or 14 % status tint plus an inset ring                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | default, hover, focus-visible                                                                                                                               | [HIG Buttons]                                                                                              |
+| Ingredient tile               | `.recipe-ingredient-tile`                                                                                                    | ≥ 64 px high, raised fill, control border and control radius, padding 8 px / 12 px; name (`.recipe-ingredient-tile__name`) in callout 700 text primary on its own line, price (`.recipe-ingredient-tile__price`) in footnote 600 text tertiary with tabular figures (`$2.00`) below it, and a tertiary "+" (700, decorative) at the end of the price line; the shelf is the same auto-fill grid (min 124 px, `--space-2` gap) as the mix tiles                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | default, hover, focus-visible, active (sunken), drag source (dashed control border)                                                                         | [User 2026-09-12] (v2 §11), [D-14] (currency)                                                              |
+| Recipe step                   | `.recipe-step`                                                                                                               | ≥ 44 px row, raised fill, control border, control radius; step number (`.recipe-step__number`, caption 700, text tertiary, tabular figures), name (`.recipe-step__name`, callout 700 text primary, wraps), price (`.recipe-step__price`, footnote 600 text tertiary, tabular figures) and Delete (`.recipe-step__remove`, footnote 500) in one line. In large text on a narrow list (the list is an inline-size container narrower than 14 em, e.g. 320 px at 125 % text) the price moves under Delete in the right column and the name spans both lines, so the name column keeps its width; drop indicator 3 px line in focus-ring colour                                                                                                                                                                                                                                                                                                                                                                                                       | default, focus-visible, dragging, drop target                                                                                                               | [User 2026-09-12] (v2 §11)                                                                                 |
+| Drag copy                     | `.recipe-drag-ghost`                                                                                                         | Raised fill, popover shadow, follows the pointer                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | —                                                                                                                                                           | [User 2026-09-12] (v2 §11)                                                                                 |
+| Disclosure                    | `details` (`What these effects do`, highest-modifier comparison)                                                             | 44 px summary row (`display: list-item`), subhead                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | closed, open, hover, focus-visible                                                                                                                          | [HIG Layout] (progressive disclosure)                                                                      |
+| Effect option list            | `.effect-options`                                                                                                            | Sunken fill, bounded scroll height, thin native scrollbar, option rows ≥ 44 px                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | default, filtered empty ("No effects match")                                                                                                                | [User 2026-09-12] (v2 §13)                                                                                 |
+| Effect option card            | `.effect-option` (`data-preference`)                                                                                         | One card per effect inside the list: control radius, 12 px padding; game-colour dot, name in headline text primary, explanation in footnote text secondary, then the Want/Neutral/Avoid control. **Neutral:** panel fill, no boundary line. **Wanted:** 2 px success border + success soft fill. **Excluded:** 2 px error border + error soft fill. The selected segment carries the state; the card edge only repeats it                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | default (neutral), wanted, excluded; no hover or click state on the card itself                                                                             | [Plan §0] (quiet edge kept), [User 2026-09-12] (v2 §13), [WCAG 1.4.11]                                     |
+| Skip link and jump links      | `.skip-link`, `.jump-link`                                                                                                   | Link colour (neutral text) with underline; skip link on raised with focus ring when focused                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | default, hover, focus-visible                                                                                                                               | [WCAG 2.4.1], [D-14] (not blue)                                                                            |
+| Empty state                   | `.empty-state`                                                                                                               | Body in text secondary inside the result surface, no illustration                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | —                                                                                                                                                           | [Own: no decoration, principle 1]                                                                          |
+
+**Currency.** All money in the web app uses one format: `$` in front, two decimals, en-US grouping, minus in front (`$70.00`, `$2,486.00`, `-$5.50`); `formatMoney` in `script.js` and the Jinja macro `money` in `index.html` follow the same rule. [D-14], [Plan §3.4].
+
+## 6. Layout
+
+- **Breakpoints — the complete list:** **480 px** and **900 px**, unchanged. No other width query exists. [Own: two breakpoints are enough for one task per view], [HIG Layout].
+
+  | Rule                                   | Below 480 px   | 480–899 px      | From 900 px                                                                                                                                                                                                                                             | Source                                                      |
+  | -------------------------------------- | -------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+  | Side gutter                            | 16 px          | 24 px           | 24 px                                                                                                                                                                                                                                                   | v3, unchanged                                               |
+  | Screen / card / result-surface padding | 8 / 12 / 16 px | 16 / 24 / 24 px | 16 / 24 / 24 px                                                                                                                                                                                                                                         | section 4                                                   |
+  | Columns                                | 1              | 1               | 2 with a 16 px gap. Find Best Mix: form left 5/12, result right 7/12, equal height, top-aligned. Match Effects: effect selection left 7/12, settings and result right 5/12, equal height. Your Recipe: input column left 7/12, sticky result right 5/12 | [D-12], [Ref `.st .grid`], [User 2026-09-12] (v2 §2, §9)    |
+  | Stats row                              | stacked        | in a row        | in a row (stacked in the recipe result column)                                                                                                                                                                                                          | [Own: rows of three or more items do not fit at 320–479 px] |
+  | Mix tiles, effect pills                | wrapping row   | wrapping row    | wrapping row                                                                                                                                                                                                                                            | [Ref `.h .mix`, `.h .fx`]                                   |
+
+- **Order:** header (wordmark, theme switch), then the screen with the tabs on top, then the form, then the result; from 900 px the result is to the right. [D-12], [Ref `.h .tbar`], [HIG Layout] (hierarchy).
+- **Equal height (Find Best Mix, Match Effects):** from 900 px the two columns are one stretched grid row (`align-items: stretch`). Find Best Mix: the form card `#best-mix-form` and `#result.result-surface` start at the same top edge and end at the same bottom edge (± 1 px at 1280 px, measured in the empty, running and result state). `.form-actions` has no auto margin, so "Get Best Mix" (and "Find Recipe") follow the last form field directly in every tab; the free height stays below the button. Match Effects: the effect selection card stretches to the column height; in the right column the settings card sits on top and `#effect-result.result-surface` fills the rest; left card top = settings card top, left card bottom = `#effect-result` bottom. [D-12], [Ref `.st .grid`, `.st .form .cta`], [Plan §3.1, §5].
+- **Recipe result stays sticky:** in Your Recipe the result column is not stretched; the result stays visible while scrolling. [D-14].
+- **Content width:** `--content-max` 1120 px, centred; the header band spans the full width, its content follows the same width and gutter. [Own: the 1120 px value is kept], [Ref `.h .scape`] (full-width band).
+- **Acceptance widths:** at **320, 390, 768 and 1280 px**, in Dusk and Night, there is no horizontal document overflow, all three tabs stay in one row (labels may wrap), every control is reachable, and with 200 % text size wrapping and vertical scrolling are allowed. [MG DESIGN.md:73], [WCAG 1.4.10], [User 2026-09-12] (v2 §13).
+- **Safe areas:** fixed elements, if any, respect `env(safe-area-inset-*)`. [HIG Layout].
+
+## 7. Theme switch
+
+The switch offers **Dusk and Night only** (decision D-29; the earlier third option "System" is gone). This is a **conscious deviation from HIG**, which says not to offer an app-specific appearance setting. [HIG Dark Mode], [D-4] (1), [R-1 Conflict 1].
+
+Reasons: the rule is written for native apps that inherit the system setting; a web page runs inside a browser whose setting people often cannot or do not want to change per site; users rely on the stored choice; and the system appearance remains the default, so a person who never touches the switch gets exactly the HIG behaviour. [Own: reasons as listed], [D-3] (no interface break).
+
+- **Labels:** the light theme is called **Dusk**, the dark theme **Night**, matching the scene. Only the visible labels change. [D-12], [Ref `.h .theme`].
+- **Values unchanged:** `data-theme="light" | "dark"` for an explicit choice, `data-theme="system"` on the page while nothing is stored; Dusk = `light`, Night = `dark`. [D-3], [Plan §1].
+- **Default:** no stored choice (page `data-theme="system"`) follows `prefers-color-scheme`, including changes while the page is open, and the switch marks the matching option (light = Dusk, dark = Night) with `aria-checked="true"` and follows the change too. [HIG Dark Mode], [D-29].
+- **Explicit choice:** `data-theme="light"` / `data-theme="dark"` wins in both directions.
+- **Storage:** `localStorage` key `schedule1-theme`, values `light`/`dark`, written only by clicking or selecting an option (never on load); blocked storage does not break the switch. Unchanged interface. [User 2026-09-12] (v2 §5), `webapp/static/js/theme.js`.
+- **No flash:** the inline script in `<head>` sets the attribute before the first paint; `theme.js` only owns the control. Unchanged.
+- **Resolution in `tokens.css`:** Dusk values in `:root`; Night values in `@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) }` and in `:root[data-theme="dark"]`; `:root[data-theme="light"]` repeats the Dusk values. [R-1 §3.1] (structure), [HIG Dark Mode].
+- **Control:** a segmented control (section 5, theme switch) labelled "Color theme" with Dusk and Night; ARIA radiogroup with roving tabindex as today. It sits on the scene band and uses the header switch tokens and `--focus-ring-header`. [HIG Segmented controls], [D-17] (F-14-5).
+
+## 8. Contrast
+
+**Method.** WCAG 2.x relative luminance and contrast ratio (`(L1 + 0.05) / (L2 + 0.05)`, sRGB linearisation with threshold 0.04045). Alpha colours are composited on the named background first, in floating point without rounding to 8 bit; "mix(c n %, bg)" is colour c at n % opacity over bg. Scene layers are composited at their 70 % drawing opacity over the sky bottom, the worst case of the band. Ratios are truncated to two decimals, so no printed value overstates. **Checked on the real CSS** by `tests/browser/contrast.test.cjs` (`node --test tests/browser/contrast.test.cjs`): the test reads `tokens.css` and, where a component composes a colour (`color-mix` of the selection chips, of `Delete` pressed and of the theme switch hover and pressed tints, the opacity of the scene drawing; the `::placeholder` colour of the "text tertiary / field" row), `styles.css`; it parses both tables below, checks every value in Dusk and Night against its target and fails when a printed value differs from the computed value truncated to two decimals or when a row names a colour it does not map. No target lowered. Targets: text ≥ 4.5:1 for all sizes and weights, non-text ≥ 3:1. [HIG Accessibility], [HIG Dark Mode], [WCAG 1.4.3], [WCAG 1.4.11], [QT README.md:67] (structure: test on the real roles), [Plan §4].
+
+**Text pairs (target 4.5:1)**
+
+| Foreground / background                                                                        | Where                                          | Dusk                | Night               |
+| ---------------------------------------------------------------------------------------------- | ---------------------------------------------- | ------------------- | ------------------- |
+| text primary / screen                                                                          | text on the screen, tab labels                 | 15.19               | 15.44               |
+| text primary / panel                                                                           | card text, selected tab                        | 13.66               | 13.98               |
+| text primary / raised                                                                          | secondary buttons, items in the result surface | 15.19               | 15.44               |
+| text primary / sunken                                                                          | text on tracks and the scroll list             | 11.80               | 11.61               |
+| text primary / field                                                                           | input and select values                        | 16.14               | 16.55               |
+| text primary / canvas                                                                          | text outside the screen                        | 12.70               | 17.08               |
+| text secondary / screen                                                                        | inactive tabs                                  | 8.09                | 9.14                |
+| text secondary / panel                                                                         | supporting text                                | 7.28                | 8.28                |
+| text secondary / raised                                                                        | supporting text in menus                       | 8.09                | 9.14                |
+| text secondary / sunken                                                                        | `Delete` rest, text on tracks                  | 6.29                | 6.87                |
+| text secondary / field                                                                         | unselected segments                            | 8.60                | 9.80                |
+| text secondary / canvas                                                                        | text outside the screen                        | 6.77                | 10.11               |
+| text tertiary / screen                                                                         | mix captions and prices, stat labels           | 6.12                | 6.79                |
+| text tertiary / panel                                                                          | field captions, help text, status line         | 5.50                | 6.15                |
+| text tertiary / raised                                                                         | help text in menus                             | 6.12                | 6.79                |
+| text tertiary / sunken                                                                         | disabled control labels                        | 4.75                | 5.10                |
+| text tertiary / field                                                                          | placeholders (`::placeholder`), select meta    | 6.50                | 7.28                |
+| text tertiary / canvas                                                                         | meta text outside the screen                   | 5.11                | 7.51                |
+| link / screen                                                                                  | jump links                                     | 15.19               | 15.44               |
+| link / panel                                                                                   | inline links                                   | 13.66               | 13.98               |
+| link / raised                                                                                  | skip link                                      | 15.19               | 15.44               |
+| link / sunken, / field, / canvas                                                               | links elsewhere                                | 11.80, 16.14, 12.70 | 11.61, 16.55, 17.08 |
+| primary ink / primary fill                                                                     | primary button                                 | 6.96                | 9.81                |
+| primary ink / primary hover                                                                    | primary button hover                           | 5.47                | 11.01               |
+| primary ink / primary pressed                                                                  | primary button pressed                         | 8.74                | 8.25                |
+| selected ink / selected surface                                                                | selected segment incl. ✓ Want / ⊘ Avoid        | 15.19               | 15.44               |
+| money ink / money surface                                                                      | banknote figure and "Profit" label             | 8.82                | 8.82                |
+| money ink / mix(guilloche, money surface)                                                      | banknote text over a guilloche line            | 7.76                | 7.76                |
+| brand cream / brand outline                                                                    | wordmark fill against its outline              | 8.57                | 8.57                |
+| header switch ink / switch surface over sky bottom                                             | theme labels, worst sky                        | 6.02                | 15.26               |
+| header switch ink / switch surface over sky top                                                | theme labels                                   | 6.58                | 16.33               |
+| header switch ink / switch surface over far, mid, near layer                                   | theme labels over the drawing                  | 7.46, 8.39, 9.50    | 15.21, 15.54, 15.84 |
+| header switch ink / mix(header switch selected 6 %, switch surface) over sky bottom            | theme label on hover, worst sky                | 5.22                | 13.49               |
+| header switch ink / mix(header switch selected 6 %, switch surface) over sky top               | theme label on hover                           | 5.66                | 14.88               |
+| header switch ink / mix(header switch selected 6 %, switch surface) over far, mid, near layer  | theme label on hover over the drawing          | 6.36, 7.11, 8.02    | 13.42, 13.84, 14.25 |
+| header switch ink / mix(header switch selected 10 %, switch surface) over sky bottom           | theme label pressed, worst sky                 | 4.75                | 12.13               |
+| header switch ink / mix(header switch selected 10 %, switch surface) over sky top              | theme label pressed                            | 5.13                | 13.60               |
+| header switch ink / mix(header switch selected 10 %, switch surface) over far, mid, near layer | theme label pressed over the drawing           | 5.73, 6.37, 7.14    | 12.05, 12.48, 12.91 |
+| header switch selected ink / header switch selected                                            | selected theme label                           | 15.44               | 15.44               |
+| success / screen                                                                               | "Optimality proven" text                       | 6.27                | 8.01                |
+| success / panel                                                                                | success text in cards                          | 5.64                | 7.26                |
+| success / sunken                                                                               | success text on tracks                         | 4.87                | 6.02                |
+| success / canvas                                                                               | success text outside the screen                | 5.24                | 8.86                |
+| success / success soft over panel                                                              | proven badge                                   | 4.93                | 5.55                |
+| warning / screen                                                                               | warning text                                   | 6.07                | 9.95                |
+| warning / panel                                                                                | warning text in cards                          | 5.45                | 9.01                |
+| warning / sunken                                                                               | warning text on tracks                         | 4.71                | 7.48                |
+| warning / warning soft over panel                                                              | approximate badge                              | 4.75                | 6.68                |
+| error / screen                                                                                 | error text                                     | 6.57                | 7.78                |
+| error / panel                                                                                  | field error message                            | 5.91                | 7.05                |
+| error / sunken                                                                                 | `Delete` hover and focus                       | 5.10                | 5.85                |
+| error / error soft over panel                                                                  | error badge text                               | 5.16                | 5.49                |
+| error / mix(error 6 %, sunken)                                                                 | `Delete` pressed                               | 4.63                | 5.28                |
+| success / mix(success 12 %, panel)                                                             | wanted chip hover                              | 4.79                | 5.79                |
+| success / mix(success 14 %, panel)                                                             | wanted chip pressed                            | 4.66                | 5.55                |
+| error / mix(error 12 %, panel)                                                                 | excluded chip hover                            | 4.81                | 5.71                |
+| error / mix(error 14 %, panel)                                                                 | excluded chip pressed                          | 4.64                | 5.49                |
+| text primary / success soft over panel                                                         | wanted effect card: name                       | 11.94               | 10.70               |
+| text secondary / success soft over panel                                                       | wanted effect card: text                       | 6.36                | 6.33                |
+| text primary / error soft over panel                                                           | excluded effect card: name                     | 11.93               | 10.89               |
+| text secondary / error soft over panel                                                         | excluded effect card: text                     | 6.35                | 6.44                |
+| text primary / warning soft over panel                                                         | stop notice in the result surface              | 11.91               | 10.36               |
+| text primary / error soft over panel                                                           | error alert in the result surface              | 11.93               | 10.89               |
+| text primary / warning soft over screen                                                        | stop notice on the screen                      | 13.17               | 11.61               |
+| text primary / error soft over screen                                                          | error alert on the screen                      | 13.22               | 12.17               |
+| text primary / match strict soft over field, / match strict selected over field                | "Only these" option, rest and selected         | 14.01, 12.08        | 13.85, 11.26        |
+| text primary / match loose soft over field, / match loose selected over field                  | "Allow extras" option, rest and selected       | 13.98, 12.02        | 13.68, 11.03        |
+
+**Non-text pairs (target 3:1)**
+
+| Foreground / background                                   | Where                                    | Dusk                   | Night                  |
+| --------------------------------------------------------- | ---------------------------------------- | ---------------------- | ---------------------- |
+| control border / field                                    | field and segment track boundary         | 4.19                   | 5.08                   |
+| control border / panel                                    | controls in cards                        | 3.54                   | 4.29                   |
+| control border / sunken                                   | controls on sunken, scrollbar thumb      | 3.06                   | 3.56                   |
+| control border / raised                                   | secondary buttons, ingredient tiles      | 3.94                   | 4.73                   |
+| control border / screen                                   | controls on the screen                   | 3.94                   | 4.73                   |
+| control border / canvas                                   | controls outside the screen              | 3.29                   | 5.24                   |
+| control border hover / panel, / field, / screen, / sunken | hover, increased contrast                | 5.50, 6.50, 6.12, 4.75 | 6.15, 7.28, 6.79, 5.10 |
+| focus ring / screen                                       | focus on the screen                      | 15.19                  | 12.34                  |
+| focus ring / panel                                        | focus in cards                           | 13.66                  | 11.18                  |
+| focus ring / raised                                       | focus in menus                           | 15.19                  | 12.34                  |
+| focus ring / sunken                                       | focus on tracks, drop line               | 11.80                  | 9.29                   |
+| focus ring / field                                        | focus around a segment on its track      | 16.14                  | 13.24                  |
+| focus ring / canvas                                       | skip link focus outside the screen       | 12.70                  | 13.66                  |
+| focus ring header / switch surface over sky bottom        | header focus, worst sky                  | 5.23                   | 13.26                  |
+| focus ring header / switch surface over sky top           | header focus                             | 5.72                   | 14.18                  |
+| focus ring header / switch surface over far, mid, near    | header focus over the drawing            | 6.48, 7.29, 8.25       | 13.21, 13.50, 13.76    |
+| primary fill / panel                                      | primary button boundary in the form card | 6.82                   | 8.80                   |
+| selected surface / field                                  | selected segment against its track       | 16.14                  | 16.55                  |
+| selected surface / panel, / sunken, / screen              | selected segment on other tracks         | 13.66, 11.80, 15.19    | 13.98, 11.61, 15.44    |
+| money boundary / panel (border resp. fill, either)        | banknote edge in the result surface      | 8.95 (border)          | 9.18 (fill)            |
+| success / panel                                           | proven glyph and border                  | 5.64                   | 7.26                   |
+| warning / panel                                           | warning glyph and border                 | 5.45                   | 9.01                   |
+| error / panel                                             | alert bar, error glyph                   | 5.91                   | 7.05                   |
+| error / field                                             | invalid field border                     | 6.98                   | 8.34                   |
+| success / sunken                                          | wanted effect card border on the list    | 4.87                   | 6.02                   |
+| error / sunken                                            | excluded effect card border on the list  | 5.10                   | 5.85                   |
+| success / success soft over panel                         | wanted effect card border, inner side    | 4.93                   | 5.55                   |
+| error / error soft over panel                             | excluded effect card border, inner side  | 5.16                   | 5.49                   |
+
+The banknote boundary passes by either edge: in Dusk the dark border carries it (fill 1.48), in Night the light fill (border 1.52). [WCAG 1.4.11] (one adjacent colour suffices).
+
+**Decorative, no target** (they carry no information; the meaning is in text or in another listed pair):
+
+| Item                               | Dusk        | Night       | Reason                                                                                                        |
+| ---------------------------------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------- |
+| progress fill start / end on track | 1.22 / 1.77 | 1.66 / 3.43 | The bar is `aria-hidden`; the status text carries the progress (section 4).                                   |
+| screen rim / canvas, / screen      | 1.23 / 1.47 | 2.05 / 1.85 | The screen is identified by its fill and position; the rim is a frame.                                        |
+| subtle border / screen, / panel    | 1.37 / 1.23 | 1.32 / 1.20 | Tab-bar separator and tile hairlines; tabs, tiles and pills are told apart by text and fill, not by the line. |
+| effect dots (game label colours)   | –           | –           | Domain colours per effect; the effect name in text primary carries the meaning (section 2).                   |
+| scene band (sky and polygons)      | –           | –           | An `aria-hidden` drawing; only the switch on it carries text, covered above.                                  |
+| money guilloche on money surface   | –           | –           | A texture; the text pair over it is listed above.                                                             |
+
+Result: **224 pairs** (both themes, as checked by `tests/browser/contrast.test.cjs`), **0 below target**; 12 decorative values printed for the record. Surface-on-surface steps (canvas, screen, panel, raised, sunken) carry no information on their own: every component boundary that identifies a control is the control border, the selected surface or the primary fill, all listed above. [WCAG 1.4.11].
+
+## 9. Token plan
+
+Version 4 (T-14, Studio direction, decision D-12): `webapp/static/css/tokens.css` holds these names and values; light is the "Dusk" theme, dark the "Night" theme. T-3 implemented the version 3 names. [Own: one plan keeps T-3..T-7 consistent], brief T-2, [MG DESIGN.md:80] and [QT README.md:46] (structure: roles, not values, in components).
+
+### 9.1 Theme-independent tokens
+
+| Token                                           | Value                                                                                                   |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `--space-1` … `--space-8`                       | 4px, 8px, 12px, 16px, 24px, 32px, 48px, 64px                                                            |
+| `--gap-optical`                                 | 4px                                                                                                     |
+| `--gap-compact`                                 | 8px                                                                                                     |
+| `--gap-control`                                 | 12px                                                                                                    |
+| `--gap-regular`                                 | 16px                                                                                                    |
+| `--gap-section`                                 | 32px                                                                                                    |
+| `--radius-small`                                | 6px                                                                                                     |
+| `--radius-control`                              | 8px                                                                                                     |
+| `--radius-card`                                 | 10px                                                                                                    |
+| `--radius-screen`                               | 12px                                                                                                    |
+| `--radius-pill`                                 | 999px                                                                                                   |
+| `--font-ui`                                     | `system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif` |
+| `--font-display`                                | `"Barlow", var(--font-ui)`                                                                              |
+| `--weight-regular`                              | 400                                                                                                     |
+| `--weight-medium`                               | 500                                                                                                     |
+| `--weight-semibold`                             | 600                                                                                                     |
+| `--weight-bold`                                 | 700                                                                                                     |
+| `--weight-heavy`                                | 800                                                                                                     |
+| `--type-large-title-size` / `-line` / `-weight` | 2.125rem / 1.2 / 700                                                                                    |
+| `--type-page-title-size` / `-line` / `-weight`  | 1.375rem / 1.27 / 700                                                                                   |
+| `--type-title-size` / `-line` / `-weight`       | 1.25rem / 1.25 / 600                                                                                    |
+| `--type-headline-size` / `-line` / `-weight`    | 1.0625rem / 1.3 / 600                                                                                   |
+| `--type-body-size` / `-line` / `-weight`        | 1.0625rem / 1.47 / 400                                                                                  |
+| `--type-callout-size` / `-line` / `-weight`     | 1rem / 1.3 / 400                                                                                        |
+| `--type-subhead-size` / `-line` / `-weight`     | 0.9375rem / 1.33 / 600                                                                                  |
+| `--type-footnote-size` / `-line` / `-weight`    | 0.8125rem / 1.38 / 400                                                                                  |
+| `--type-caption-size` / `-line` / `-weight`     | 0.75rem / 1.33 / 600                                                                                    |
+| `--control-min`                                 | 44px                                                                                                    |
+| `--focus-ring-width`                            | 2px (3px under `prefers-contrast: more`)                                                                |
+| `--focus-ring-offset`                           | 2px                                                                                                     |
+| `--focus-ring-header`                           | `#ffd257`                                                                                               |
+| `--motion-fast`                                 | 100ms                                                                                                   |
+| `--motion-base`                                 | 150ms                                                                                                   |
+| `--motion-reveal`                               | 300ms                                                                                                   |
+| `--motion-count`                                | 550ms                                                                                                   |
+| `--motion-progress`                             | 1600ms                                                                                                  |
+| `--ease-standard`                               | `cubic-bezier(0.25, 0.1, 0.25, 1)`                                                                      |
+| `--ease-emphasized`                             | `cubic-bezier(0.2, 0, 0, 1)`                                                                            |
+| `--content-max`                                 | 1120px                                                                                                  |
+| `--scene-height`                                | 96px                                                                                                    |
+| `--screen-rim-width`                            | 4px                                                                                                     |
+| `--brand-cream`                                 | `#efe8c6`                                                                                               |
+| `--brand-outline`                               | `#2c4526`                                                                                               |
+| `--money-surface`                               | `#a9cf8c`                                                                                               |
+| `--money-border`                                | `#2c4526`                                                                                               |
+| `--money-ink`                                   | `#16290f`                                                                                               |
+| `--money-guilloche`                             | `rgb(44 69 38 / 9%)`                                                                                    |
+| `--header-switch-ink`                           | `#e9e6dc`                                                                                               |
+| `--header-switch-selected`                      | `#f2efe6`                                                                                               |
+| `--header-switch-selected-ink`                  | `#17181b`                                                                                               |
+
+The `/ -line / -weight` rows stand for three tokens each, e.g. `--type-body-size`, `--type-body-line`, `--type-body-weight`.
+
+### 9.2 Theme tokens
+
+`color-scheme` is set to `light` / `dark` with each block.
+
+| Token                      | Light                                                  | Dark                          |
+| -------------------------- | ------------------------------------------------------ | ----------------------------- |
+| `--surface-canvas`         | `#e9e4d6`                                              | `#0b0b0f`                     |
+| `--surface-screen`         | `#fbf8ef`                                              | `#17181b`                     |
+| `--surface-panel`          | `#f1ecdd`                                              | `#202125`                     |
+| `--surface-raised`         | `#fbf8ef`                                              | `#17181b`                     |
+| `--surface-sunken`         | `#e3dccb`                                              | `#2e2f34`                     |
+| `--surface-field`          | `#ffffff`                                              | `#0f1012`                     |
+| `--border-subtle`          | `#ddd5bf`                                              | `#2e2f34`                     |
+| `--screen-rim`             | `#d9cfa8`                                              | `#4a4536`                     |
+| `--text-primary`           | `#1f2219`                                              | `#f2efe6`                     |
+| `--text-secondary`         | `#4b4d43`                                              | `#bdbab0`                     |
+| `--text-tertiary`          | `#5d5f54`                                              | `#a3a097`                     |
+| `--text-link`              | `#1f2219`                                              | `#f2efe6`                     |
+| `--border-control`         | `#7f7c6e`                                              | `#86847c`                     |
+| `--border-control-hover`   | `#5d5f54`                                              | `#a3a097`                     |
+| `--focus-ring`             | `#1f2219`                                              | `#ffd257`                     |
+| `--action-primary`         | `#2f5a22`                                              | `#9bcf63`                     |
+| `--action-primary-hover`   | `#3a6b2b`                                              | `#aad977`                     |
+| `--action-primary-pressed` | `#264a1b`                                              | `#8bbf52`                     |
+| `--action-primary-ink`     | `#f4efd6`                                              | `#0f1a08`                     |
+| `--selected-surface`       | `#1f2219`                                              | `#f2efe6`                     |
+| `--selected-ink`           | `#fbf8ef`                                              | `#17181b`                     |
+| `--status-success`         | `#4a6340`                                              | `#9fb58f`                     |
+| `--status-success-soft`    | `rgb(74 99 64 / 10%)`                                  | `rgb(159 181 143 / 14%)`      |
+| `--progress-fill-start`    | `#b9cfa4`                                              | `#3f5733`                     |
+| `--progress-fill-end`      | `#8fb07c`                                              | `#6b8a57`                     |
+| `--status-warning`         | `#8a5100`                                              | `#ffb340`                     |
+| `--status-warning-soft`    | `rgb(138 81 0 / 10%)`                                  | `rgb(255 179 64 / 14%)`       |
+| `--status-error`           | `#b3101c`                                              | `#ff8a82`                     |
+| `--status-error-soft`      | `rgb(179 16 28 / 8%)`                                  | `rgb(255 138 130 / 14%)`      |
+| `--match-strict-soft`      | `rgb(179 16 28 / 8%)`                                  | `rgb(255 138 130 / 12%)`      |
+| `--match-strict-selected`  | `rgb(179 16 28 / 16%)`                                 | `rgb(255 138 130 / 22%)`      |
+| `--match-loose-soft`       | `rgb(74 99 64 / 10%)`                                  | `rgb(159 181 143 / 12%)`      |
+| `--match-loose-selected`   | `rgb(74 99 64 / 20%)`                                  | `rgb(159 181 143 / 22%)`      |
+| `--scene-sky-top`          | `#c9c1dc`                                              | `#07080d`                     |
+| `--scene-sky-bottom`       | `#efcdb0`                                              | `#1b1730`                     |
+| `--scene-far`              | `#a59fbf`                                              | `#1a1a2a`                     |
+| `--scene-mid`              | `#8a84a6`                                              | `#131320`                     |
+| `--scene-near`             | `#6c6884`                                              | `#0c0c15`                     |
+| `--header-switch-surface`  | `rgb(0 0 0 / 60%)`                                     | `rgb(0 0 0 / 40%)`            |
+| `--shadow-raised`          | `0 1px 2px rgb(0 0 0 / 6%), 0 2px 8px rgb(0 0 0 / 6%)` | `none`                        |
+| `--shadow-popover`         | `0 8px 24px rgb(0 0 0 / 14%)`                          | `0 8px 24px rgb(0 0 0 / 50%)` |
+
+The primary action tokens keep the prefix `--action-primary` because the role (primary action) is unchanged; section 2 calls them "primary action fill / hover / pressed / ink". Under `@media (prefers-contrast: more)`: `--text-tertiary` takes the `--text-secondary` value, `--border-control` takes the `--border-control-hover` value, `--focus-ring-width` is 3px (section 2).
+
+### 9.3 Mapping old → new
+
+Every custom property of `tokens.css` on main @ 078fd3a:
+
+| Old token (`tokens.css` @ 078fd3a) | New token                 | Note                                                                                                                                                                                                                                                                                |
+| ---------------------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--space-1`                        | `--space-1`               | unchanged (4px)                                                                                                                                                                                                                                                                     |
+| `--space-2`                        | `--space-2`               | unchanged (8px)                                                                                                                                                                                                                                                                     |
+| `--space-3`                        | `--space-3`               | unchanged (12px)                                                                                                                                                                                                                                                                    |
+| `--space-4`                        | `--space-4`               | unchanged (16px)                                                                                                                                                                                                                                                                    |
+| `--space-5`                        | `--space-5`               | unchanged (24px)                                                                                                                                                                                                                                                                    |
+| `--space-6`                        | `--space-6`               | unchanged (32px)                                                                                                                                                                                                                                                                    |
+| `--space-7`                        | `--space-7`               | unchanged (48px)                                                                                                                                                                                                                                                                    |
+| `--space-8`                        | `--space-8`               | unchanged (64px)                                                                                                                                                                                                                                                                    |
+| `--radius-sm`                      | `--radius-small`          | 4px → 6px                                                                                                                                                                                                                                                                           |
+| `--radius-md`                      | `--radius-control`        | 6px → 10px                                                                                                                                                                                                                                                                          |
+| `--radius-lg`                      | `--radius-card`           | 10px → 16px                                                                                                                                                                                                                                                                         |
+| `--radius-pill`                    | `--radius-pill`           | unchanged                                                                                                                                                                                                                                                                           |
+| `--font-ui`                        | `--font-ui`               | stack gains `BlinkMacSystemFont`                                                                                                                                                                                                                                                    |
+| `--font-mono`                      | removed                   | figures use `tabular-nums` on `--font-ui` (section 3); its other use, the `$` header mark, is removed (section 5, app header)                                                                                                                                                       |
+| `--text-page-size`                 | `--type-page-title-size`  | 1.75rem → 1.375rem; the `h1` page title in the app header at every width (the < 480 px shrink to the section size ends); the header mark that also used it is removed                                                                                                               |
+| `--text-page-line`                 | `--type-page-title-line`  | 1.2 → 1.27                                                                                                                                                                                                                                                                          |
+| `--text-section-size`              | `--type-title-size`       | 1.125rem → 1.25rem                                                                                                                                                                                                                                                                  |
+| `--text-section-line`              | `--type-title-line`       | 1.3 → 1.25                                                                                                                                                                                                                                                                          |
+| `--text-body-size`                 | `--type-body-size`        | 1rem → 1.0625rem                                                                                                                                                                                                                                                                    |
+| `--text-body-line`                 | `--type-body-line`        | 1.6 → 1.47                                                                                                                                                                                                                                                                          |
+| `--text-control-size`              | `--type-callout-size`     | 0.9375rem → 1rem                                                                                                                                                                                                                                                                    |
+| `--text-label-size`                | `--type-subhead-size`     | 0.8125rem → 0.9375rem, sentence case                                                                                                                                                                                                                                                |
+| `--text-label-tracking`            | removed                   | no uppercase tracked labels (section 3)                                                                                                                                                                                                                                             |
+| `--text-meta-size`                 | `--type-footnote-size`    | 0.8125rem                                                                                                                                                                                                                                                                           |
+| `--text-profit-size`               | `--type-large-title-size` | 2rem → 2.125rem; profit uses the large-title role                                                                                                                                                                                                                                   |
+| `--motion-fast`                    | `--motion-fast`           | 90ms → 100ms                                                                                                                                                                                                                                                                        |
+| `--motion-base`                    | `--motion-base`           | 140ms → 150ms                                                                                                                                                                                                                                                                       |
+| `--motion-enter`                   | removed                   | entering layers use `--motion-base`                                                                                                                                                                                                                                                 |
+| `--ease-standard`                  | `--ease-standard`         | new curve                                                                                                                                                                                                                                                                           |
+| `--content-max`                    | `--content-max`           | unchanged (1120px)                                                                                                                                                                                                                                                                  |
+| `--ground`                         | `--surface-canvas`        | page background                                                                                                                                                                                                                                                                     |
+| `--surface`                        | `--surface-panel`         | cards and panels                                                                                                                                                                                                                                                                    |
+| `--surface-raised`                 | `--surface-raised`        | new values                                                                                                                                                                                                                                                                          |
+| `--surface-sunken`                 | `--surface-sunken`        | new values; field fills move to `--surface-field`                                                                                                                                                                                                                                   |
+| `--border-subtle`                  | `--border-subtle`         | removed in v3; v4 brings it back with new values for the screen's separator lines (section 4, version 4)                                                                                                                                                                            |
+| `--border-strong`                  | `--border-control`        | control boundaries                                                                                                                                                                                                                                                                  |
+| `--text-primary`                   | `--text-primary`          | new values                                                                                                                                                                                                                                                                          |
+| `--text-secondary`                 | `--text-secondary`        | new values                                                                                                                                                                                                                                                                          |
+| `--text-muted`                     | `--text-tertiary`         | renamed to the HIG ramp                                                                                                                                                                                                                                                             |
+| `--action-primary`                 | `--action-primary`        | now the game green and only the primary button fill; old uses for selection → `--selected-*`, focus → `--focus-ring`, proven badge → `--status-success`, profit → `--profit-*`, wanted effect option border → `--status-success`, `$` header mark → removed (section 5, app header) |
+| `--action-primary-hover`           | `--action-primary-hover`  | new values                                                                                                                                                                                                                                                                          |
+| `--action-primary-ink`             | `--action-primary-ink`    | new values                                                                                                                                                                                                                                                                          |
+| `--action-primary-quiet`           | removed                   | no green tint surfaces; former uses → `--selected-surface`, `--status-success-soft` (proven badge, wanted effect option), `--profit-surface`                                                                                                                                        |
+| `--status-warn`                    | `--status-warning`        | renamed                                                                                                                                                                                                                                                                             |
+| `--status-warn-quiet`              | `--status-warning-soft`   | renamed                                                                                                                                                                                                                                                                             |
+| `--status-danger`                  | `--status-error`          | renamed                                                                                                                                                                                                                                                                             |
+| `--status-danger-quiet`            | `--status-error-soft`     | renamed                                                                                                                                                                                                                                                                             |
+| `--status-neutral`                 | removed                   | use `--text-secondary`                                                                                                                                                                                                                                                              |
+| `--focus-ring`                     | `--focus-ring`            | now blue, no longer the accent                                                                                                                                                                                                                                                      |
+| `--shadow-card`                    | `--shadow-raised`         | dark is `none` as before                                                                                                                                                                                                                                                            |
+
+New without predecessor: `--gap-*`, `--weight-*`, all `--type-*-weight`, `--type-headline-*`, `--type-caption-*`, `--surface-field`, `--text-link`, `--border-control-hover`, `--action-primary-pressed`, `--selected-surface`, `--selected-border`, `--status-success`, `--status-success-soft`, `--profit-text`, `--profit-surface`, `--shadow-popover`, `--control-min`, `--focus-ring-width`, `--focus-ring-offset`.
+
+Version 3 → version 4 (T-14): every version 3 name stays with the values of section 9.2, except:
+
+| Old token (`tokens.css` v3) | New token            | Note                                                                 |
+| --------------------------- | -------------------- | -------------------------------------------------------------------- |
+| `--profit-text`             | `--money-ink`        | the profit figure is dark ink on the banknote in both themes         |
+| `--profit-surface`          | `--money-surface`    | the banknote fill, with `--money-border` and `--money-guilloche`     |
+| `--selected-border`         | `--selected-surface` | selection is a neutral inverted fill; no separate boundary is needed |
+
+## 10. Brand-asset limits
+
+We take the mood, the meaning of colours and the look of the game's UI language from Schedule I; we take no assets. The wordmark, the banknote and the scene are own drawings in the game's visual language. [D-12], [R-2 §3], [R-1 §2.4], [D-4] (6).
+
+- **Own, allowed:** the wordmark is **own lettering** in the style of the logo (cream fill, dark green outline), set as live text in Barlow; it is not the game logo, no logo file, no traced outline. The scene band is an **own low-poly drawing** of polygons in the template. The banknote is an own CSS shape with a generated guilloche, not the game's banknote art. [D-12], [Ref `.h .mark`, `.h .scape`, `.h .note`], [R-2 §3] (general patterns may be echoed).
+- **Not used:** the Schedule I logo and extended logo, the title lettering, key art, banner and header images, screenshots, GIFs, item renders, the game's banknote art, the phone design, portraits and the graffiti artwork (TVGS and credited artists). No file from the press kit and no file from Steam is in the repository. [R-2 §3], [R-1 §2.1, §2.4], [Plan §5] (no image files added).
+- **Not used:** the Fandom logo, chrome, button styling and its yellow; Rubik as Fandom's skin font; game text and taglines. The page is named by the wordmark "Best Mix for Schedule I", which names the game only as the subject of the tool. [R-1 §2.2, §2.4], [D-12].
+- **Fonts:** Barlow (700, 800) is used under the **SIL Open Font License 1.1**; the font files, `OFL.txt` and a `README.md` with the source (`@fontsource/barlow` 5.3.0, 2026-11-15) live in `webapp/static/fonts/`. The game's own font is unidentified and not used; Open Sans and Font Awesome of the game site are not used. [D-16], [R-2 §3] (do not assume a font licence), [R-1 §2.4].
+- **Not used:** Apple's brand assets, SF font files and product imagery; HIG is a rulebook, not an asset source. [HIG Typography], [MG DESIGN.md:40].
+- **Not used:** mediagrab and quiltor colours, logos, fonts and layouts. [D-2], [R-1 §3.3].
+- **Allowed:** colour values read from the reference and game effect label colours as domain data (section 2). [Own: hex values carry no creative expression; they appear without any logo or artwork], [R-2 §3] (colours only as reference, no 1:1 palette clone).
+
+## 11. States and flows
+
+Product contract, carried over from v2 §6 and unchanged in substance. [User 2026-09-12].
+
+| Flow           | Implemented states                                                                                                                                                                                                                                |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Search         | Empty (explains exact vs fast) · catalogue loading · search running (progress text with depth/operations, progress bar, `Cancel Search`) · result proven · result approximate · stopped · error · browser without worker.                         |
+| Recipe         | Tab not yet opened · data loading · loaded with empty recipe (shows the base product) · result · calculation error · loading error with `Retry Loading`.                                                                                          |
+| Wanted effects | Catalogue loading · filter without matches · empty/kept selection · search running/stopped · exactly matching recipe · proven no recipe within the settings · fast without match and without impossibility proof · resource limit without recipe. |
+| Not applicable | No login, no permissions, no autosave, no destructive server actions. `Clear Recipe` is local; `Undo clear` restores the last cleared order including repetitions.                                                                                |
+
+Inputs are kept in **every** error case; `#result` is an `aria-live="polite"` region, errors additionally carry `role="alert"`. [WCAG 4.1.3].
+
+**Stop with partial result.** The existing result cards and the approximate badge are reused; no extra component variant. The stop reason is a status line above the card. The state differs in wording from a successful fast result and never claims proof, even in exact mode.
+
+| State                             | Behaviour                                                                                           |
+| --------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Search running                    | Progress and cancel stay visible; improved candidates are kept in memory.                           |
+| Stop / limit with candidate       | Show the best candidate so far and the stop reason; badge "Search stopped — optimality not proven". |
+| Stop / limit without candidate    | Explain the missing partial result; do not claim impossibility.                                     |
+| Fully finished                    | The existing distinction between a proven exact result and a fast approximation.                    |
+| Tab change                        | Cancel and keep the candidate in the left search tab.                                               |
+| New run / changed effect settings | Discard previous candidates; ignore late messages.                                                  |
+| Data / protocol error             | Error without winner; inputs are kept.                                                              |
+
+**Result states per tab** (T-6; every state uses existing classes only; a finished result never contains `.status-block` or `.progress`):
+
+| State       | Find Best Mix (`#result`)                                                                                                                       | Your Recipe (`#recipe-result`)               | Match Effects (`#effect-result`)       |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | -------------------------------------- |
+| Empty       | `.empty-state` ("No mix yet")                                                                                                                   | base-only `.result-card` (no `.empty-state`) | `.empty-state`                         |
+| Searching   | `.status-block` with `.progress`                                                                                                                | – (calculated at once)                       | `.status-block` with `.progress`       |
+| Proven      | `.result-card` + `.badge.badge--proven` "Optimality proven"                                                                                     | `.result-card` (same card)                   | `.result-card` + `.badge--proven`      |
+| Approximate | `.result-card` + `.badge.badge--approximate`                                                                                                    | –                                            | `.result-card` + `.badge--approximate` |
+| Stopped     | `.status-line` + `.result-card` + `.badge.badge--stopped` "Search stopped — optimality not proven"; without a candidate only the `.status-line` | –                                            | same as Find Best Mix                  |
+| Error       | `.alert.alert--error` (`role="alert"`)                                                                                                          | `.alert.alert--error`                        | `.alert.alert--error`                  |
+| No result   | `.status-line`                                                                                                                                  | –                                            | `.status-line`                         |
+
+**Preload.** `<head>` carries one `<link rel="preload" as="font" type="font/woff2" crossorigin>` for `barlow-latin-700-normal.woff2`, with the revisioned `/browser/<revision>/static/fonts/…` URL that the `@font-face` in `styles.css` resolves to (a test compares both), so the 700 figures do not flash in the fallback font. This solves T-14 concern 1. [T-6].
+
+Partial results do not survive a page reload; there is no server-side storage for this local calculation.
+
+## 12. Scope and domain contract
+
+Carried over from v2 §10. [User 2026-09-12].
+
+- Watchdog budgets, the ARIA tab contract, the central price calculation and the data source stay. The search view keeps its element IDs. The ingredient shelf (section 13) replaced the manual ingredient selects and their DOM; the UI tests check the new contract.
+- With exactly equal modifier, higher profit wins first, then the shorter recipe. A paid or free repetition that does not change the full ordered effect sequence is not extended further; it stays available as a valid one-step candidate. The [search contract](../../docs/SEARCH_MODES.md) gives reasons and limits. Exact search returns only proven winners or no result; own recipes keep every explicitly entered step.
+- `webapp/js/script.js` is an unused legacy copy from the server-calculation era and is out of scope.
+- This redesign changes no interface: `/get_best_mix`, the form field names, the `data-theme` attribute and the `schedule1-theme` storage key stay. Decision D-3.
+
+## 13. Ingredient shelf and drag-and-drop
+
+Carried over from v2 §11. The user chose concept 1 of three working drafts on 2026-09-12: a visible ingredient shelf with clean drag-and-drop; no text entry and no permanent board with insert buttons between all steps. [User 2026-09-12].
+
+- Each tile shows the readable name and the ingredient price from the catalogue (`$2.00`, section 5). A click appends a step; repeated clicks give repeated steps. The tile keeps focus. A tile is not a checkbox and not a quantity control.
+- Whole tiles and whole recipe steps are draggable; no extra insert/replace actions and no drag handles. The shelf uses the same auto-fill columns (min 124 px) and type roles as the mix tiles of the result (section 5); each mixing order row is a raised tile with step number, name, price (`recipe-step__price`) and exactly one visible action, Delete. The row's accessible name includes the price. Prices are on the shelf, on the order rows, as total cost in the result and as step prices on the tiles of the result mix (`mix__price`, section 5). [D-12], [D-14], [T-17], [Plan §3.3] (step prices in every client-rendered result).
+- Adding copies the ingredient from the shelf; moving moves an existing step. An insertion line (focus-ring colour, section 5) shows the target. The ordered sequence and the result change only on a valid drop.
+- The drag copy follows the pointer at the original grab point. No spring, no decorative trailing motion, no automatic sorting. Edge scrolling supports long recipes. Normal swiping over tiles scrolls the page; on touch screens dragging starts after a short hold. No page-wide scroll lock on shelf and recipe.
+- Dropping outside the recipe, Escape and interrupted pointer input discard the drag. Tiles append by click or Enter; Alt + Arrow up/down moves the focused step. Inserting with a single pointer happens only by dragging.
+- `Undo clear` restores the exact order. Base product, ingredient shelf, mixing order and result stay visually and semantically separate.
+
+Implementation follows [Pointer Events](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events) and [setPointerCapture](https://developer.mozilla.org/en-US/docs/Web/API/Element/setPointerCapture) (checked 2026-09-12); a scroll lock cannot be switched on through `touch-action` inside a running pointer gesture. No extra UI library. The verification log of 2026-09-12 is in the git history of this file (v2 §11).
+
+## 14. Reduced interface
+
+Carried over from v2 §12, adapted to the Studio header. [User 2026-09-12], [D-12].
+
+- The header shows the wordmark and the theme switch on the scene band (section 5). There is **no visible "Best Mix Calculator" heading and no "Set up your mix" heading**: the wordmark names the page, and the form needs no title above its first field. The other card and result headings stay. The document `<title>` stays "Best Mix Calculator" (section 1, deviations). [D-12], [D-14], [Plan §3.1].
+- Below the header the screen continues directly with the calculator tabs. No promotional intro block, no technical header/footer lines, no repeated intro text in the recipe tab. "Max ingredients" names the search limit without an extra help paragraph. The mixing order shows only step, ingredient name, price and Delete.
+- Exact and Fast form a two-segment control with native radio inputs. One shared hint below names the guaranteed respectively approximate search and the time limit; it does not change on switching and is not repeated in the empty result. Tab and arrow keys work; the chosen mode is taken at search start.
+- Product and rank keep native select semantics with shared field styling, chevrons, focus states and, in supporting browsers, styled open option lists via `appearance: base-select` behind `@supports`; older browsers keep their native list. Source: [MDN: Customizable select elements](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Forms/Customizable_select), checked 2026-09-12. No JavaScript dropdown library. Long names such as "Meth (High-Quality Pseudo)" truncate with an ellipsis when closed and stay fully readable in the open list.
+
+## 15. Wanted effects and descriptions
+
+Carried over from v2 §13. Version 4 changes how the selection looks: the selected segment is neutral and inverted like every segmented control, and success is the muted green. [User 2026-09-12], [D-12], [D-14] (Q3).
+
+- **Match Effects** is the third equal tab. Each effect card shows the game colour dot, name, a short explanation and a compact three-way control **Want / Neutral / Avoid** on native radio groups. The selected segment is the **neutral inverted segment** (selected surface + selected ink) **plus** its glyph (✓ Want, ⊘ Avoid) and label; the card repeats the state with a quiet edge — muted-green success for Want, error for Avoid (section 5). Text, glyph and the marked segment make the state clear without colour. The card itself does not cycle state, so a click always makes one clear choice. [Plan §0] (own decision: neutral like Exact/Fast), [HIG Color].
+- **Recipe match** sits directly above the selection: **Only these** requires exactly the wanted effects, **Allow extras** allows further neutral effects. Avoided effects are absent in both. A text filter narrows the list without deleting hidden choices. Below the list, want/avoid counts and individually removable selection chips stay visible; wanted chips use the muted-green success, avoided chips the error colour. A mode change keeps the preferences but discards a stale result and stops a running search. With **Allow extras** an avoid-only list is valid. **Allow extras** is the default. The two options carry soft tints (`--match-strict-*` muted red for **Only these**, `--match-loose-*` muted green for **Allow extras**, never the action colour); the selected one has the stronger tint, a ring in the status colour and a ✓, so the state is not colour alone. When **Only these** finds nothing, the empty-result message adds that this setting may be the reason and suggests **Allow extras**.
+- Ranking sits with the recipe settings: fewest steps first, then lowest cost. **Exact / Fast** stays separate. A fast match always meets the effect conditions but does not guarantee the shortest or cheapest recipe. Results keep the same card structure (banknote, stats, mix with step prices, effect pills).
+- Below all result cards, descriptions are in a native `details` element "What these effects do": closed by default, reachable by click, touch and keyboard, not bound to hover. Unknown metadata produces no empty lines. Sources: [description review](../../docs/reviews/2026-09-12-effect-descriptions.md).
+- From 900 px the effect selection is left, settings and result right, at equal height (section 6); below 900 px the same order top to bottom. The filterable list has a bounded scroll height on the sunken surface with a thin themed native scrollbar. Focus, keyboard scrolling and scroll-into-view of focused controls stay. Selection text, chips and Clear stay outside the list. The three tabs stay in one row at 320 px with labels that may wrap.
+
+## 16. Verification and open gaps
+
+- **Verified for version 4 (2026-11-15):** section 2 and section 9 match `tokens.css` @ f350ca6 (`tests/browser/design-tokens.test.cjs` checks section 9 against the file); section 8 is computed on the real `tokens.css` by the extended S0 gate (`schedule1calc-kb/dev/D-14-1/contrast.txt`: 204 pairs, 0 below target).
+- **Evidenced by T-14 outside this file** (see the T-14 report): screenshots of the three tabs at 390 and 1280 px in Dusk and Night next to the reference, equal-height measurements at 1280 px, the action-token selector list, the "no blue" grep and hue test, Barlow loaded from the app origin with `font/woff2` and no external request, the T-4/T-5 sweeps (44 px targets, overflow at 320/390/768/1280, breakpoint grep, Want/Neutral/Avoid sweep), the F-5-6 drift test and reduced motion (D-14-6, `studio-styles.test.cjs`, `search-ui.test.cjs`, `effect-ui.test.cjs`). [Plan §5].
+- **Not measured in a rendered page by this file:** the contrast values are computed from token values; the scene layers are composited at the drawing's 70 % opacity over the worst sky colour, not sampled from pixels. Text over the scene other than the switch (the wordmark) relies on its own outline (cream / outline 8.57).
+- **Consistency:** this file was written in parallel to the code (D-14-3/4/5); the T-14 integration (D-14F-1) compared sections 2–6, 14, 15 and the deviation table with the merged `styles.css` and `script.js` and corrected the text where they differed (rule table in `schedule1calc-kb/dev/D-14F-1.md`). [Plan §3] (integration), Critic note 5 of `T-14-p1`.
+- **Verified by T-7 (2026-11-16, version 1.6.0 on base 60f54d4 plus the D-7-3 fixes, headless Edge over CDP):** keyboard for the three tabs in Dusk and Night (tab order with accessible name and focus ring, Enter/Space and arrow keys per control type, no keyboard trap forward or backward; the header switch ring is ≥ 5.4:1 against the switch surface, sampled from screenshot pixels); 150/175/200 % text at 320 px (0 overlaps, 0 horizontal overflow, every target ≥ 44 px hit height; the theme switch now wraps into equal-width cells instead of running out of its track, D-10); F-4-6 (an invalid field keeps its error border under the pointer); accessible names of every control, the busy state and the result badges from the accessibility tree (none missing). Report: `schedule1calc-kb/dev/D-7-3/report.md`.
+- **Open from v2/v3 and still open:** no test with real assistive technology, no real touch device. The list position of the base tile (one ahead of the visible step numbers) is for T-7. [Plan §3.1].
+- **Open from R-1 and R-2:** HIG gives no web spacing, focus-ring, motion-duration or divider values; the values here for those are own decisions or reference values and say so. The game's mixing and effect screens are not publicly visible (R-2 §4), so the mix tiles and effect pills follow the reference, not a game screen.

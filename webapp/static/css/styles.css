@@ -1,9 +1,27 @@
 /*
- * Best Mix Calculator — base, layout and components.
+ * Best Mix Calculator — base, layout and components (Studio look).
  * Values come from tokens.css; decisions are documented in webapp/design/DESIGN.md.
  */
 
 @layer base, layout, components, utilities;
+
+/* Barlow (OFL, self-hosted in webapp/static/fonts) for the wordmark and figures only; text stays
+   in --font-ui. Until it has loaded, --font-display falls back to --font-ui. */
+@font-face {
+  font-display: swap;
+  font-family: "Barlow";
+  font-style: normal;
+  font-weight: 700;
+  src: url("../fonts/barlow-latin-700-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-display: swap;
+  font-family: "Barlow";
+  font-style: normal;
+  font-weight: 800;
+  src: url("../fonts/barlow-latin-800-normal.woff2") format("woff2");
+}
 
 @layer base {
   *,
@@ -14,11 +32,12 @@
 
   body {
     margin: 0;
-    background: var(--ground);
+    background: var(--surface-canvas);
     color: var(--text-primary);
     font-family: var(--font-ui);
-    font-size: var(--text-body-size);
-    line-height: var(--text-body-line);
+    font-size: var(--type-body-size);
+    font-weight: var(--type-body-weight);
+    line-height: var(--type-body-line);
     -webkit-text-size-adjust: 100%;
   }
 
@@ -26,18 +45,23 @@
   h2,
   h3 {
     margin: 0;
-    font-weight: 600;
+    font-weight: var(--type-title-weight);
   }
 
   h1 {
-    font-size: var(--text-page-size);
-    line-height: var(--text-page-line);
-    letter-spacing: -0.01em;
+    font-size: var(--type-page-title-size);
+    font-weight: var(--type-page-title-weight);
+    line-height: var(--type-page-title-line);
   }
 
   h2 {
-    font-size: var(--text-section-size);
-    line-height: var(--text-section-line);
+    font-size: var(--type-title-size);
+    line-height: var(--type-title-line);
+  }
+
+  a {
+    color: var(--text-link);
+    text-underline-offset: 0.2em;
   }
 
   p {
@@ -55,9 +79,9 @@
   }
 
   :focus-visible {
-    border-radius: var(--radius-sm);
-    outline: 2px solid var(--focus-ring);
-    outline-offset: 2px;
+    border-radius: var(--radius-small);
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);
   }
 
   .skip-link {
@@ -65,14 +89,23 @@
     z-index: 10;
     top: var(--space-2);
     left: var(--space-2);
+    display: inline-flex;
+    min-height: var(--control-min);
+    align-items: center;
     padding: var(--space-2) var(--space-4);
-    border: 1px solid var(--action-primary);
-    border-radius: var(--radius-md);
-    background: var(--surface);
-    color: var(--text-primary);
-    font-size: var(--text-control-size);
-    text-decoration: none;
+    border: 1px solid var(--border-control);
+    border-radius: var(--radius-control);
+    background: var(--surface-raised);
+    color: var(--text-link);
+    font-size: var(--type-callout-size);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
     transform: translateY(-200%);
+  }
+
+  .skip-link:hover {
+    border-color: var(--border-control-hover);
+    text-decoration-thickness: 2px;
   }
 
   .skip-link:focus-visible {
@@ -84,7 +117,7 @@
   .container {
     width: 100%;
     max-width: var(--content-max);
-    padding-inline: var(--space-5);
+    padding-inline: var(--space-4);
     margin-inline: auto;
   }
 
@@ -92,18 +125,18 @@
     display: flex;
     min-height: 100vh;
     flex-direction: column;
-    gap: var(--space-6);
   }
 
   .app-main {
     flex: 1;
+    padding-top: var(--space-4);
     padding-bottom: var(--space-6);
   }
 
   .panel-grid {
     display: grid;
     align-items: start;
-    gap: var(--space-5);
+    gap: var(--space-4);
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -123,96 +156,195 @@
       grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
     }
 
+    /* Form and result share their top and bottom edge: the row stretches both columns, and the
+       visible surface of each column fills it. */
+    .panel-grid--search,
+    .panel-grid--effects {
+      align-items: stretch;
+    }
+
+    .panel-grid--search #best-mix-form,
+    .panel-grid--search #result,
+    .panel-grid--effects > .panel-column:first-child > .card,
+    .panel-grid--effects #effect-result {
+      flex: 1 1 auto;
+    }
+
     .panel-column--recipe-result {
       position: sticky;
       top: var(--space-5);
     }
   }
 
-  @media (width >= 640px) {
+  @media (width >= 480px) {
+    .container {
+      padding-inline: var(--space-5);
+    }
+
     .field-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: var(--space-4);
     }
   }
-
-  @media (width < 480px) {
-    .container {
-      padding-inline: var(--space-4);
-    }
-
-    .app-header h1 {
-      font-size: var(--text-section-size);
-    }
-  }
 }
 
 @layer components {
-  /* Header ------------------------------------------------------------- */
+  /* Header: scene band, wordmark, theme switch ------------------------- */
 
   .app-header {
-    border-bottom: 1px solid var(--border-subtle);
-    background: var(--surface);
+    position: relative;
+    min-height: var(--scene-height);
+    isolation: isolate;
+  }
+
+  /* The sky fills the band; the own low-poly drawing sits on it, a little transparent. */
+  .app-header__scene {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    overflow: hidden;
+    min-height: var(--scene-height);
+    background: linear-gradient(180deg, var(--scene-sky-top), var(--scene-sky-bottom));
+    pointer-events: none;
+  }
+
+  .app-header__scene svg {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.7;
   }
 
   .app-header__bar {
     display: flex;
+    min-height: var(--scene-height);
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     padding-block: var(--space-4);
-    gap: var(--space-4);
-  }
-
-  .app-header__identity {
-    display: flex;
-    align-items: baseline;
     gap: var(--space-3);
   }
 
-  .app-header__mark {
-    color: var(--action-primary);
-    font-family: var(--font-mono);
-    font-size: var(--text-page-size);
-    line-height: var(--text-page-line);
+  .app-header__identity {
+    min-width: 0;
+  }
+
+  /* Own lettering in the style of the game logo: cream fill, dark green outline drawn behind it. */
+  .wordmark {
+    color: var(--brand-cream);
+    font-family: var(--font-display);
+    /* 26 px, the size of the reference lettering. */
+    font-size: calc(var(--type-page-title-size) + var(--space-1));
+    font-weight: var(--weight-heavy);
+    letter-spacing: 0.02em;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+    paint-order: stroke fill;
+    text-transform: uppercase;
+    -webkit-text-stroke: 5px var(--brand-outline);
+  }
+
+  .wordmark__sub {
+    display: inline-block;
+    margin-inline-start: var(--space-2);
+    font-size: var(--type-footnote-size);
+    letter-spacing: 0.06em;
+    -webkit-text-stroke-width: 3px;
+  }
+
+  /* Controls on the scene band use the header ring, which keeps 3:1 on the switch surface. */
+  .app-header :focus-visible {
+    outline-color: var(--focus-ring-header);
   }
 
   /* Theme switch ------------------------------------------------------- */
 
+  /* The track padding is the ring width plus its offset, so a focus ring of a segment lies on the
+     switch surface and never on the scene (also with the 3 px ring of increased contrast).
+     A segment is as wide as the longest label ("Night"/"Dusk", about 2.9 em at 600) plus its padding.
+     The basis asks for one row of two; when the band is narrower (large text at 320 px), the
+     segments wrap into rows of equal-width cells instead of running out of the track (D-10). */
   .theme-switch {
-    display: flex;
-    padding: 3px;
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-md);
-    background: var(--surface-sunken);
-    gap: 2px;
+    --theme-switch-segment: calc(3.25em + 2 * var(--space-3));
+    --theme-switch-inset: calc(var(--focus-ring-width) + var(--focus-ring-offset));
+
+    display: grid;
+    flex: 0 1 calc(2 * var(--theme-switch-segment) + var(--space-1) + 2 * var(--theme-switch-inset));
+    padding: var(--theme-switch-inset);
+    border-radius: var(--radius-card);
+    background: var(--header-switch-surface);
+    font-size: var(--type-subhead-size);
+    gap: var(--space-1);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--theme-switch-segment)), 1fr));
   }
 
   .theme-switch__option {
-    min-height: 44px;
+    min-height: var(--control-min);
     padding: var(--space-1) var(--space-3);
     border: 0;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-control);
     background: none;
-    color: var(--text-secondary);
+    color: var(--header-switch-ink);
     cursor: pointer;
     font-family: var(--font-ui);
-    font-size: var(--text-meta-size);
+    font-size: var(--type-subhead-size);
+    font-weight: var(--weight-semibold);
     transition:
       background-color var(--motion-fast) var(--ease-standard),
       color var(--motion-fast) var(--ease-standard);
   }
 
-  .theme-switch__option:hover {
-    color: var(--text-primary);
+  .theme-switch .theme-switch__option:hover:not(:disabled, [aria-checked="true"]) {
+    border-color: transparent;
+    background: color-mix(in srgb, var(--header-switch-selected) 6%, transparent);
+    color: var(--header-switch-ink);
   }
 
-  .theme-switch__option[aria-checked="true"] {
-    background: var(--action-primary-quiet);
-    box-shadow: inset 0 0 0 1px var(--action-primary);
-    color: var(--action-primary);
-    font-weight: 600;
+  /* Pressed (not selected): a stronger tint of the selected surface, never the selected look. */
+  .theme-switch .theme-switch__option:active:not(:disabled, [aria-checked="true"]) {
+    background: color-mix(in srgb, var(--header-switch-selected) 10%, transparent);
+    color: var(--header-switch-ink);
+  }
+
+  /* Selected wins over hover and pressed: the extra class outranks the generic button rules. */
+  .theme-switch .theme-switch__option[aria-checked="true"] {
+    background: var(--header-switch-selected);
+    color: var(--header-switch-selected-ink);
+  }
+
+  .theme-switch .theme-switch__option:disabled {
+    background: none;
+    color: color-mix(in srgb, var(--header-switch-ink) 60%, transparent);
+    cursor: not-allowed;
+  }
+
+  /* Screen: the app sits on the computer screen with a rim --------------- */
+
+  .app-screen {
+    min-width: 0;
+    padding: var(--space-4);
+    border-radius: var(--radius-screen);
+    background: var(--surface-screen);
+    box-shadow: 0 0 0 var(--screen-rim-width) var(--screen-rim);
+  }
+
+  /* Below 480 px the screen, the cards and the effect list give back the 16 px per side that the
+     screen adds, so the Want/Neutral/Avoid segments keep the width they had before (D-5F-3). */
+  @media (width < 480px) {
+    .app-screen {
+      padding: var(--space-2);
+    }
+
+    .app-screen .card {
+      padding: var(--space-3);
+    }
+
+    .app-screen .effect-options {
+      padding: var(--space-2);
+    }
   }
 
   /* Tabs --------------------------------------------------------------- */
@@ -220,37 +352,49 @@
   .calculator-tabs {
     display: flex;
     flex-wrap: wrap;
+    padding-bottom: var(--space-3);
     border-bottom: 1px solid var(--border-subtle);
-    margin-bottom: var(--space-5);
+    margin-bottom: var(--space-4);
     gap: var(--space-1);
   }
 
   .calculator-tabs button {
-    min-height: 44px;
+    min-height: var(--control-min);
     padding: var(--space-2) var(--space-4);
     border: 0;
-    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-    margin-bottom: -1px;
+    border-radius: var(--radius-control);
     background: none;
     color: var(--text-secondary);
     cursor: pointer;
     font-family: var(--font-ui);
-    font-size: var(--text-control-size);
-    font-weight: 600;
+    font-size: var(--type-subhead-size);
+    font-weight: var(--weight-semibold);
     white-space: nowrap;
     transition:
       background-color var(--motion-fast) var(--ease-standard),
       color var(--motion-fast) var(--ease-standard);
   }
 
-  .calculator-tabs button:hover {
-    background: var(--surface);
+  .calculator-tabs button:hover:not(:disabled) {
     color: var(--text-primary);
   }
 
-  .calculator-tabs [aria-selected="true"] {
-    box-shadow: inset 0 -2px 0 var(--action-primary);
-    color: var(--action-primary);
+  .calculator-tabs button:active:not(:disabled, [aria-selected="true"]) {
+    background: var(--surface-sunken);
+    color: var(--text-primary);
+  }
+
+  .calculator-tabs button:disabled {
+    background: none;
+    color: var(--text-tertiary);
+    cursor: not-allowed;
+  }
+
+  /* Selected tab: neutral, the panel surface with an underline in the text colour. */
+  .calculator-tabs button[role="tab"][aria-selected="true"] {
+    background: var(--surface-panel);
+    box-shadow: inset 0 -2px 0 var(--text-primary);
+    color: var(--text-primary);
   }
 
   @media (width < 480px) {
@@ -262,7 +406,7 @@
       min-width: 0;
       flex: 1;
       padding-inline: var(--space-2);
-      font-size: var(--text-meta-size);
+      font-size: var(--type-footnote-size);
       white-space: normal;
     }
   }
@@ -270,11 +414,15 @@
   /* Cards -------------------------------------------------------------- */
 
   .card {
-    padding: var(--space-5);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-lg);
-    background: var(--surface);
-    box-shadow: var(--shadow-card);
+    padding: var(--space-4);
+    border-radius: var(--radius-card);
+    background: var(--surface-panel);
+  }
+
+  @media (width >= 480px) {
+    .card {
+      padding: var(--space-5);
+    }
   }
 
   .card__title {
@@ -291,13 +439,27 @@
     gap: var(--space-2);
   }
 
+  /* The search form is a column whose action sits at its bottom edge. */
+  #best-mix-form {
+    display: flex;
+    flex-direction: column;
+  }
+
   .jump-link {
     display: inline-flex;
-    min-height: 44px;
+    min-height: var(--control-min);
     align-items: center;
-    color: var(--action-primary);
-    font-size: var(--text-control-size);
+    color: var(--text-link);
+    font-size: var(--type-callout-size);
     text-underline-offset: 0.2em;
+  }
+
+  .jump-link:hover {
+    text-decoration-thickness: 2px;
+  }
+
+  .jump-link:active {
+    color: var(--text-primary);
   }
 
   #recipe-result,
@@ -317,35 +479,40 @@
   .field > label,
   .field-label {
     color: var(--text-secondary);
-    font-size: var(--text-label-size);
-    font-weight: 600;
-    letter-spacing: var(--text-label-tracking);
-    text-transform: uppercase;
+    font-size: var(--type-subhead-size);
+    font-weight: var(--type-subhead-weight);
+    line-height: var(--type-subhead-line);
   }
 
   .field__hint {
-    color: var(--text-muted);
-    font-size: var(--text-meta-size);
+    color: var(--text-tertiary);
+    font-size: var(--type-footnote-size);
   }
 
   select,
   input[type="number"],
   input[type="search"] {
     width: 100%;
-    min-height: 44px;
+    min-height: var(--control-min);
     padding: var(--space-2) var(--space-3);
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius-md);
-    background: var(--surface-sunken);
+    border: 1px solid var(--border-control);
+    border-radius: var(--radius-control);
+    background: var(--surface-field);
     color: var(--text-primary);
     font-family: var(--font-ui);
-    font-size: var(--text-control-size);
+    font-size: var(--type-callout-size);
     transition: border-color var(--motion-fast) var(--ease-standard);
   }
 
   input[type="number"] {
-    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Placeholders use text tertiary (DESIGN.md section 8, "text tertiary / field"), not the browser default grey; opacity 1 because Firefox dims it. */
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--text-tertiary);
+    opacity: 1;
   }
 
   .select-control {
@@ -404,21 +571,21 @@
       max-block-size: min(360px, 60dvh);
       max-inline-size: calc(100vw - var(--space-6));
       padding: var(--space-1);
-      border: 1px solid var(--border-strong);
-      border-radius: var(--radius-md);
+      border: 1px solid var(--border-control);
+      border-radius: var(--radius-control);
       margin-block: var(--space-1);
       background: var(--surface-raised);
-      box-shadow: var(--shadow-card);
+      box-shadow: var(--shadow-popover);
       color: var(--text-primary);
       overscroll-behavior: contain;
     }
 
     select option {
-      min-height: 44px;
+      min-height: var(--control-min);
       padding: var(--space-2) var(--space-3);
-      border-radius: var(--radius-sm);
+      border-radius: var(--radius-small);
       font-family: var(--font-ui);
-      font-size: var(--text-control-size);
+      font-size: var(--type-callout-size);
       white-space: normal;
       overflow-wrap: anywhere;
     }
@@ -430,13 +597,13 @@
     }
 
     select option:checked {
-      background: var(--action-primary-quiet);
-      color: var(--action-primary);
+      background: var(--selected-surface);
+      color: var(--selected-ink);
       font-weight: 600;
     }
 
     select option::checkmark {
-      color: var(--action-primary);
+      color: var(--selected-ink);
     }
   }
 
@@ -452,19 +619,25 @@
     margin-bottom: var(--space-2);
   }
 
+  /* Segmented control: a field-coloured track with the control border; the selected segment is
+     neutral and inverted. */
   .mode-switch {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     padding: var(--space-1);
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius-md);
-    background: var(--surface-sunken);
+    border-radius: var(--radius-control);
+    background: var(--surface-field);
+    box-shadow: inset 0 0 0 1px var(--border-control);
     gap: var(--space-1);
   }
 
   .mode-switch__option {
     position: relative;
     cursor: pointer;
+  }
+
+  .mode-switch__option:has(input:disabled) {
+    cursor: not-allowed;
   }
 
   .mode-switch__option input {
@@ -477,14 +650,18 @@
 
   .mode-switch__option span {
     display: flex;
-    min-height: 44px;
+    min-height: var(--control-min);
     align-items: center;
     justify-content: center;
     padding: var(--space-2);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-small);
     color: var(--text-secondary);
-    font-size: var(--text-control-size);
+    font-size: var(--type-callout-size);
+    font-weight: var(--weight-semibold);
     gap: var(--space-2);
+    transition:
+      background-color var(--motion-fast) var(--ease-standard),
+      color var(--motion-fast) var(--ease-standard);
   }
 
   .mode-switch__option span::before {
@@ -498,56 +675,121 @@
   }
 
   .mode-switch__option input:checked + span {
-    background: var(--action-primary-quiet);
-    box-shadow: inset 0 0 0 1px var(--action-primary);
-    color: var(--action-primary);
-    font-weight: 600;
+    background: var(--selected-surface);
+    color: var(--selected-ink);
   }
 
   .mode-switch__option input:checked + span::before {
     opacity: 1;
   }
 
-  .mode-switch__option:hover span {
-    color: var(--action-primary);
+  .mode-switch__option:hover input:not(:disabled, :checked) + span {
+    color: var(--text-primary);
+  }
+
+  /* Pressed (not selected): a light tint of the selected surface; selected keeps its own look. */
+  .mode-switch__option:active input:not(:checked):not(:disabled) + span {
+    background: color-mix(in srgb, var(--selected-surface) 12%, transparent);
+    color: var(--text-primary);
   }
 
   .mode-switch__option input:focus-visible + span {
-    outline: 2px solid var(--focus-ring);
-    outline-offset: 2px;
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  /* Match Effects "Recipe match": soft tints (red: Only these, green: Allow extras). The selected
+     option has the stronger tint, a status-colour ring and the check mark. */
+  .mode-switch__option--strict span,
+  .mode-switch__option--loose span {
+    color: var(--text-primary);
+  }
+
+  .mode-switch__option--strict span {
+    background: var(--match-strict-soft);
+  }
+
+  .mode-switch__option--loose span {
+    background: var(--match-loose-soft);
+  }
+
+  .mode-switch__option--strict input:checked + span,
+  .mode-switch__option--strict:active input:not(:checked):not(:disabled) + span {
+    background: var(--match-strict-selected);
+    color: var(--text-primary);
+  }
+
+  .mode-switch__option--loose input:checked + span,
+  .mode-switch__option--loose:active input:not(:checked):not(:disabled) + span {
+    background: var(--match-loose-selected);
+    color: var(--text-primary);
+  }
+
+  .mode-switch__option--strict input:checked + span {
+    box-shadow: inset 0 0 0 2px var(--status-error);
+  }
+
+  .mode-switch__option--loose input:checked + span {
+    box-shadow: inset 0 0 0 2px var(--status-success);
   }
 
   .mode-switch__option input:disabled + span {
-    color: var(--text-muted);
-    cursor: not-allowed;
+    color: var(--text-tertiary);
   }
 
-  select:hover:not(:disabled),
-  input[type="number"]:hover:not(:disabled),
-  input[type="search"]:hover:not(:disabled) {
-    border-color: var(--action-primary);
+  .mode-switch__option input:disabled:checked + span {
+    background: var(--surface-sunken);
+    color: var(--text-tertiary);
+  }
+
+  /* An invalid field keeps its error border under the pointer (F-4-6). */
+  select:hover:not(:disabled, [aria-invalid="true"]),
+  input[type="number"]:hover:not(:disabled, [aria-invalid="true"]),
+  input[type="search"]:hover:not(:disabled, [aria-invalid="true"]) {
+    border-color: var(--border-control-hover);
+  }
+
+  select:open {
+    border-color: var(--border-control-hover);
   }
 
   select:disabled,
   input:disabled {
-    border-color: var(--border-subtle);
-    color: var(--text-muted);
+    border-color: var(--border-control);
+    background: var(--surface-sunken);
+    color: var(--text-tertiary);
     cursor: not-allowed;
+  }
+
+  .select-control:has(select:disabled)::after {
+    border-color: var(--text-tertiary);
+  }
+
+  /* Error: the border plus the message linked with aria-describedby. */
+  select[aria-invalid="true"],
+  input[aria-invalid="true"] {
+    border-color: var(--status-error);
+  }
+
+  .field__error {
+    color: var(--status-error);
+    font-size: var(--type-footnote-size);
   }
 
   /* Buttons ------------------------------------------------------------ */
 
   button {
-    min-height: 44px;
+    min-width: var(--control-min);
+    min-height: var(--control-min);
     padding: var(--space-2) var(--space-4);
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius-md);
+    border: 1px solid var(--border-control);
+    border-radius: var(--radius-control);
     background: var(--surface-raised);
     color: var(--text-primary);
     cursor: pointer;
     font-family: var(--font-ui);
-    font-size: var(--text-control-size);
-    font-weight: 600;
+    font-size: var(--type-callout-size);
+    font-weight: var(--weight-semibold);
     transition:
       background-color var(--motion-fast) var(--ease-standard),
       border-color var(--motion-fast) var(--ease-standard),
@@ -555,24 +797,29 @@
   }
 
   button:hover:not(:disabled) {
-    border-color: var(--action-primary);
-    color: var(--action-primary);
+    border-color: var(--border-control-hover);
+    color: var(--text-primary);
   }
 
   button:active:not(:disabled) {
-    background: var(--action-primary-quiet);
+    background: var(--surface-sunken);
   }
 
   button:disabled {
-    border-color: var(--border-subtle);
-    color: var(--text-muted);
+    border-color: var(--border-control);
+    background: var(--surface-sunken);
+    color: var(--text-tertiary);
     cursor: not-allowed;
   }
 
+  /* Primary button: the only user of the action colour (the logo green). Its label is text, so it
+     stays in the UI font. */
   .btn--primary {
     border-color: var(--action-primary);
     background: var(--action-primary);
     color: var(--action-primary-ink);
+    font-size: var(--type-headline-size);
+    font-weight: var(--weight-bold);
   }
 
   .btn--primary:hover:not(:disabled) {
@@ -581,16 +828,56 @@
     color: var(--action-primary-ink);
   }
 
-  .btn--primary:disabled {
-    border-color: var(--border-subtle);
-    background: var(--surface-raised);
-    color: var(--text-muted);
+  .btn--primary:active:not(:disabled) {
+    border-color: var(--action-primary-pressed);
+    background: var(--action-primary-pressed);
+    color: var(--action-primary-ink);
   }
 
+  .btn--primary:disabled {
+    border-color: var(--border-control);
+    background: var(--surface-sunken);
+    color: var(--text-tertiary);
+  }
+
+  /* Loading: script.js sets aria-busy on the form and disables the button. The label stays in the
+     DOM (and in the accessible name) but is hidden, so the width does not change; a ring spins in
+     its place. The status line carries the words. */
+  [aria-busy="true"] .btn--primary:disabled {
+    position: relative;
+    border-color: var(--action-primary);
+    background: var(--action-primary);
+    color: transparent;
+    cursor: progress;
+  }
+
+  [aria-busy="true"] .btn--primary:disabled::after {
+    position: absolute;
+    top: calc(50% - 9px);
+    left: calc(50% - 9px);
+    width: 18px;
+    height: 18px;
+    box-sizing: border-box;
+    border: 2px solid color-mix(in srgb, var(--action-primary-ink) 30%, transparent);
+    border-top-color: var(--action-primary-ink);
+    border-radius: var(--radius-pill);
+    animation: spinner-rotate 800ms linear infinite;
+    content: "";
+  }
+
+  @keyframes spinner-rotate {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* The actions follow the last field directly in every form, so a long result in the stretched
+     column beside it never pushes the primary button out of reach; the padding keeps the distance
+     to the last field. */
   .form-actions {
     display: flex;
     flex-wrap: wrap;
-    margin-top: var(--space-5);
+    padding-top: var(--space-5);
     gap: var(--space-2);
   }
 
@@ -607,18 +894,76 @@
     gap: var(--space-4);
   }
 
+  /* Result surface (#result, #effect-result): the filled panel that holds every state; its
+     content sits directly on it, the items inside are raised. */
+  .result-surface {
+    padding: var(--space-4);
+    border-radius: var(--radius-card);
+    background: var(--surface-panel);
+  }
+
+  @media (width >= 480px) {
+    .result-surface {
+      padding: var(--space-5);
+    }
+  }
+
+  .result-surface .card,
+  .result-surface .status-block,
+  .result-surface .status-line,
+  .result-surface .empty-state {
+    padding: 0;
+    border-radius: 0;
+    background: none;
+  }
+
+  .result-surface .result-comparison {
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--border-subtle);
+  }
+
   .result-card {
     overflow-wrap: anywhere;
   }
 
-  .result-comparison summary {
-    min-height: 44px;
-    padding: var(--space-3) var(--space-4);
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius-md);
+  /* Reveal of a fresh final result (script.js adds the class only when motion is allowed). */
+  .is-revealing {
+    animation: result-reveal var(--motion-reveal) var(--ease-emphasized) both;
+  }
+
+  @keyframes result-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* Disclosure: a 44 px summary row with the native triangle, subhead role. Hover and the open state
+     raise the text; focus-visible comes from the base ring. */
+  .result-comparison summary,
+  .effect-guide summary {
+    display: list-item;
+    min-height: var(--control-min);
+    padding-block: var(--space-3);
+    border-radius: var(--radius-small);
     color: var(--text-secondary);
     cursor: pointer;
-    font-size: var(--text-control-size);
+    font-size: var(--type-subhead-size);
+    font-weight: var(--type-subhead-weight);
+    line-height: var(--type-subhead-line);
+    transition: color var(--motion-fast) var(--ease-standard);
+  }
+
+  .result-comparison summary:hover,
+  .effect-guide summary:hover,
+  .result-comparison[open] summary,
+  .effect-guide[open] summary {
+    color: var(--text-primary);
   }
 
   .result-comparison[open] summary {
@@ -628,66 +973,87 @@
   .result-card__head {
     display: flex;
     flex-wrap: wrap;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     padding-bottom: var(--space-3);
-    border-bottom: 1px solid var(--border-subtle);
     margin-bottom: var(--space-4);
     gap: var(--space-2);
   }
 
+  /* Badge: a pill with soft fill, status text and a glyph (the glyph repeats the text, so it has
+     empty alt text). A stopped search renders as `--stopped` (script.js): the warning fill with
+     a ■ glyph, so it differs from the approximate ≈ by more than its text. */
   .badge {
-    padding: var(--space-1) var(--space-2);
-    border: 1px solid currentcolor;
-    border-radius: var(--radius-sm);
-    font-family: var(--font-mono);
-    font-size: var(--text-meta-size);
-    line-height: 1.3;
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-pill);
+    font-size: var(--type-caption-size);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--type-caption-weight);
+    gap: var(--space-1);
+    line-height: var(--type-caption-line);
   }
 
+  .badge::before {
+    content: "\2713" / "";
+  }
+
+  /* Success is the muted green: quieter than the profit and the primary action. */
   .badge--proven {
-    background: var(--action-primary-quiet);
-    color: var(--action-primary);
+    background: var(--status-success-soft);
+    color: var(--status-success);
   }
 
-  .badge--approximate {
-    background: var(--status-warn-quiet);
-    color: var(--status-warn);
+  .badge--approximate,
+  .badge--stopped {
+    background: var(--status-warning-soft);
+    color: var(--status-warning);
   }
 
+  .badge--approximate::before {
+    content: "\2248" / "";
+  }
+
+  .badge--stopped::before {
+    content: "\25A0" / "";
+  }
+
+  /* A caption above its chips (Mix, Effects). */
   .chips-row {
     display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    margin-bottom: var(--space-3);
+    flex-direction: column;
+    margin-bottom: var(--space-4);
     gap: var(--space-2);
   }
 
   .chips-label {
-    min-width: 84px;
-    color: var(--text-secondary);
-    font-size: var(--text-label-size);
-    font-weight: 600;
-    letter-spacing: var(--text-label-tracking);
-    text-transform: uppercase;
+    color: var(--text-tertiary);
+    font-size: var(--type-footnote-size);
+    font-weight: var(--weight-semibold);
+    line-height: var(--type-footnote-line);
   }
 
   .chips {
     display: flex;
-    flex: 1;
     flex-wrap: wrap;
-    gap: var(--space-1);
+    gap: var(--space-2);
     list-style: none;
   }
 
+  /* Chips are neutral: raised surface, subtle inset edge. Effects add their colour as a dot only. */
   .chips li {
-    padding: 2px var(--space-2);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-pill);
-    background: var(--surface-sunken);
+    display: inline-flex;
+    min-height: 32px;
+    align-items: center;
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-small);
+    background: var(--surface-raised);
+    box-shadow: inset 0 0 0 1px var(--border-subtle);
     color: var(--text-primary);
-    font-family: var(--font-mono);
-    font-size: var(--text-meta-size);
+    font-size: var(--type-callout-size);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--weight-semibold);
   }
 
   .chips--ordered {
@@ -695,18 +1061,15 @@
   }
 
   /* Effect colours are game data supplied by the shared lookup catalog. */
-  .chips .effect-chip {
-    border-color: color-mix(in srgb, var(--effect-color) 45%, var(--border-subtle));
-    background: color-mix(in srgb, var(--effect-color) 14%, var(--surface-sunken));
-  }
-
   .effect-chip::before {
     display: inline-block;
-    width: 0.65em;
-    height: 0.65em;
+    width: 10px;
+    height: 10px;
+    flex: none;
     border-radius: var(--radius-pill);
-    margin-inline-end: var(--space-1);
+    margin-inline-end: var(--space-2);
     background: var(--effect-color);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--text-primary) 25%, transparent);
     content: "";
   }
 
@@ -715,32 +1078,23 @@
     width: 0.7em;
     height: 0.7em;
     border-radius: var(--radius-pill);
-    background: var(--effect-color, var(--text-muted));
+    background: var(--effect-color, var(--text-tertiary));
   }
 
   .effect-guide {
-    border-top: 1px solid var(--border-subtle);
     margin-top: var(--space-4);
-  }
-
-  .effect-guide summary {
-    min-height: 44px;
-    padding-block: var(--space-3);
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: var(--text-control-size);
   }
 
   .effect-guide__list {
     margin: 0;
-    font-size: var(--text-control-size);
+    font-size: var(--type-callout-size);
   }
 
   .effect-guide__list dt {
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
   }
 
   .effect-guide__list dd {
@@ -764,13 +1118,12 @@
     max-height: clamp(24rem, 54vh, 34rem);
     overflow-y: auto;
     padding: var(--space-3);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-card);
     background: var(--surface-sunken);
     gap: var(--space-2);
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
     overscroll-behavior-y: contain;
-    scrollbar-color: var(--border-strong) var(--surface-sunken);
+    scrollbar-color: var(--border-control) var(--surface-sunken);
     scrollbar-gutter: stable;
     scrollbar-width: thin;
   }
@@ -787,7 +1140,7 @@
   .effect-options::-webkit-scrollbar-thumb {
     border: 2px solid var(--surface-sunken);
     border-radius: var(--radius-pill);
-    background: var(--border-strong);
+    background: var(--border-control);
   }
 
   .effect-option {
@@ -795,25 +1148,25 @@
     min-inline-size: 0;
     flex-direction: column;
     padding: var(--space-3);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-md);
+    border: 2px solid transparent;
+    border-radius: var(--radius-control);
     margin: 0;
-    background: var(--surface);
+    background: var(--surface-panel);
     gap: var(--space-2);
     overflow-wrap: anywhere;
-    transition:
-      border-color var(--motion-fast) var(--ease-standard),
-      background-color var(--motion-fast) var(--ease-standard);
   }
 
+  /* The card keeps a quiet status edge; the selected segment itself is neutral. */
   .effect-option[data-preference="wanted"] {
-    border-color: var(--action-primary);
-    background: var(--action-primary-quiet);
+    border-color: var(--status-success);
+    background: linear-gradient(var(--status-success-soft), var(--status-success-soft))
+      var(--surface-panel);
   }
 
   .effect-option[data-preference="excluded"] {
-    border-color: var(--status-danger);
-    background: var(--status-danger-quiet);
+    border-color: var(--status-error);
+    background: linear-gradient(var(--status-error-soft), var(--status-error-soft))
+      var(--surface-panel);
   }
 
   .effect-option__heading {
@@ -827,32 +1180,68 @@
   }
 
   .effect-option__name {
-    font-size: var(--text-control-size);
-    font-weight: 600;
+    font-size: var(--type-headline-size);
+    font-weight: var(--type-headline-weight);
+    line-height: var(--type-headline-line);
   }
 
   .effect-option__description {
     margin: 0 0 var(--space-2);
     color: var(--text-secondary);
-    font-size: var(--text-meta-size);
-    line-height: var(--text-body-line);
+    font-size: var(--type-footnote-size);
+    line-height: var(--type-body-line);
   }
 
+  /*
+   * Segments of a row are equal: each grows from a zero basis. A segment is never narrower than its
+   * label, so whole segments wrap to the next row when the labels do not fit side by side (large text).
+   */
   .effect-preference {
-    display: grid;
+    display: flex;
+    flex-wrap: wrap;
     padding: 2px;
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-control);
     margin-block-start: auto;
-    background: var(--surface);
+    background: var(--surface-field);
+    box-shadow: inset 0 0 0 1px var(--border-control);
     gap: 2px;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .effect-preference__option {
     position: relative;
-    min-width: 0;
+    display: grid;
+    flex: 1 1 0;
     cursor: pointer;
+  }
+
+  /*
+   * An invisible copy of the selected label (glyph, gap and weight 600) in the same cell keeps the
+   * segment's minimum width independent of the selection, so a click never moves the wrap point.
+   * The texts mirror the labels in script.js (guarded by tests/browser/studio-styles.test.cjs).
+   */
+  .effect-preference__option::after {
+    padding: 0 2px;
+    font-size: var(--type-footnote-size);
+    font-weight: var(--weight-semibold);
+    grid-area: 1 / 1;
+    line-height: 1.3;
+    pointer-events: none;
+    visibility: hidden;
+    white-space: nowrap;
+  }
+
+  .effect-preference__option:has(input[value="wanted"])::after {
+    content: "\2713" "Want" / "";
+    padding-inline-end: calc(2px + var(--space-1));
+  }
+
+  .effect-preference__option:has(input[value="neutral"])::after {
+    content: "Neutral" / "";
+  }
+
+  .effect-preference__option:has(input[value="excluded"])::after {
+    content: "\2298" "Avoid" / "";
+    padding-inline-end: calc(2px + var(--space-1));
   }
 
   .effect-preference__option input {
@@ -866,43 +1255,56 @@
 
   .effect-preference__option span {
     display: flex;
-    min-height: 36px;
+    min-height: var(--control-min);
     align-items: center;
     justify-content: center;
-    padding: var(--space-1);
-    border-radius: var(--radius-sm);
+    padding: var(--space-1) 2px;
+    border-radius: var(--radius-small);
     color: var(--text-secondary);
-    font-size: var(--text-meta-size);
+    font-size: var(--type-footnote-size);
+    gap: var(--space-1);
+    grid-area: 1 / 1;
     line-height: 1.3;
+    overflow-wrap: normal;
+    transition:
+      background-color var(--motion-fast) var(--ease-standard),
+      color var(--motion-fast) var(--ease-standard);
+    white-space: nowrap;
   }
 
-  .effect-preference__option:hover span {
-    background: var(--surface-sunken);
+  .effect-preference__option:hover input:not(:disabled, :checked) + span {
     color: var(--text-primary);
   }
 
+  /* Pressed (not selected): a light tint of the selected surface, as in the other segmented controls. */
+  .effect-preference__option:active input:not(:checked):not(:disabled) + span {
+    background: color-mix(in srgb, var(--selected-surface) 12%, transparent);
+    color: var(--text-primary);
+  }
+
+  /* Selected Want, Neutral and Avoid look the same (neutral, inverted); glyph and label name it. */
   .effect-preference__option input:checked + span {
-    background: var(--surface-sunken);
-    box-shadow: inset 0 0 0 1px var(--border-strong);
-    color: var(--text-primary);
-    font-weight: 600;
+    background: var(--selected-surface);
+    color: var(--selected-ink);
+    font-weight: var(--weight-semibold);
   }
 
-  .effect-preference__option input[value="wanted"]:checked + span {
-    background: var(--action-primary-quiet);
-    box-shadow: inset 0 0 0 1px var(--action-primary);
-    color: var(--action-primary);
+  .effect-preference__option input[value="wanted"]:checked + span::before {
+    content: "\2713" / "";
   }
 
-  .effect-preference__option input[value="excluded"]:checked + span {
-    background: var(--status-danger-quiet);
-    box-shadow: inset 0 0 0 1px var(--status-danger);
-    color: var(--status-danger);
+  .effect-preference__option input[value="excluded"]:checked + span::before {
+    content: "\2298" / "";
+  }
+
+  .effect-preference__option input:disabled + span {
+    color: var(--text-tertiary);
+    cursor: not-allowed;
   }
 
   .effect-preference__option input:focus-visible + span {
-    outline: 2px solid var(--focus-ring);
-    outline-offset: 2px;
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);
   }
 
   .effect-selection-toolbar {
@@ -917,108 +1319,173 @@
   .effect-selection-count {
     margin: 0;
     color: var(--text-secondary);
-    font-size: var(--text-control-size);
+    font-size: var(--type-callout-size);
     overflow-wrap: anywhere;
   }
 
   .effect-selection-summary {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-2);
+    /* Row pitch 44 px (32 px chip + 12 px gap) keeps the 44 px hit areas of wrapped rows apart. */
+    gap: var(--space-3) var(--space-2);
   }
 
   .effect-selection-summary:not(:empty) {
     margin-block-start: var(--space-3);
   }
 
+  /* The whole chip is the remove button: 32 px visual, 44 px hit area through the pseudo-element.
+     Wanted and excluded keep their status colour in every state (hover, active, focus). */
   .effect-selection-chip {
+    position: relative;
     display: inline-flex;
-    min-height: 36px;
+    min-height: 32px;
     align-items: center;
     padding: var(--space-1) var(--space-3);
-    border: 1px solid var(--action-primary);
+    border: 1px solid var(--status-success);
     border-radius: var(--radius-pill);
-    background: var(--action-primary-quiet);
-    color: var(--action-primary);
-    font-size: var(--text-meta-size);
+    background: var(--status-success-soft);
+    color: var(--status-success);
+    font-size: var(--type-footnote-size);
+    font-weight: var(--weight-medium);
     gap: var(--space-2);
     overflow-wrap: anywhere;
   }
 
+  .effect-selection-chip::after {
+    position: absolute;
+    inset: -7px 0;
+    content: "";
+  }
+
+  .effect-selection-chip:hover:not(:disabled),
+  .effect-selection-chip:active:not(:disabled) {
+    border-color: var(--status-success);
+    color: var(--status-success);
+  }
+
+  .effect-selection-chip:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--status-success) 12%, var(--surface-panel));
+  }
+
+  .effect-selection-chip:active:not(:disabled) {
+    background: color-mix(in srgb, var(--status-success) 14%, var(--surface-panel));
+  }
+
+  /* Hover and pressed add an inset ring; the fill steps stay small so the text keeps 4.5:1. */
+  .effect-selection-chip:hover:not(:disabled),
+  .effect-selection-chip:active:not(:disabled) {
+    box-shadow: inset 0 0 0 1px currentcolor;
+  }
+
   .effect-selection-chip[data-preference="excluded"],
-  .effect-selection-chip[data-preference="excluded"]:hover,
-  .effect-selection-chip[data-preference="excluded"]:active {
-    border-color: var(--status-danger);
-    background: var(--status-danger-quiet);
-    color: var(--status-danger);
+  .effect-selection-chip[data-preference="excluded"]:hover:not(:disabled),
+  .effect-selection-chip[data-preference="excluded"]:active:not(:disabled) {
+    border-color: var(--status-error);
+    background: var(--status-error-soft);
+    color: var(--status-error);
+  }
+
+  .effect-selection-chip[data-preference="excluded"]:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--status-error) 12%, var(--surface-panel));
+  }
+
+  .effect-selection-chip[data-preference="excluded"]:active:not(:disabled) {
+    background: color-mix(in srgb, var(--status-error) 14%, var(--surface-panel));
   }
 
   .effect-options-empty {
+    padding: var(--space-4);
     color: var(--text-secondary);
+    font-size: var(--type-callout-size);
     grid-column: 1 / -1;
+    text-align: center;
   }
 
   #effect-result {
     scroll-margin-block: var(--space-5);
   }
 
-  @media (width < 640px) {
-    .effect-options {
-      grid-template-columns: minmax(0, 1fr);
-    }
-  }
-
-  @media (width < 400px) {
-    .effect-options,
-    .effect-option {
-      padding: var(--space-2);
-    }
-  }
-
-  @media (pointer: coarse) {
-    .effect-preference__option span,
-    .effect-selection-chip {
-      min-height: 44px;
-    }
-  }
-
   .chips--ordered li {
+    gap: var(--space-1);
     counter-increment: chip;
   }
 
   .chips--ordered li::before {
-    color: var(--text-muted);
+    color: var(--text-tertiary);
     content: counter(chip) " ";
   }
 
   .chips__empty {
-    color: var(--text-muted);
-    font-family: var(--font-mono);
-    font-size: var(--text-meta-size);
+    color: var(--text-tertiary);
+    font-size: var(--type-footnote-size);
   }
 
-  /* Below this width the reserved label column costs the chips more room than it is worth. */
-  @media (width < 560px) {
-    .chips-row {
-      flex-direction: column;
-      align-items: stretch;
-      gap: var(--space-1);
-    }
-
-    .chips-label {
-      min-width: 0;
-    }
+  /* Mix: an even grid of stock tiles (base product, then the steps with prices). Every tile has the
+     column width, the step number gives the order, so no separator can break the columns (T-17).
+     The step number is visible text in the tile, so the list counter is not drawn. */
+  .mix {
+    display: grid;
+    gap: var(--space-2);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 124px), 1fr));
   }
 
-  /* Profit leads; the three secondary figures form a quiet, aligned row beneath it. */
+  .mix .mix__item {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-control);
+    background: var(--surface-raised);
+    box-shadow: inset 0 0 0 1px var(--border-subtle);
+    font-size: var(--type-callout-size);
+    gap: 0;
+  }
+
+  .mix .mix__item::before {
+    content: none;
+  }
+
+  /* The base is the start of the mix: sunken like a slot, with a control-coloured start edge. */
+  .mix .mix__item--base {
+    background: var(--surface-sunken);
+    box-shadow:
+      inset 3px 0 0 var(--border-control),
+      inset 0 0 0 1px var(--border-subtle);
+  }
+
+  .mix__step {
+    color: var(--text-tertiary);
+    font-size: var(--type-caption-size);
+    font-weight: var(--weight-bold);
+    line-height: var(--type-caption-line);
+  }
+
+  .mix__name {
+    max-width: 100%;
+    color: var(--text-primary);
+    font-weight: var(--weight-bold);
+    overflow-wrap: anywhere;
+  }
+
+  .mix__price,
+  .mix__meta {
+    color: var(--text-tertiary);
+    font-size: var(--type-footnote-size);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--weight-semibold);
+  }
+
+  /* Profit leads as a banknote; the three secondary figures form a quiet, aligned row beneath it. */
   .stats {
     display: grid;
     margin: 0 0 var(--space-5);
-    gap: var(--space-3);
+    gap: var(--space-2);
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  @media (width < 560px) {
+  @media (width < 480px) {
     .stats {
       grid-template-columns: minmax(0, 1fr);
     }
@@ -1038,41 +1505,78 @@
     display: flex;
     flex-direction: column;
     padding: var(--space-2) var(--space-3);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-md);
-    background: var(--surface-sunken);
+    border-radius: var(--radius-control);
+    background: var(--surface-raised);
     gap: var(--space-1);
   }
 
   .stat dt {
-    color: var(--text-secondary);
-    font-size: var(--text-label-size);
-    font-weight: 600;
-    letter-spacing: var(--text-label-tracking);
-    text-transform: uppercase;
+    color: var(--text-tertiary);
+    font-size: var(--type-footnote-size);
+    font-weight: var(--weight-semibold);
+    line-height: var(--type-footnote-line);
   }
 
   .stat dd {
     margin: 0;
-    font-family: var(--font-mono);
-    font-size: 1.0625rem;
+    color: var(--text-primary);
+    font-family: var(--font-display);
+    font-size: var(--type-title-size);
     font-variant-numeric: tabular-nums;
+    font-weight: var(--weight-bold);
+    line-height: var(--type-title-line);
     overflow-wrap: anywhere;
   }
 
+  /* Banknote: money surface with a quiet guilloche drawn from its right edge. */
   .stat--primary {
-    border-color: var(--action-primary);
-    background: var(--action-primary-quiet);
+    padding: var(--space-3) var(--space-4);
+    border: 2px solid var(--money-border);
+    background:
+      repeating-radial-gradient(
+        circle at 100% 50%,
+        transparent 0 9px,
+        var(--money-guilloche) 9px 10px
+      ),
+      var(--money-surface);
     grid-column: 1 / -1;
   }
 
+  /* The label "Profit" is text and stays in the UI font; only the figure is set in Barlow. */
   .stat--primary dt {
-    color: var(--text-primary);
+    color: var(--money-ink);
+    font-size: var(--type-subhead-size);
+    font-weight: var(--weight-bold);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
   }
 
   .stat--primary dd {
-    font-size: var(--text-profit-size);
-    font-weight: 600;
+    position: relative;
+    color: var(--money-ink);
+    font-size: var(--type-large-title-size);
+    font-weight: var(--weight-heavy);
+    line-height: 1;
+  }
+
+  @media (width >= 480px) {
+    .stat--primary dd {
+      font-size: calc(var(--type-large-title-size) * 1.4);
+    }
+  }
+
+  /* Count-up: script.js lays an aria-hidden figure over the final text for a moment; the final
+     text stays in the DOM (and for assistive technology) but is not painted meanwhile. */
+  .stat--primary dd:has(> .count-up) {
+    color: transparent;
+  }
+
+  .count-up {
+    position: absolute;
+    inset: 0;
+    color: var(--money-ink);
+    pointer-events: none;
+    white-space: nowrap;
   }
 
   .panel-column--recipe-result .stats {
@@ -1094,26 +1598,29 @@
   .status-line,
   .status-block {
     padding: var(--space-4);
-    border: 1px dashed var(--border-strong);
-    border-radius: var(--radius-lg);
-    background: var(--surface);
+    border-radius: var(--radius-card);
+    background: var(--surface-panel);
     color: var(--text-secondary);
-    font-family: var(--font-mono);
-    font-size: var(--text-meta-size);
+    font-size: var(--type-footnote-size);
+    font-variant-numeric: tabular-nums;
   }
 
   .alert {
     padding: var(--space-4);
-    border: 1px solid var(--status-danger);
-    border-left-width: 4px;
-    border-radius: var(--radius-md);
-    background: var(--status-danger-quiet);
+    border: 0;
+    border-left: 4px solid var(--status-error);
+    border-radius: var(--radius-control);
+    background: linear-gradient(var(--status-error-soft), var(--status-error-soft))
+      var(--surface-raised);
     color: var(--text-primary);
   }
 
+  /* Indeterminate progress: a muted green segment sweeps over the track and repeats while the
+     node exists (the engine reports no total). The status text carries the progress. */
   .progress {
+    position: relative;
     overflow: hidden;
-    height: 4px;
+    height: 6px;
     border-radius: var(--radius-pill);
     margin-top: var(--space-3);
     background: var(--surface-sunken);
@@ -1123,11 +1630,13 @@
     display: block;
     width: 40%;
     height: 100%;
-    animation: progress-slide 1.4s var(--ease-standard) infinite;
-    background: var(--action-primary);
+    border-radius: var(--radius-pill);
+    animation: progress-sweep var(--motion-progress) var(--ease-standard);
+    animation-iteration-count: infinite;
+    background: linear-gradient(90deg, var(--progress-fill-start), var(--progress-fill-end));
   }
 
-  @keyframes progress-slide {
+  @keyframes progress-sweep {
     0% {
       transform: translateX(-100%);
     }
@@ -1140,16 +1649,22 @@
   .empty-state {
     display: flex;
     flex-direction: column;
-    padding: var(--space-5);
-    border: 1px dashed var(--border-strong);
-    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    border-radius: var(--radius-card);
+    background: var(--surface-panel);
     color: var(--text-secondary);
     gap: var(--space-2);
   }
 
+  @media (width >= 480px) {
+    .empty-state {
+      padding: var(--space-5);
+    }
+  }
+
   .empty-state__hint {
-    color: var(--text-muted);
-    font-size: var(--text-meta-size);
+    color: var(--text-tertiary);
+    font-size: var(--type-footnote-size);
   }
 
   /* Ingredient shelf and ordered recipe ------------------------------- */
@@ -1167,63 +1682,70 @@
   }
 
   .ingredient-library__heading h3 {
-    font-size: var(--text-section-size);
-    line-height: var(--text-section-line);
+    font-size: var(--type-title-size);
+    line-height: var(--type-title-line);
   }
 
+  /* Shelf and mixing order use the mix tile language: raised tile, name in bold, price and step
+     number in tertiary type, the same column width as the mix (T-17). Tiles are controls, so they
+     keep the control border. */
   .ingredient-shelf {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(116px, 1fr));
     gap: var(--space-2);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 124px), 1fr));
   }
 
   .recipe-ingredient-tile {
     display: grid;
     min-width: 0;
-    min-height: 76px;
+    min-height: 64px;
     grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    padding: var(--space-3);
-    background: var(--surface-sunken);
-    text-align: left;
+    align-content: start;
+    align-items: baseline;
+    padding: var(--space-2) var(--space-3);
+    background: var(--surface-raised);
+    column-gap: var(--space-2);
     cursor: grab;
+    text-align: left;
     touch-action: manipulation;
     user-select: none;
   }
 
   .recipe-ingredient-tile__name {
+    color: var(--text-primary);
+    font-weight: var(--weight-bold);
     grid-column: 1 / -1;
     overflow-wrap: anywhere;
   }
 
+  /* "+" says the tile adds a step; it sits on the price line, so it never leaves the tile. */
   .recipe-ingredient-tile::after {
+    color: var(--text-tertiary);
+    content: "+" / "";
+    font-weight: var(--weight-bold);
     grid-column: 2;
     grid-row: 2;
-    color: var(--action-primary);
-    content: "+";
-    font-size: var(--text-section-size);
   }
 
-  .recipe-ingredient-tile__price {
-    color: var(--text-secondary);
-    font-family: var(--font-mono);
-    font-size: var(--text-meta-size);
+  .recipe-ingredient-tile__price,
+  .recipe-step__price {
+    color: var(--text-tertiary);
+    font-size: var(--type-footnote-size);
     font-variant-numeric: tabular-nums;
-    font-weight: 400;
+    font-weight: var(--weight-semibold);
   }
 
   .recipe-announcement {
     min-height: 1.6em;
     margin-block: var(--space-2);
     color: var(--text-secondary);
-    font-size: var(--text-meta-size);
+    font-size: var(--type-footnote-size);
   }
 
   .recipe-drop-area {
     position: relative;
     min-height: 140px;
     padding-block: var(--space-3);
-    border-top: 1px solid var(--border-subtle);
   }
 
   #recipe-drop-area,
@@ -1235,7 +1757,7 @@
     display: flex;
     flex-direction: column;
     margin-block: var(--space-3);
-    counter-reset: step;
+    container-type: inline-size;
     gap: var(--space-2);
     list-style: none;
   }
@@ -1243,38 +1765,102 @@
   .recipe-step {
     position: relative;
     display: grid;
+    min-height: var(--control-min);
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    padding: var(--space-1) var(--space-2) var(--space-1) var(--space-6);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-md);
-    background: var(--surface-sunken);
-    counter-increment: step;
+    padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+    border: 1px solid var(--border-control);
+    border-radius: var(--radius-control);
+    background: var(--surface-raised);
     cursor: grab;
+    font-size: var(--type-callout-size);
     touch-action: manipulation;
     user-select: none;
     gap: var(--space-2);
   }
 
-  .recipe-step::before {
-    position: absolute;
-    left: var(--space-3);
-    top: var(--space-4);
-    color: var(--text-muted);
-    content: counter(step);
-    font-family: var(--font-mono);
-    font-size: var(--text-meta-size);
+  /* Step number, name and price on one line; the name takes the free width and wraps. */
+  .recipe-step__body {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: 2.5ch minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: var(--space-2);
+  }
+
+  .recipe-step__number {
+    color: var(--text-tertiary);
+    font-size: var(--type-caption-size);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--weight-bold);
+    line-height: var(--type-caption-line);
   }
 
   .recipe-step__name {
+    color: var(--text-primary);
+    font-weight: var(--weight-bold);
     overflow-wrap: anywhere;
   }
 
+  /* Quiet destructive button: no fill, no border; error colour on hover and focus. */
   .recipe-step__remove {
-    min-width: 44px;
+    min-width: var(--control-min);
     padding: var(--space-1) var(--space-2);
-    font-size: var(--text-meta-size);
-    font-weight: 500;
+    border-color: transparent;
+    background: none;
+    color: var(--text-secondary);
+    font-size: var(--type-footnote-size);
+    font-weight: var(--weight-medium);
+  }
+
+  .recipe-step__remove:hover:not(:disabled),
+  .recipe-step__remove:focus-visible {
+    border-color: transparent;
+    color: var(--status-error);
+  }
+
+  .recipe-step__remove:active:not(:disabled) {
+    background: color-mix(in srgb, var(--status-error) 6%, var(--surface-sunken));
+    color: var(--status-error);
+  }
+
+  /* Large text on a narrow list (under 14em, e.g. 320 px from 125 % text): the price moves under
+     Delete, so number, price and Delete no longer squeeze the name column (F-17-1). The query is
+     in em, so it follows the text size; the list is the container, so a row can restyle itself. */
+  @container (width < 14em) {
+    .recipe-step {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      row-gap: 0;
+    }
+
+    .recipe-step__body {
+      display: contents;
+    }
+
+    .recipe-step__number {
+      min-width: 2ch;
+      align-self: center;
+      grid-column: 1;
+      grid-row: 1 / span 2;
+    }
+
+    .recipe-step__name {
+      align-self: center;
+      grid-column: 2;
+      grid-row: 1 / span 2;
+    }
+
+    .recipe-step__remove {
+      padding-inline: var(--space-1);
+      grid-column: 3;
+      grid-row: 1;
+    }
+
+    .recipe-step__price {
+      grid-column: 3;
+      grid-row: 2;
+      text-align: center;
+    }
   }
 
   .recipe-drop-before::after,
@@ -1285,7 +1871,7 @@
     left: 0;
     height: 3px;
     border-radius: var(--radius-pill);
-    background: var(--action-primary);
+    background: var(--focus-ring);
     content: "";
     pointer-events: none;
   }
@@ -1300,7 +1886,7 @@
 
   .is-drag-source {
     border-style: dashed;
-    border-color: var(--action-primary);
+    border-color: var(--border-control);
     opacity: 0.55;
   }
 
@@ -1308,20 +1894,17 @@
     position: fixed;
     z-index: 1000;
     overflow: hidden;
-    border: 1px solid var(--action-primary);
-    border-radius: var(--radius-md);
-    background: var(--surface-sunken);
+    border: 1px solid var(--border-control);
+    border-radius: var(--radius-control);
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-popover);
     color: var(--text-primary);
     font-family: var(--font-ui);
-    font-size: var(--text-control-size);
-    font-weight: 600;
+    font-size: var(--type-callout-size);
+    font-weight: var(--weight-semibold);
     pointer-events: none;
     transition: none;
     user-select: none;
-  }
-
-  .recipe-drag-ghost.recipe-step::before {
-    content: attr(data-step-number);
   }
 
   .recipe-is-dragging,
@@ -1330,20 +1913,10 @@
     user-select: none;
   }
 
-  @media (width < 480px) {
-    #recipe-form {
-      padding: var(--space-4);
-    }
-
-    .ingredient-shelf {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-
   #recipe-count {
-    color: var(--text-muted);
-    font-family: var(--font-mono);
-    font-size: var(--text-meta-size);
+    color: var(--text-tertiary);
+    font-size: var(--type-footnote-size);
+    font-variant-numeric: tabular-nums;
     font-weight: 400;
   }
 }
@@ -1362,12 +1935,11 @@
   }
 
   .numeric {
-    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
   }
 
   .muted {
-    color: var(--text-muted);
+    color: var(--text-tertiary);
   }
 }
 
@@ -1375,14 +1947,25 @@
   *,
   *::before,
   *::after {
-    animation-duration: 1ms !important;
+    animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 1ms !important;
+    transition-duration: 0.01ms !important;
   }
 
+  /* Static bar at reduced strength; the status text carries the progress. */
   .progress span {
     width: 100%;
     animation: none;
     opacity: 0.5;
+  }
+
+  /* No reveal: the result is there at once. */
+  .is-revealing {
+    animation: none;
+  }
+
+  /* The spinner stays visible as a static ring segment; the status line carries the words. */
+  [aria-busy="true"] .btn--primary:disabled::after {
+    animation: none;
   }
 }

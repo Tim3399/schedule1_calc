@@ -11,7 +11,7 @@ const themeSource = fs.readFileSync(
   "utf8",
 );
 
-function loadTheme({ storedValue = null, failOn = null } = {}) {
+function loadTheme({ storedValue = null, failOn = null, systemDark = false } = {}) {
   const storageCalls = [];
   const documentElement = { dataset: {} };
   const document = {
@@ -21,13 +21,14 @@ function loadTheme({ storedValue = null, failOn = null } = {}) {
       return id === "theme-switch" ? group : null;
     },
   };
-  const options = ["system", "light", "dark"].map((value) => ({
+  // Markup order: Dusk (light), Night (dark). The markup ships Dusk checked; theme.js corrects it.
+  const options = ["light", "dark"].map((value) => ({
     attributes: {
-      "aria-checked": value === "system" ? "true" : "false",
+      "aria-checked": value === "light" ? "true" : "false",
     },
     dataset: { themeValue: value },
     listeners: {},
-    tabIndex: value === "system" ? 0 : -1,
+    tabIndex: value === "light" ? 0 : -1,
     addEventListener(type, listener) {
       this.listeners[type] = listener;
     },
@@ -61,10 +62,28 @@ function loadTheme({ storedValue = null, failOn = null } = {}) {
       storedValue = value;
     },
   };
+  const mediaListeners = [];
+  const darkQuery = {
+    matches: systemDark,
+    addEventListener(type, listener) {
+      assert.equal(type, "change");
+      mediaListeners.push(listener);
+    },
+  };
+  const window = {
+    matchMedia(query) {
+      assert.equal(query, "(prefers-color-scheme: dark)");
+      return darkQuery;
+    },
+  };
 
-  vm.runInNewContext(themeSource, { document, localStorage }, { filename: "theme.js" });
+  vm.runInNewContext(themeSource, { document, localStorage, window }, { filename: "theme.js" });
 
   return {
+    changeSystem(dark) {
+      darkQuery.matches = dark;
+      for (const listener of mediaListeners) listener({ matches: dark });
+    },
     document,
     documentElement,
     options,
@@ -79,6 +98,10 @@ function selectedValues(ui) {
     .map((option) => option.dataset.themeValue);
 }
 
+function tabIndexes(ui) {
+  return ui.options.map((option) => option.tabIndex);
+}
+
 function keydown(option, key) {
   let prevented = false;
   option.listeners.keydown({
@@ -90,17 +113,49 @@ function keydown(option, key) {
   return prevented;
 }
 
-test("missing, invalid, and blocked storage reads resolve to system", () => {
-  for (const setup of [{}, { storedValue: "sepia" }, { failOn: "getItem" }]) {
-    const ui = loadTheme(setup);
+test("missing, invalid, and blocked storage follow the system appearance", () => {
+  const setups = [{}, { storedValue: "sepia" }, { storedValue: "system" }, { failOn: "getItem" }];
+  for (const systemDark of [false, true]) {
+    for (const setup of setups) {
+      const ui = loadTheme({ ...setup, systemDark });
 
-    assert.equal(ui.documentElement.dataset.theme, "system");
-    assert.deepEqual(selectedValues(ui), ["system"]);
-    assert.deepEqual(
-      ui.options.map((option) => option.tabIndex),
-      [0, -1, -1],
-    );
+      assert.equal(ui.documentElement.dataset.theme, "system");
+      assert.deepEqual(selectedValues(ui), [systemDark ? "dark" : "light"]);
+      assert.deepEqual(tabIndexes(ui), systemDark ? [-1, 0] : [0, -1]);
+      assert.ok(
+        ui.storageCalls.every(([call]) => call === "getItem"),
+        "nothing is written or removed on load",
+      );
+    }
   }
+});
+
+test("with empty storage a system appearance change updates theme and selection", () => {
+  const ui = loadTheme({ systemDark: false });
+
+  ui.changeSystem(true);
+  assert.equal(ui.documentElement.dataset.theme, "system");
+  assert.deepEqual(selectedValues(ui), ["dark"]);
+  assert.deepEqual(tabIndexes(ui), [-1, 0]);
+
+  ui.changeSystem(false);
+  assert.deepEqual(selectedValues(ui), ["light"]);
+  assert.deepEqual(tabIndexes(ui), [0, -1]);
+  assert.equal(ui.storedValue(), null);
+});
+
+test("a stored or chosen theme ignores later system appearance changes", () => {
+  const stored = loadTheme({ storedValue: "light", systemDark: false });
+  stored.changeSystem(true);
+  assert.equal(stored.documentElement.dataset.theme, "light");
+  assert.deepEqual(selectedValues(stored), ["light"]);
+
+  const chosen = loadTheme({ systemDark: false });
+  chosen.options[1].listeners.click();
+  chosen.changeSystem(false);
+  chosen.changeSystem(true);
+  assert.equal(chosen.documentElement.dataset.theme, "dark");
+  assert.deepEqual(selectedValues(chosen), ["dark"]);
 });
 
 test("stored explicit theme initializes the control without rewriting storage", () => {
@@ -108,59 +163,58 @@ test("stored explicit theme initializes the control without rewriting storage", 
 
   assert.equal(ui.documentElement.dataset.theme, "dark");
   assert.deepEqual(selectedValues(ui), ["dark"]);
-  assert.deepEqual(
-    ui.options.map((option) => option.tabIndex),
-    [-1, -1, 0],
-  );
+  assert.deepEqual(tabIndexes(ui), [-1, 0]);
   assert.deepEqual(ui.storageCalls, [["getItem", "schedule1-theme"]]);
 });
 
-test("clicking an explicit theme applies and persists it", () => {
-  const ui = loadTheme();
+test("a stored choice wins over the opposite system appearance", () => {
+  const night = loadTheme({ storedValue: "dark", systemDark: false });
+  assert.equal(night.documentElement.dataset.theme, "dark");
+  assert.deepEqual(selectedValues(night), ["dark"]);
 
-  ui.options[1].listeners.click();
-
-  assert.equal(ui.documentElement.dataset.theme, "light");
-  assert.equal(ui.storedValue(), "light");
-  assert.deepEqual(selectedValues(ui), ["light"]);
-  assert.deepEqual(
-    ui.options.map((option) => option.tabIndex),
-    [-1, 0, -1],
-  );
+  const dusk = loadTheme({ storedValue: "light", systemDark: true });
+  assert.equal(dusk.documentElement.dataset.theme, "light");
+  assert.deepEqual(selectedValues(dusk), ["light"]);
 });
 
-test("choosing system removes an explicit stored theme", () => {
-  const ui = loadTheme({ storedValue: "dark" });
+test("clicking an option stores the explicit choice, also when it matches the system", () => {
+  const same = loadTheme({ systemDark: true });
+  same.options[1].listeners.click();
+  assert.equal(same.documentElement.dataset.theme, "dark");
+  assert.equal(same.storedValue(), "dark");
 
-  ui.options[0].listeners.click();
+  const other = loadTheme({ systemDark: false });
+  other.options[1].listeners.click();
+  assert.equal(other.documentElement.dataset.theme, "dark");
+  assert.equal(other.storedValue(), "dark");
+  assert.deepEqual(selectedValues(other), ["dark"]);
+  assert.deepEqual(tabIndexes(other), [-1, 0]);
 
-  assert.equal(ui.documentElement.dataset.theme, "system");
-  assert.equal(ui.storedValue(), null);
-  assert.deepEqual(ui.storageCalls.at(-1), ["removeItem", "schedule1-theme"]);
+  other.options[0].listeners.click();
+  assert.equal(other.documentElement.dataset.theme, "light");
+  assert.equal(other.storedValue(), "light");
 });
 
 test("radio keys wrap, jump, focus, and keep ARIA and roving tabindex synchronized", () => {
   const ui = loadTheme();
 
   assert.equal(keydown(ui.options[0], "ArrowLeft"), true);
-  assert.equal(ui.document.activeElement, ui.options[2]);
+  assert.equal(ui.document.activeElement, ui.options[1]);
   assert.deepEqual(selectedValues(ui), ["dark"]);
-  assert.deepEqual(
-    ui.options.map((option) => option.tabIndex),
-    [-1, -1, 0],
-  );
+  assert.equal(ui.storedValue(), "dark");
+  assert.deepEqual(tabIndexes(ui), [-1, 0]);
 
-  assert.equal(keydown(ui.options[2], "ArrowRight"), true);
+  assert.equal(keydown(ui.options[1], "ArrowRight"), true);
   assert.equal(ui.document.activeElement, ui.options[0]);
-  assert.deepEqual(selectedValues(ui), ["system"]);
+  assert.deepEqual(selectedValues(ui), ["light"]);
 
   assert.equal(keydown(ui.options[0], "End"), true);
-  assert.equal(ui.document.activeElement, ui.options[2]);
+  assert.equal(ui.document.activeElement, ui.options[1]);
   assert.deepEqual(selectedValues(ui), ["dark"]);
 
-  assert.equal(keydown(ui.options[2], "Home"), true);
+  assert.equal(keydown(ui.options[1], "Home"), true);
   assert.equal(ui.document.activeElement, ui.options[0]);
-  assert.deepEqual(selectedValues(ui), ["system"]);
+  assert.deepEqual(selectedValues(ui), ["light"]);
 
   assert.equal(keydown(ui.options[0], "Enter"), false);
   assert.equal(ui.document.activeElement, ui.options[0]);
@@ -169,11 +223,8 @@ test("radio keys wrap, jump, focus, and keep ARIA and roving tabindex synchroniz
 test("a denied storage write keeps the current page selection usable", () => {
   const ui = loadTheme({ failOn: "setItem" });
 
-  assert.doesNotThrow(() => ui.options[2].listeners.click());
+  assert.doesNotThrow(() => ui.options[1].listeners.click());
   assert.equal(ui.documentElement.dataset.theme, "dark");
   assert.deepEqual(selectedValues(ui), ["dark"]);
-  assert.deepEqual(
-    ui.options.map((option) => option.tabIndex),
-    [-1, -1, 0],
-  );
+  assert.deepEqual(tabIndexes(ui), [-1, 0]);
 });

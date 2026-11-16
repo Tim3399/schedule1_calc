@@ -6,6 +6,13 @@
     <title>Best Mix Calculator</title>
     <link rel="stylesheet" href="{{ browser_asset_url('css/tokens.css') }}" />
     <link rel="stylesheet" href="{{ browser_asset_url('css/styles.css') }}" />
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="{{ browser_asset_url('fonts/barlow-latin-700-normal.woff2') }}"
+      crossorigin
+    />
     <script>
       (function () {
         try {
@@ -20,7 +27,9 @@
     </script>
   </head>
   <body>
-    {% macro combination_card(combination, proven) %}
+    {%- macro money(v) -%} {%- set rounded = (v | float) | round(2) -%} {%- if rounded < 0 %}-{%
+    endif %}${{ '{:,.2f}'.format(rounded | abs) }} {%- endmacro %} {% macro
+    combination_card(combination, proven) %}
     <article class="card result-card">
       <header class="result-card__head">
         <h2>{{ caller() }}</h2>
@@ -35,15 +44,15 @@
       <dl class="stats">
         <div class="stat stat--primary">
           <dt>Profit</dt>
-          <dd>{{ '%.2f' | format(combination.sell_price - combination.substance_cost) }}$</dd>
+          <dd>{{ money(combination.sell_price - combination.substance_cost) }}</dd>
         </div>
         <div class="stat">
           <dt>Sell Price</dt>
-          <dd>{{ '%.2f' | format(combination.sell_price) }}$</dd>
+          <dd>{{ money(combination.sell_price) }}</dd>
         </div>
         <div class="stat">
           <dt>Ingredient Cost</dt>
-          <dd>{{ '%.2f' | format(combination.substance_cost) }}$</dd>
+          <dd>{{ money(combination.substance_cost) }}</dd>
         </div>
         <div class="stat">
           <dt>Modifier</dt>
@@ -51,11 +60,14 @@
         </div>
       </dl>
       <div class="chips-row">
-        <span class="chips-label">Ingredients</span>
+        <span class="chips-label">Mix</span>
         {% if combination.substances %}
-        <ol class="chips chips--ordered">
+        <ol class="chips chips--ordered mix">
           {% for substance in combination.substances %}
-          <li>{{ substance | display_lookup_name }}</li>
+          <li class="mix__item">
+            <span class="mix__step">{{ loop.index }}</span>
+            <span class="mix__name">{{ substance | display_lookup_name }}</span>
+          </li>
           {% endfor %}
         </ol>
         {% else %}
@@ -63,7 +75,7 @@
         {% endif %}
       </div>
       <div class="chips-row">
-        <span class="chips-label">Effects</span>
+        <span class="chips-label">Effects · {{ combination.effects | length }}</span>
         {% if combination.effects %}
         <ul class="chips">
           {% for effect in combination.effects %} {% set color = effect | effect_color %}
@@ -101,10 +113,32 @@
     <a class="skip-link" href="#main">Skip to calculator</a>
     <div class="app-shell">
       <header class="app-header">
+        <div class="app-header__scene" aria-hidden="true">
+          <svg viewBox="0 0 1200 300" preserveAspectRatio="none">
+            <polygon
+              fill="var(--scene-far)"
+              points="0,190 110,130 240,170 370,100 480,160 610,110 730,175 860,120 990,165 1100,125 1200,160 1200,300 0,300"
+            />
+            <polygon
+              fill="var(--scene-mid)"
+              points="0,235 150,195 310,225 430,185 570,220 710,190 870,230 1010,195 1200,220 1200,300 0,300"
+            />
+            <rect fill="var(--scene-near)" x="0" y="155" width="1200" height="12" />
+            <g fill="var(--scene-near)">
+              <rect x="150" y="167" width="10" height="133" />
+              <rect x="430" y="167" width="10" height="133" />
+              <rect x="710" y="167" width="10" height="133" />
+              <rect x="990" y="167" width="10" height="133" />
+            </g>
+            <polygon
+              fill="var(--scene-near)"
+              points="0,300 0,255 90,255 90,220 160,220 160,245 270,245 270,205 340,205 340,250 530,250 530,230 610,230 610,260 770,260 770,215 860,215 860,245 1020,245 1020,225 1090,225 1090,255 1200,255 1200,300"
+            />
+          </svg>
+        </div>
         <div class="app-header__bar container">
           <div class="app-header__identity">
-            <span class="app-header__mark" aria-hidden="true">$</span>
-            <h1>Best Mix Calculator</h1>
+            <h1 class="wordmark">Best Mix <span class="wordmark__sub">for Schedule I</span></h1>
           </div>
           <div class="theme-switch" id="theme-switch" role="radiogroup" aria-label="Color theme">
             <button
@@ -112,19 +146,9 @@
               class="theme-switch__option"
               role="radio"
               aria-checked="true"
-              data-theme-value="system"
-            >
-              System
-            </button>
-            <button
-              type="button"
-              class="theme-switch__option"
-              role="radio"
-              aria-checked="false"
-              tabindex="-1"
               data-theme-value="light"
             >
-              Light
+              Dusk
             </button>
             <button
               type="button"
@@ -134,413 +158,425 @@
               tabindex="-1"
               data-theme-value="dark"
             >
-              Dark
+              Night
             </button>
           </div>
         </div>
       </header>
 
       <main class="app-main container" id="main">
-        <div class="calculator-tabs" role="tablist" aria-label="Calculator">
-          <button
-            type="button"
-            id="search-tab"
-            role="tab"
-            aria-controls="search-panel"
-            aria-selected="true"
-          >
-            Find Best Mix
-          </button>
-          <button
-            type="button"
-            id="recipe-tab"
-            role="tab"
-            aria-controls="recipe-panel"
-            aria-selected="false"
-            tabindex="-1"
-          >
-            Your Recipe
-          </button>
-          <button
-            type="button"
-            id="effect-tab"
-            role="tab"
-            aria-controls="effect-panel"
-            aria-selected="false"
-            tabindex="-1"
-          >
-            Match Effects
-          </button>
-        </div>
+        <div class="app-screen">
+          <div class="calculator-tabs" role="tablist" aria-label="Calculator">
+            <button
+              type="button"
+              id="search-tab"
+              role="tab"
+              aria-controls="search-panel"
+              aria-selected="true"
+            >
+              Find Best Mix
+            </button>
+            <button
+              type="button"
+              id="recipe-tab"
+              role="tab"
+              aria-controls="recipe-panel"
+              aria-selected="false"
+              tabindex="-1"
+            >
+              Your Recipe
+            </button>
+            <button
+              type="button"
+              id="effect-tab"
+              role="tab"
+              aria-controls="effect-panel"
+              aria-selected="false"
+              tabindex="-1"
+            >
+              Match Effects
+            </button>
+          </div>
 
-        <section id="search-panel" role="tabpanel" aria-labelledby="search-tab">
-          <div class="panel-grid panel-grid--search">
-            <div class="panel-column">
-              <form
-                id="best-mix-form"
-                class="card"
-                method="GET"
-                action="/"
-                data-search-data-url="{{ browser_catalog_url() }}"
-                data-worker-url="{{ browser_asset_url('js/search-worker.js') }}"
-              >
-                <h2 class="card__title">Set up your mix</h2>
-
-                <div class="field">
-                  <label for="product-name">Base product</label>
-                  <div class="select-control">
-                    <select id="product-name" name="product_name" required>
-                      <button type="button"><selectedcontent></selectedcontent></button>
-                      {% for product in products %}
-                      <option value="{{ product.name }}">
-                        {{ display_lookup_name(product.name) }}
-                      </option>
-                      {% endfor %}
-                    </select>
-                  </div>
-                </div>
-
-                <div class="field-grid">
+          <section id="search-panel" role="tabpanel" aria-labelledby="search-tab">
+            <div class="panel-grid panel-grid--search">
+              <div class="panel-column">
+                <form
+                  id="best-mix-form"
+                  class="card"
+                  method="GET"
+                  action="/"
+                  data-search-data-url="{{ browser_catalog_url() }}"
+                  data-worker-url="{{ browser_asset_url('js/search-worker.js') }}"
+                >
                   <div class="field">
-                    <label for="level">Your rank</label>
+                    <label for="product-name">Base product</label>
                     <div class="select-control">
-                      <select id="level" name="level" required>
+                      <select id="product-name" name="product_name" required>
                         <button type="button"><selectedcontent></selectedcontent></button>
-                        {% for level_name, level_id in level_name_to_int.items() %}
-                        <option value="{{ level_name }}">
-                          {{ display_lookup_name(level_name) }}
+                        {% for product in products %}
+                        <option value="{{ product.name }}">
+                          {{ display_lookup_name(product.name) }}
                         </option>
                         {% endfor %}
                       </select>
                     </div>
+                    <p id="product-name-error" class="field__error" hidden></p>
                   </div>
 
-                  <div class="field">
-                    <label for="combination-size">Max ingredients</label>
-                    <input
-                      type="number"
-                      id="combination-size"
-                      name="combination_size"
-                      min="1"
-                      value="3"
-                      step="1"
-                      required
-                    />
-                  </div>
-                </div>
-                <fieldset class="field search-mode-field" aria-describedby="search-mode-hint">
-                  <legend class="field-label">Search mode</legend>
-                  <div id="search-mode" class="mode-switch">
-                    <label class="mode-switch__option">
-                      {% if selected_search_mode | default('exact') == 'exact' %}
+                  <div class="field-grid">
+                    <div class="field">
+                      <label for="level">Your rank</label>
+                      <div class="select-control">
+                        <select id="level" name="level" required>
+                          <button type="button"><selectedcontent></selectedcontent></button>
+                          {% for level_name, level_id in level_name_to_int.items() %}
+                          <option value="{{ level_name }}">
+                            {{ display_lookup_name(level_name) }}
+                          </option>
+                          {% endfor %}
+                        </select>
+                      </div>
+                      <p id="level-error" class="field__error" hidden></p>
+                    </div>
+
+                    <div class="field">
+                      <label for="combination-size">Max ingredients</label>
                       <input
-                        type="radio"
-                        id="search-mode-exact"
-                        name="search_mode"
-                        value="exact"
-                        required
-                        checked
-                      />
-                      {% else %}
-                      <input
-                        type="radio"
-                        id="search-mode-exact"
-                        name="search_mode"
-                        value="exact"
+                        type="number"
+                        id="combination-size"
+                        name="combination_size"
+                        min="1"
+                        value="3"
+                        step="1"
                         required
                       />
-                      {% endif %}
-                      <span>Exact</span>
-                    </label>
-                    <label class="mode-switch__option">
-                      {% if selected_search_mode | default('exact') == 'fast' %}
-                      <input
-                        type="radio"
-                        id="search-mode-fast"
-                        name="search_mode"
-                        value="fast"
-                        required
-                        checked
-                      />
-                      {% else %}
-                      <input
-                        type="radio"
-                        id="search-mode-fast"
-                        name="search_mode"
-                        value="fast"
-                        required
-                      />
-                      {% endif %}
-                      <span>Fast</span>
-                    </label>
+                      <p id="combination-size-error" class="field__error" hidden></p>
+                    </div>
                   </div>
-                  <p class="field__hint" id="search-mode-hint">
-                    Exact proves the best mix when complete (up to 5 min). Fast gives a quick
-                    estimate. If stopped, the best result found is kept without a guarantee.
-                  </p>
-                </fieldset>
-
-                <div class="form-actions">
-                  <button type="submit" class="btn--primary" disabled>Get Best Mix</button>
-                  <button type="button" id="cancel-search" hidden>Cancel Search</button>
-                </div>
-              </form>
-
-              <noscript>
-                <p class="alert alert--error">
-                  This calculator needs JavaScript to run the search on your device.
-                </p>
-              </noscript>
-            </div>
-
-            <div class="panel-column">
-              <div id="result" class="result-stack" aria-live="polite">
-                {% if error %}
-                <div class="alert alert--error" role="alert">Error: {{ error }}</div>
-                {% elif search and search.status in ['optimal', 'approximate'] %} {% set proven =
-                search.status == 'optimal' %} {% set fast = search.mode == 'fast' %} {% if
-                best_profit %} {% call combination_card(best_profit, proven) %} {% if fast %}Highest
-                profit found{% else %}Best Profit Combination{% endif %} {% endcall %} {% endif %}
-                {% if best_modifier %}
-                <details class="result-comparison">
-                  <summary>Compare highest modifier</summary>
-                  {% call combination_card(best_modifier, proven) %} {% if fast %}Highest modifier
-                  found{% else %}Best Modifier Combination{% endif %} {% endcall %}
-                </details>
-                {% endif %} {% else %}
-                <div class="empty-state">
-                  <h2>No mix yet</h2>
-                  <p>Choose your settings, then select Get Best Mix.</p>
-                </div>
-                {% endif %}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="recipe-panel" role="tabpanel" aria-labelledby="recipe-tab" hidden>
-          <div class="panel-grid">
-            <div class="panel-column">
-              <form id="recipe-form" class="card" method="GET" action="/">
-                <div class="card__heading">
-                  <h2>Your ingredients</h2>
-                  <a class="jump-link" href="#recipe-result">View result ↓</a>
-                </div>
-                <div class="field">
-                  <label for="recipe-product">Base product</label>
-                  <div class="select-control">
-                    <select id="recipe-product" disabled>
-                      <button type="button"><selectedcontent></selectedcontent></button>
-                      {% for product in products %}
-                      <option value="{{ product.name }}">
-                        {{ display_lookup_name(product.name) }}
-                      </option>
-                      {% endfor %}
-                    </select>
-                  </div>
-                </div>
-                <div class="ingredient-library" aria-labelledby="ingredient-shelf-title">
-                  <div class="ingredient-library__heading">
-                    <h3 id="ingredient-shelf-title" tabindex="-1">Ingredients</h3>
-                    <a class="jump-link" href="#recipe-drop-area">View mixing order ↓</a>
-                  </div>
-                  <p id="ingredient-shelf-hint" class="field__hint">
-                    Click to add, drag to place. On touchscreens, hold briefly to drag.
-                  </p>
-                  <p
-                    id="recipe-announcement"
-                    class="recipe-announcement"
-                    role="status"
-                    aria-live="polite"
-                    aria-atomic="true"
-                  ></p>
-                  <div
-                    id="ingredient-shelf"
-                    class="ingredient-shelf"
-                    role="group"
-                    aria-label="Available ingredients"
-                    aria-describedby="ingredient-shelf-hint"
-                  ></div>
-                </div>
-                <div id="recipe-drop-area" class="recipe-drop-area" tabindex="-1">
-                  <div class="ingredient-library__heading">
-                    <h2>Mixing order <span id="recipe-count">(0 ingredients)</span></h2>
-                    <a class="jump-link" href="#ingredient-shelf-title">↑ Ingredients</a>
-                  </div>
-                  <p id="recipe-order-hint" class="field__hint">
-                    Drag a step to reorder. With a step focused, use Alt + ↑ or ↓.
-                  </p>
-                  <p id="recipe-empty" class="empty-state">
-                    No ingredients yet. Click an ingredient above or drag it here.
-                  </p>
-                  <ol
-                    id="recipe-steps"
-                    class="recipe-steps"
-                    aria-label="Ingredients in mixing order"
-                    aria-describedby="recipe-order-hint"
-                  ></ol>
-                </div>
-                <div class="form-actions">
-                  <button type="button" id="clear-recipe" disabled>Clear Recipe</button>
-                  <button type="button" id="restore-recipe" hidden>Undo clear</button>
-                  <a class="jump-link" href="#recipe-result">View result ↓</a>
-                </div>
-              </form>
-            </div>
-            <div class="panel-column panel-column--recipe-result">
-              <div
-                id="recipe-result"
-                class="result-stack"
-                role="status"
-                aria-live="polite"
-                aria-atomic="true"
-                tabindex="-1"
-              >
-                <p class="status-line">Select this tab to load the recipe calculator.</p>
-              </div>
-              <button type="button" id="retry-recipe" hidden>Retry Loading</button>
-              <a class="jump-link" href="#recipe-form">↑ Back to ingredients</a>
-            </div>
-          </div>
-        </section>
-        <section id="effect-panel" role="tabpanel" aria-labelledby="effect-tab" hidden>
-          <form id="effect-form" class="panel-grid panel-grid--effects" method="GET" action="/">
-            <div class="panel-column">
-              <div class="card">
-                <h2 class="card__title">Choose your effects</h2>
-                <fieldset class="field search-mode-field" aria-describedby="effect-match-hint">
-                  <legend class="field-label">Recipe match</legend>
-                  <div class="mode-switch">
-                    <label class="mode-switch__option">
-                      <input type="radio" name="effect_match_mode" value="exact" checked />
-                      <span>Only these</span>
-                    </label>
-                    <label class="mode-switch__option">
-                      <input type="radio" name="effect_match_mode" value="contains" />
-                      <span>Allow extras</span>
-                    </label>
-                  </div>
-                  <p class="field__hint" id="effect-match-hint">
-                    Only wanted effects. All other effects are excluded.
-                  </p>
-                </fieldset>
-                <fieldset class="effect-picker" aria-describedby="effect-match-hint">
-                  <legend class="visually-hidden">Effect preferences</legend>
-                  <div class="field">
-                    <label for="effect-filter">Filter effects</label>
-                    <input
-                      id="effect-filter"
-                      type="search"
-                      placeholder="Name or description"
-                      autocomplete="off"
-                    />
-                  </div>
-                  <div
-                    id="effect-options"
-                    class="effect-options"
-                    role="region"
-                    aria-label="Available effects"
-                    tabindex="0"
-                  ></div>
-                  <div class="effect-selection-toolbar">
-                    <p
-                      id="effect-selection-count"
-                      class="effect-selection-count"
-                      aria-live="polite"
-                    >
-                      0 wanted · 0 avoided
+                  <fieldset class="field search-mode-field" aria-describedby="search-mode-hint">
+                    <legend class="field-label">Search mode</legend>
+                    <div id="search-mode" class="mode-switch">
+                      <label class="mode-switch__option">
+                        {% if selected_search_mode | default('exact') == 'exact' %}
+                        <input
+                          type="radio"
+                          id="search-mode-exact"
+                          name="search_mode"
+                          value="exact"
+                          required
+                          checked
+                        />
+                        {% else %}
+                        <input
+                          type="radio"
+                          id="search-mode-exact"
+                          name="search_mode"
+                          value="exact"
+                          required
+                        />
+                        {% endif %}
+                        <span>Exact</span>
+                      </label>
+                      <label class="mode-switch__option">
+                        {% if selected_search_mode | default('exact') == 'fast' %}
+                        <input
+                          type="radio"
+                          id="search-mode-fast"
+                          name="search_mode"
+                          value="fast"
+                          required
+                          checked
+                        />
+                        {% else %}
+                        <input
+                          type="radio"
+                          id="search-mode-fast"
+                          name="search_mode"
+                          value="fast"
+                          required
+                        />
+                        {% endif %}
+                        <span>Fast</span>
+                      </label>
+                    </div>
+                    <p class="field__hint" id="search-mode-hint">
+                      Exact proves the best mix when complete (up to 5 min). Fast gives a quick
+                      estimate. If stopped, the best result found is kept without a guarantee.
                     </p>
-                    <button id="clear-effects" type="button">Clear all</button>
+                  </fieldset>
+
+                  <div class="form-actions">
+                    <button type="submit" class="btn--primary" disabled>Get Best Mix</button>
+                    <button type="button" id="cancel-search" hidden>Cancel Search</button>
                   </div>
-                  <div id="effect-selection-summary" class="effect-selection-summary"></div>
-                </fieldset>
+                </form>
+
+                <noscript>
+                  <p class="alert alert--error">
+                    This calculator needs JavaScript to run the search on your device.
+                  </p>
+                </noscript>
+              </div>
+
+              <div class="panel-column">
+                <div id="result" class="result-stack result-surface" aria-live="polite">
+                  {% if error %}
+                  <div class="alert alert--error" role="alert">Error: {{ error }}</div>
+                  {% elif search and search.status in ['optimal', 'approximate'] %} {% set proven =
+                  search.status == 'optimal' %} {% set fast = search.mode == 'fast' %} {% if
+                  best_profit %} {% call combination_card(best_profit, proven) %} {% if fast
+                  %}Highest profit found{% else %}Best Profit Combination{% endif %} {% endcall %}
+                  {% endif %} {% if best_modifier %}
+                  <details class="result-comparison">
+                    <summary>Compare highest modifier</summary>
+                    {% call combination_card(best_modifier, proven) %} {% if fast %}Highest modifier
+                    found{% else %}Best Modifier Combination{% endif %} {% endcall %}
+                  </details>
+                  {% endif %} {% else %}
+                  <div class="empty-state">
+                    <h2>No mix yet</h2>
+                    <p>Choose your settings, then select Get Best Mix.</p>
+                  </div>
+                  {% endif %}
+                </div>
               </div>
             </div>
-            <div class="panel-column">
-              <div class="card">
-                <h2 class="card__title">Recipe settings</h2>
-                <p class="field__hint effect-ranking-hint">Fewest steps, then lowest cost.</p>
-                <div class="field">
-                  <label for="effect-product">Base product</label>
-                  <div class="select-control">
-                    <select id="effect-product" required>
-                      <button type="button"><selectedcontent></selectedcontent></button>
-                      {% for product in products %}
-                      <option value="{{ product.name }}">
-                        {{ display_lookup_name(product.name) }}
-                      </option>
-                      {% endfor %}
-                    </select>
+          </section>
+
+          <section id="recipe-panel" role="tabpanel" aria-labelledby="recipe-tab" hidden>
+            <div class="panel-grid">
+              <div class="panel-column">
+                <form id="recipe-form" class="card" method="GET" action="/">
+                  <div class="card__heading">
+                    <h2>Your ingredients</h2>
+                    <a class="jump-link" href="#recipe-result">View result ↓</a>
                   </div>
-                </div>
-                <div class="field-grid">
                   <div class="field">
-                    <label for="effect-level">Your rank</label>
+                    <label for="recipe-product">Base product</label>
                     <div class="select-control">
-                      <select id="effect-level" required>
+                      <select id="recipe-product" disabled>
                         <button type="button"><selectedcontent></selectedcontent></button>
-                        {% for level_name in level_name_to_int.keys() %}
-                        <option value="{{ level_name }}">
-                          {{ display_lookup_name(level_name) }}
+                        {% for product in products %}
+                        <option value="{{ product.name }}">
+                          {{ display_lookup_name(product.name) }}
                         </option>
                         {% endfor %}
                       </select>
                     </div>
                   </div>
-                  <div class="field">
-                    <label for="effect-max-ingredients">Max ingredients</label>
-                    <input
-                      type="number"
-                      id="effect-max-ingredients"
-                      min="0"
-                      max="16"
-                      value="6"
-                      step="1"
-                      required
-                    />
+                  <div class="ingredient-library" aria-labelledby="ingredient-shelf-title">
+                    <div class="ingredient-library__heading">
+                      <h3 id="ingredient-shelf-title" tabindex="-1">Ingredients</h3>
+                      <a class="jump-link" href="#recipe-drop-area">View mixing order ↓</a>
+                    </div>
+                    <p id="ingredient-shelf-hint" class="field__hint">
+                      Click to add, drag to place. On touchscreens, hold briefly to drag.
+                    </p>
+                    <p
+                      id="recipe-announcement"
+                      class="recipe-announcement"
+                      role="status"
+                      aria-live="polite"
+                      aria-atomic="true"
+                    ></p>
+                    <div
+                      id="ingredient-shelf"
+                      class="ingredient-shelf"
+                      role="group"
+                      aria-label="Available ingredients"
+                      aria-describedby="ingredient-shelf-hint"
+                    ></div>
                   </div>
-                </div>
-                <fieldset class="field search-mode-field" aria-describedby="effect-mode-hint">
-                  <legend class="field-label">Search mode</legend>
-                  <div class="mode-switch">
-                    <label class="mode-switch__option">
-                      <input
-                        type="radio"
-                        name="effect_search_mode"
-                        value="exact"
-                        checked
-                        required
-                      />
-                      <span>Exact</span>
-                    </label>
-                    <label class="mode-switch__option">
-                      <input type="radio" name="effect_search_mode" value="fast" required />
-                      <span>Fast</span>
-                    </label>
+                  <div id="recipe-drop-area" class="recipe-drop-area" tabindex="-1">
+                    <div class="ingredient-library__heading">
+                      <h2>Mixing order <span id="recipe-count">(0 ingredients)</span></h2>
+                      <a class="jump-link" href="#ingredient-shelf-title">↑ Ingredients</a>
+                    </div>
+                    <p id="recipe-order-hint" class="field__hint">
+                      Drag a step to reorder. With a step focused, use Alt + ↑ or ↓.
+                    </p>
+                    <p id="recipe-empty" class="empty-state">
+                      No ingredients yet. Click an ingredient above or drag it here.
+                    </p>
+                    <ol
+                      id="recipe-steps"
+                      class="recipe-steps"
+                      aria-label="Ingredients in mixing order"
+                      aria-describedby="recipe-order-hint"
+                    ></ol>
                   </div>
-                  <p class="field__hint" id="effect-mode-hint">
-                    Exact proves the shortest recipe or no match when complete (up to 5 min). Fast
-                    searches quickly. If stopped, any matching recipe found is kept without a
-                    guarantee.
-                  </p>
-                </fieldset>
-                <div class="form-actions">
-                  <button id="find-effects" type="submit" class="btn--primary" disabled>
-                    Find Recipe
-                  </button>
-                  <button id="cancel-effects" type="button" hidden>Cancel Search</button>
-                </div>
-                <button id="retry-effects" type="button" hidden>Retry Loading</button>
+                  <div class="form-actions">
+                    <button type="button" id="clear-recipe" disabled>Clear Recipe</button>
+                    <button type="button" id="restore-recipe" hidden>Undo clear</button>
+                    <a class="jump-link" href="#recipe-result">View result ↓</a>
+                  </div>
+                </form>
               </div>
-              <div id="effect-result" class="result-stack" aria-live="polite" tabindex="-1">
-                <div class="empty-state">
-                  <h2>No recipe yet</h2>
-                  <p>Mark the effects you want or want to avoid, then select Find Recipe.</p>
+              <div class="panel-column panel-column--recipe-result">
+                <div
+                  id="recipe-result"
+                  class="result-stack result-surface"
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                  tabindex="-1"
+                >
+                  <p class="status-line">Select this tab to load the recipe calculator.</p>
                 </div>
+                <button type="button" id="retry-recipe" hidden>Retry Loading</button>
+                <a class="jump-link" href="#recipe-form">↑ Back to ingredients</a>
               </div>
             </div>
-          </form>
-        </section>
+          </section>
+          <section id="effect-panel" role="tabpanel" aria-labelledby="effect-tab" hidden>
+            <form id="effect-form" class="panel-grid panel-grid--effects" method="GET" action="/">
+              <div class="panel-column">
+                <div class="card">
+                  <h2 class="card__title">Choose your effects</h2>
+                  <fieldset class="field search-mode-field" aria-describedby="effect-match-hint">
+                    <legend class="field-label">Recipe match</legend>
+                    <div class="mode-switch">
+                      <label class="mode-switch__option mode-switch__option--strict">
+                        <input type="radio" name="effect_match_mode" value="exact" />
+                        <span>Only these</span>
+                      </label>
+                      <label class="mode-switch__option mode-switch__option--loose">
+                        <input type="radio" name="effect_match_mode" value="contains" checked />
+                        <span>Allow extras</span>
+                      </label>
+                    </div>
+                    <p class="field__hint" id="effect-match-hint">
+                      Wanted effects must be present; avoided effects must be absent. Other effects
+                      are allowed.
+                    </p>
+                  </fieldset>
+                  <fieldset class="effect-picker" aria-describedby="effect-match-hint">
+                    <legend class="visually-hidden">Effect preferences</legend>
+                    <div class="field">
+                      <label for="effect-filter">Filter effects</label>
+                      <input
+                        id="effect-filter"
+                        type="search"
+                        placeholder="Name or description"
+                        autocomplete="off"
+                      />
+                    </div>
+                    <div
+                      id="effect-options"
+                      class="effect-options"
+                      role="region"
+                      aria-label="Available effects"
+                      tabindex="0"
+                    ></div>
+                    <div class="effect-selection-toolbar">
+                      <p
+                        id="effect-selection-count"
+                        class="effect-selection-count"
+                        aria-live="polite"
+                      >
+                        0 wanted · 0 avoided
+                      </p>
+                      <button id="clear-effects" type="button">Clear all</button>
+                    </div>
+                    <div id="effect-selection-summary" class="effect-selection-summary"></div>
+                  </fieldset>
+                </div>
+              </div>
+              <div class="panel-column">
+                <div class="card">
+                  <h2 class="card__title">Recipe settings</h2>
+                  <p class="field__hint effect-ranking-hint">Fewest steps, then lowest cost.</p>
+                  <div class="field">
+                    <label for="effect-product">Base product</label>
+                    <div class="select-control">
+                      <select id="effect-product" required>
+                        <button type="button"><selectedcontent></selectedcontent></button>
+                        {% for product in products %}
+                        <option value="{{ product.name }}">
+                          {{ display_lookup_name(product.name) }}
+                        </option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                    <p id="effect-product-error" class="field__error" hidden></p>
+                  </div>
+                  <div class="field-grid">
+                    <div class="field">
+                      <label for="effect-level">Your rank</label>
+                      <div class="select-control">
+                        <select id="effect-level" required>
+                          <button type="button"><selectedcontent></selectedcontent></button>
+                          {% for level_name in level_name_to_int.keys() %}
+                          <option value="{{ level_name }}">
+                            {{ display_lookup_name(level_name) }}
+                          </option>
+                          {% endfor %}
+                        </select>
+                      </div>
+                      <p id="effect-level-error" class="field__error" hidden></p>
+                    </div>
+                    <div class="field">
+                      <label for="effect-max-ingredients">Max ingredients</label>
+                      <input
+                        type="number"
+                        id="effect-max-ingredients"
+                        min="0"
+                        max="16"
+                        value="6"
+                        step="1"
+                        required
+                      />
+                      <p id="effect-max-ingredients-error" class="field__error" hidden></p>
+                    </div>
+                  </div>
+                  <fieldset class="field search-mode-field" aria-describedby="effect-mode-hint">
+                    <legend class="field-label">Search mode</legend>
+                    <div class="mode-switch">
+                      <label class="mode-switch__option">
+                        <input
+                          type="radio"
+                          name="effect_search_mode"
+                          value="exact"
+                          checked
+                          required
+                        />
+                        <span>Exact</span>
+                      </label>
+                      <label class="mode-switch__option">
+                        <input type="radio" name="effect_search_mode" value="fast" required />
+                        <span>Fast</span>
+                      </label>
+                    </div>
+                    <p class="field__hint" id="effect-mode-hint">
+                      Exact proves the shortest recipe or no match when complete (up to 5 min). Fast
+                      searches quickly. If stopped, any matching recipe found is kept without a
+                      guarantee.
+                    </p>
+                  </fieldset>
+                  <div class="form-actions">
+                    <button id="find-effects" type="submit" class="btn--primary" disabled>
+                      Find Recipe
+                    </button>
+                    <button id="cancel-effects" type="button" hidden>Cancel Search</button>
+                  </div>
+                  <button id="retry-effects" type="button" hidden>Retry Loading</button>
+                </div>
+                <div
+                  id="effect-result"
+                  class="result-stack result-surface"
+                  aria-live="polite"
+                  tabindex="-1"
+                >
+                  <div class="empty-state">
+                    <h2>No recipe yet</h2>
+                    <p>Mark the effects you want or want to avoid, then select Find Recipe.</p>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </section>
+        </div>
       </main>
     </div>
 

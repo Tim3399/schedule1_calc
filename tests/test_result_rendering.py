@@ -2,6 +2,8 @@
 
 from pathlib import Path
 from html import unescape
+import posixpath
+import re
 import sys
 import unittest
 from unittest import mock
@@ -39,16 +41,17 @@ class ResultRenderingTests(unittest.TestCase):
             "<dt>Sell Price</dt>",
             "<dt>Ingredient Cost</dt>",
             "<dt>Modifier</dt>",
-            '<span class="chips-label">Ingredients</span>',
-            '<span class="chips-label">Effects</span>',
+            '<span class="chips-label">Mix</span>',
+            '<span class="chips-label">Effects · ',
         ]
         positions = [card.index(label) for label in labels]
         self.assertEqual(positions, sorted(positions))
         self.assertRegex(card, ingredients)
-        self.assertRegex(card, rf"<dt>Sell Price</dt>\s*<dd>{sell_price}\$</dd>")
-        self.assertRegex(card, rf"<dt>Ingredient Cost</dt>\s*<dd>{cost}\$</dd>")
-        self.assertRegex(card, rf"<dt>Profit</dt>\s*<dd>{profit}\$</dd>")
-        self.assertRegex(card, r"<dt>Modifier</dt>\s*<dd>")
+        self.assertRegex(card, rf"<dt>Sell Price</dt>\s*<dd>\${sell_price}</dd>")
+        self.assertRegex(card, rf"<dt>Ingredient Cost</dt>\s*<dd>\${cost}</dd>")
+        self.assertRegex(card, rf"<dt>Profit</dt>\s*<dd>\${profit}</dd>")
+        self.assertRegex(card, r"<dt>Modifier</dt>\s*<dd>\d+\.\d{2}</dd>")
+        self.assertRegex(card, r'<span class="chips-label">Effects · \d+</span>')
 
     def test_html_post_renders_distinct_modifier_and_profit_winners(self):
         response = self.post_mix(2, "green_crack", "hustler_iii")
@@ -66,20 +69,42 @@ class ResultRenderingTests(unittest.TestCase):
         modifier_result = html[modifier_heading : html.index("</details>", modifier_heading)]
         self.assert_card_layout(
             profit_result,
-            r"<li>Viagra</li>\s*<li>Mega Bean</li>",
+            r'<li class="mix__item">\s*<span class="mix__step">1</span>\s*<span class="mix__name">Viagra</span>\s*</li>\s*<li class="mix__item">\s*<span class="mix__step">2</span>\s*<span class="mix__name">Mega Bean</span>\s*</li>',
             r"83\.30",
             r"11\.00",
             r"72\.30",
         )
         self.assert_card_layout(
             modifier_result,
-            r"<li>Horse Semen</li>\s*<li>Mega Bean</li>",
+            r'<li class="mix__item">\s*<span class="mix__step">1</span>\s*<span class="mix__name">Horse Semen</span>\s*</li>\s*<li class="mix__item">\s*<span class="mix__step">2</span>\s*<span class="mix__name">Mega Bean</span>\s*</li>',
             r"85\.40",
             r"16\.00",
             r"69\.40",
         )
         self.assertEqual(profit_result.count("Optimality proven"), 1)
         self.assertEqual(modifier_result.count("Optimality proven"), 1)
+
+    def test_barlow_700_is_preloaded_with_the_url_the_stylesheet_resolves_to(self):
+        html = self.client.get("/").get_data(as_text=True)
+        links = re.findall(r"<link\s[^>]*rel=\"preload\"[^>]*>", html)
+        self.assertEqual(len(links), 1)
+        link = links[0]
+        self.assertRegex(link, r'as="font"')
+        self.assertRegex(link, r'type="font/woff2"')
+        self.assertRegex(link, r"\scrossorigin")
+        href = re.search(r'href="([^"]+)"', link).group(1)
+        css_href = re.search(r'<link rel="stylesheet" href="([^"]+/css/styles\.css)"', html).group(
+            1
+        )
+        resolved = posixpath.normpath(
+            posixpath.join(posixpath.dirname(css_href), "../fonts/barlow-latin-700-normal.woff2")
+        )
+        self.assertEqual(href, resolved)
+        self.assertEqual(self.client.get(href).status_code, 200)
+
+    def test_recipe_result_is_a_result_surface(self):
+        html = self.client.get("/").get_data(as_text=True)
+        self.assertRegex(html, r'id="recipe-result"\s+class="result-stack result-surface"')
 
     def test_html_post_keeps_both_headings_for_an_identical_winner(self):
         response = self.post_mix(1, "green_crack", "hustler_iii")
@@ -88,7 +113,7 @@ class ResultRenderingTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertEqual(html.count("Best Modifier Combination"), 1)
         self.assertEqual(html.count("Best Profit Combination"), 1)
-        self.assertEqual(html.count("<li>Mega Bean</li>"), 2)
+        self.assertEqual(html.count('<span class="mix__name">Mega Bean</span>'), 2)
 
     def test_get_renders_readable_product_and_level_names_with_stable_values(self):
         response = self.client.get("/")
@@ -166,10 +191,13 @@ class ResultRenderingTests(unittest.TestCase):
         self.assertRegex(html, r'<button[^>]+id="find-effects"[^>]+disabled')
         self.assertIn('id="effect-filter"', html)
         self.assertIn('id="effect-options"', html)
-        self.assertIn("Only wanted effects. All other effects are excluded.", html)
+        self.assertIn(
+            "Wanted effects must be present; avoided effects must be absent. Other effects are allowed.",
+            " ".join(html.split()),
+        )
         self.assertIn("Fewest steps, then lowest cost.", html)
-        self.assertRegex(html, r'name="effect_match_mode"[^>]*value="exact"[^>]*checked')
-        self.assertRegex(html, r'name="effect_match_mode"[^>]*value="contains"')
+        self.assertRegex(html, r'name="effect_match_mode"[^>]*value="contains"[^>]*checked')
+        self.assertRegex(html, r'name="effect_match_mode"[^>]*value="exact"(?![^>]*checked)')
         self.assertIn('id="effect-selection-summary"', html)
 
     def test_unknown_or_malformed_effect_color_has_a_neutral_fallback(self):
