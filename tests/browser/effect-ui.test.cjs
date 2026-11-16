@@ -966,3 +966,41 @@ test("effect results use the shared Mix, Effects and modifier labels and drop th
     "a finished result holds no progress",
   );
 });
+
+test("Recipe match opens with Allow extras checked in the markup", () => {
+  const html = fs.readFileSync(
+    path.resolve(__dirname, "../../webapp/templates/index.html"),
+    "utf8",
+  );
+  const inputs = html.match(/<input[^>]*name="effect_match_mode"[^>]*>/g);
+  assert.equal(inputs.length, 2);
+  const checked = inputs.filter((tag) => /\schecked(\s|\/|>)/.test(tag));
+  assert.equal(checked.length, 1);
+  assert.match(checked[0], /value="contains"/);
+});
+
+test("the Only these suggestion appears only for an Only these search without a result", async () => {
+  async function run({ matchMode, status }) {
+    const ui = loadUi();
+    await openEffects(ui);
+    setMatchMode(ui, matchMode);
+    choose(ui, "calming");
+    await ui.effectForm.listeners.submit(event());
+    const worker = ui.workers[0];
+    worker.emit({
+      request_id: worker.sent[0].request_id,
+      result: effectResult({
+        matchMode,
+        status,
+        targets: ["calming"],
+      }),
+      type: "result",
+    });
+    return textOf(ui.elements["effect-result"]);
+  }
+  const suggestion = /“Only these” may be the reason.*“Allow extras”/s;
+  assert.match(await run({ matchMode: "exact", status: "not_found" }), suggestion);
+  assert.doesNotMatch(await run({ matchMode: "contains", status: "not_found" }), suggestion);
+  const found = await run({ matchMode: "exact", status: "optimal" });
+  assert.doesNotMatch(found, suggestion);
+});
