@@ -774,12 +774,6 @@ document.addEventListener("DOMContentLoaded", function () {
           product_name: product.value,
           substances: recipe,
         });
-        if (recipe.length === 0) {
-          const empty = appendTextElement(output, "div", "", "empty-state");
-          appendTextElement(empty, "h2", "No recipe yet");
-          appendTextElement(empty, "p", "Add an ingredient to see its price and effects.");
-          return;
-        }
         renderCombination("Your Recipe Result", result, catalog, output, null, {
           baseProduct: product.value,
         });
