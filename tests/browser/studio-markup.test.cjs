@@ -38,7 +38,7 @@ test("the removed visible headings are gone, the document title stays", () => {
   assert.ok(template.includes("<title>Best Mix Calculator</title>"));
 });
 
-test("the theme switch offers System, Dusk and Night with unchanged values", () => {
+test("the theme switch offers exactly Dusk and Night, no System option", () => {
   const group = template.match(/<div[^>]*id="theme-switch"[\s\S]*?<\/div>/);
   assert.ok(group, "#theme-switch exists");
   assert.match(group[0], /role="radiogroup"/);
@@ -51,18 +51,18 @@ test("the theme switch offers System, Dusk and Night with unchanged values", () 
   assert.deepEqual(
     buttons.map(({ value, label }) => [value, label]),
     [
-      ["system", "System"],
       ["light", "Dusk"],
       ["dark", "Night"],
     ],
   );
+  assert.ok(!/system/i.test(group[0]), "no System option or value in the control");
   assert.deepEqual(
     buttons.map(({ checked }) => checked),
-    [true, false, false],
+    [true, false],
   );
   assert.deepEqual(
     buttons.map(({ roving }) => roving),
-    [false, true, true],
+    [false, true],
   );
 });
 

@@ -15,29 +15,36 @@
     return;
   }
 
+  const darkQuery =
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia("(prefers-color-scheme: dark)")
+      : null;
+
   function storedChoice() {
     try {
       const value = localStorage.getItem(STORAGE_KEY);
-      return value === "light" || value === "dark" ? value : "system";
+      return value === "light" || value === "dark" ? value : null;
     } catch (error) {
-      return "system";
+      return null;
     }
+  }
+
+  function systemChoice() {
+    return darkQuery && darkQuery.matches ? "dark" : "light";
   }
 
   function remember(choice) {
     try {
-      if (choice === "system") {
-        localStorage.removeItem(STORAGE_KEY);
-      } else {
-        localStorage.setItem(STORAGE_KEY, choice);
-      }
+      localStorage.setItem(STORAGE_KEY, choice);
     } catch (error) {
       /* A blocked storage must not break the switch for the current page. */
     }
   }
 
-  function apply(choice, { persist = true, focus = false } = {}) {
-    document.documentElement.dataset.theme = choice;
+  // Without a stored choice the attribute stays "system" so the CSS follows the operating
+  // system; the control then only marks the option that matches the current appearance.
+  function apply(choice, { persist = true, focus = false, follow = false } = {}) {
+    document.documentElement.dataset.theme = follow ? "system" : choice;
     if (persist) {
       remember(choice);
     }
@@ -48,6 +55,15 @@
       if (selected && focus) {
         option.focus();
       }
+    }
+  }
+
+  function applyInitial() {
+    const stored = storedChoice();
+    if (stored) {
+      apply(stored, { persist: false });
+    } else {
+      apply(systemChoice(), { persist: false, follow: true });
     }
   }
 
@@ -73,5 +89,12 @@
     });
   }
 
-  apply(storedChoice(), { persist: false });
+  applyInitial();
+  if (darkQuery && typeof darkQuery.addEventListener === "function") {
+    darkQuery.addEventListener("change", function () {
+      if (!storedChoice()) {
+        applyInitial();
+      }
+    });
+  }
 })();
