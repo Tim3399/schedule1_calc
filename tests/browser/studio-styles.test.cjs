@@ -4,7 +4,8 @@
 // the action colour has one user, Barlow is self-hosted and set only on the wordmark and the stat
 // figures, motion is off under reduced motion, the
 // Want/Neutral/Avoid width reservation matches the labels in script.js (F-5-6), background tokens
-// are not blue, and width media queries use only the 480/900 breakpoints.
+// are not blue, width media queries use only the 480/900 breakpoints, and no field hover rule
+// outranks the invalid border (F-4-6).
 //
 // STYLES_CSS_PATH, SCRIPT_JS_PATH and TOKENS_CSS_PATH replace the file paths; they exist only to
 // show that the checks fail on a mutated copy.
@@ -384,4 +385,69 @@ test('the mix "+" lives in its tile\'s own margin, so a wrapped line keeps it in
   assert.equal(decl(".mix .mix__item + .mix__item::before", "right"), "100%");
   const gap = decl(".mix", "gap").split(" ");
   assert.equal(gap[1], "0", "a column gap would add to the reserved margin");
+});
+
+// Selector specificity as [ids, classes/attributes/pseudo-classes, types]; :not/:is/:has take their
+// most specific argument, :where counts zero, pseudo-elements count as types.
+function specificity(selector) {
+  const total = [0, 0, 0];
+  const add = (value) => value.forEach((count, index) => (total[index] += count));
+  let rest = selector.replace(
+    /:(not|is|has|where)\(((?:[^()]|\([^()]*\))*)\)/g,
+    (match, name, args) => {
+      if (name !== "where") {
+        const best = splitTopLevel(args, ",")
+          .map(specificity)
+          .sort((a, b) => compareSpecificity(b, a))[0];
+        add(best);
+      }
+      return " ";
+    },
+  );
+  rest = rest.replace(/::[\w-]+/g, () => {
+    total[2] += 1;
+    return " ";
+  });
+  total[0] += (rest.match(/#[\w-]+/g) || []).length;
+  total[1] += (rest.match(/\.[\w-]+|\[[^\]]*\]|:[\w-]+/g) || []).length;
+  rest = rest.replace(/#[\w-]+|\.[\w-]+|\[[^\]]*\]|:[\w-]+/g, " ");
+  total[2] += (rest.match(/(^|[\s>+~])[a-zA-Z][\w-]*/g) || []).length;
+  return total;
+}
+
+function compareSpecificity(a, b) {
+  return a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
+}
+
+test("an invalid field keeps its error border while the pointer is over it (F-4-6)", () => {
+  const setsBorder = (rule) =>
+    rule.decls.some((decl) => /^border(-top)?(-color)?$/.test(decl.name));
+  const fieldTag = (rule) => subjectCompound(rule.selector).match(/^(select|input)\b/)?.[1];
+  const indexed = styles.rules.map((rule, index) => ({ ...rule, index }));
+  const hoverRules = indexed.filter(
+    (rule) => fieldTag(rule) && /:hover/.test(rule.selector) && setsBorder(rule),
+  );
+  assert.ok(hoverRules.length >= 3, "the field hover rules were not found");
+  const invalidRules = indexed.filter(
+    (rule) =>
+      fieldTag(rule) &&
+      /\[aria-invalid="true"\]/.test(
+        subjectCompound(rule.selector).replace(/:not\([^)]*\)/g, ""),
+      ) &&
+      rule.decls.some((decl) => decl.name === "border-color" && /--status-error/.test(decl.value)),
+  );
+  assert.ok(invalidRules.length >= 2, "the invalid field rules were not found");
+  for (const hover of hoverRules) {
+    if (/:not\([^)]*\[aria-invalid="true"\]/.test(subjectCompound(hover.selector))) continue;
+    const winner = invalidRules.find((invalid) => {
+      if (fieldTag(invalid) !== fieldTag(hover)) return false;
+      if (invalid.context.join("|") !== hover.context.join("|")) return false;
+      const order = compareSpecificity(specificity(invalid.selector), specificity(hover.selector));
+      return order > 0 || (order === 0 && invalid.index > hover.index);
+    });
+    assert.ok(
+      winner,
+      `${hover.selector} (specificity ${specificity(hover.selector)}) beats the invalid border; exclude [aria-invalid="true"] or raise the invalid rule`,
+    );
+  }
 });
