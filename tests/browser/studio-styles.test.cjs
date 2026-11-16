@@ -369,3 +369,19 @@ test("styles.css no longer uses the retired tokens --profit-* and --selected-bor
   assert.doesNotMatch(stylesSource, /var\(\s*--profit-/);
   assert.doesNotMatch(stylesSource, /var\(\s*--selected-border\b/);
 });
+
+test('the mix "+" lives in its tile\'s own margin, so a wrapped line keeps it inside the list (F-14-8)', () => {
+  const decl = (selector, name) => {
+    const rule = styles.rules.find(
+      (entry) => entry.selector === selector && entry.context.length === 1,
+    );
+    assert.ok(rule, `${selector} not found`);
+    return rule.decls.find((entry) => entry.name === name)?.value;
+  };
+  const plusWidth = decl(".mix .mix__item + .mix__item::before", "width");
+  assert.ok(plusWidth, 'the "+" has no width');
+  assert.equal(decl(".mix .mix__item + .mix__item", "margin-inline-start"), plusWidth);
+  assert.equal(decl(".mix .mix__item + .mix__item::before", "right"), "100%");
+  const gap = decl(".mix", "gap").split(" ");
+  assert.equal(gap[1], "0", "a column gap would add to the reserved margin");
+});
