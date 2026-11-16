@@ -264,16 +264,15 @@
 
   /* The track padding is the ring width plus its offset, so a focus ring of a segment lies on the
      switch surface and never on the scene (also with the 3 px ring of increased contrast).
-     A segment is as wide as the longest label ("System", about 2.9 em at 600) plus its padding.
-     The basis asks for one row of three; when the band is narrower (large text at 320 px), the
+     A segment is as wide as the longest label ("Night"/"Dusk", about 2.9 em at 600) plus its padding.
+     The basis asks for one row of two; when the band is narrower (large text at 320 px), the
      segments wrap into rows of equal-width cells instead of running out of the track (D-10). */
   .theme-switch {
     --theme-switch-segment: calc(3.25em + 2 * var(--space-3));
     --theme-switch-inset: calc(var(--focus-ring-width) + var(--focus-ring-offset));
 
     display: grid;
-    flex: 0 1
-      calc(3 * var(--theme-switch-segment) + 2 * var(--space-1) + 2 * var(--theme-switch-inset));
+    flex: 0 1 calc(2 * var(--theme-switch-segment) + var(--space-1) + 2 * var(--theme-switch-inset));
     padding: var(--theme-switch-inset);
     border-radius: var(--radius-card);
     background: var(--header-switch-surface);
