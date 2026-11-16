@@ -410,6 +410,45 @@ test("the mix, the shelf and the mixing order are even grids without separators 
   }
 });
 
+test("a mixing order row keeps its name column at large text on a narrow list (F-17-1)", () => {
+  const top = (selector) => {
+    const rule = styles.rules.find(
+      (entry) => entry.selector === selector && entry.context.length === 1,
+    );
+    assert.ok(rule, `${selector} not found`);
+    return rule.decls;
+  };
+  const value = (decls, name) => decls.find((entry) => entry.name === name)?.value;
+  // The list is the query container, so the rows themselves can change their grid.
+  assert.equal(value(top(".recipe-steps"), "container-type"), "inline-size");
+  // The query is in em: it follows the text size, not only the viewport width.
+  const narrow = styles.rules.filter((entry) =>
+    entry.context.some((prelude) => /^@container \(width < \d+(?:\.\d+)?em\)$/.test(prelude)),
+  );
+  const inQuery = (selector) => {
+    const rule = narrow.find((entry) => entry.selector === selector);
+    assert.ok(rule, `${selector} has no rule in the em container query`);
+    return rule.decls;
+  };
+  // Number, name and price stop sharing one line: the body dissolves into the row grid, the name
+  // spans both row lines in the middle column, Delete and price stack in the last column.
+  assert.equal(value(inQuery(".recipe-step"), "grid-template-columns"), "auto minmax(0, 1fr) auto");
+  assert.equal(value(inQuery(".recipe-step__body"), "display"), "contents");
+  assert.equal(value(inQuery(".recipe-step__name"), "grid-column"), "2");
+  assert.equal(value(inQuery(".recipe-step__name"), "grid-row"), "1 / span 2");
+  assert.equal(value(inQuery(".recipe-step__remove"), "grid-column"), "3");
+  assert.equal(value(inQuery(".recipe-step__remove"), "grid-row"), "1");
+  assert.equal(value(inQuery(".recipe-step__price"), "grid-column"), "3");
+  assert.equal(value(inQuery(".recipe-step__price"), "grid-row"), "2");
+  // The query must not resize its own container: no padding, border or width on the list inside it.
+  for (const entry of narrow.filter((rule) => rule.selector === ".recipe-steps")) {
+    assert.ok(
+      !entry.decls.some((decl) => /^(padding|border|width|margin)/.test(decl.name)),
+      "the list changes its own size inside its container query",
+    );
+  }
+});
+
 // Selector specificity as [ids, classes/attributes/pseudo-classes, types]; :not/:is/:has take their
 // most specific argument, :where counts zero, pseudo-elements count as types.
 function specificity(selector) {
