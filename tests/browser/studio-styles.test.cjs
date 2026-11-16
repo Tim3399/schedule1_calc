@@ -371,20 +371,43 @@ test("styles.css no longer uses the retired tokens --profit-* and --selected-bor
   assert.doesNotMatch(stylesSource, /var\(\s*--selected-border\b/);
 });
 
-test('the mix "+" lives in its tile\'s own margin, so a wrapped line keeps it inside the list (F-14-8)', () => {
-  const decl = (selector, name) => {
-    const rule = styles.rules.find(
+test("the mix, the shelf and the mixing order are even grids without separators (T-17)", () => {
+  const rule = (selector) => {
+    const found = styles.rules.find(
       (entry) => entry.selector === selector && entry.context.length === 1,
     );
-    assert.ok(rule, `${selector} not found`);
-    return rule.decls.find((entry) => entry.name === name)?.value;
+    assert.ok(found, `${selector} not found`);
+    return found;
   };
-  const plusWidth = decl(".mix .mix__item + .mix__item::before", "width");
-  assert.ok(plusWidth, 'the "+" has no width');
-  assert.equal(decl(".mix .mix__item + .mix__item", "margin-inline-start"), plusWidth);
-  assert.equal(decl(".mix .mix__item + .mix__item::before", "right"), "100%");
-  const gap = decl(".mix", "gap").split(" ");
-  assert.equal(gap[1], "0", "a column gap would add to the reserved margin");
+  const decl = (selector, name) => rule(selector).decls.find((entry) => entry.name === name)?.value;
+  // Equal columns: every track is the same 1fr share of one minimum, capped at the list width.
+  const columns = "repeat(auto-fill, minmax(min(100%, 124px), 1fr))";
+  for (const selector of [".mix", ".ingredient-shelf"]) {
+    assert.equal(decl(selector, "display"), "grid", `${selector} is not a grid`);
+    assert.equal(decl(selector, "grid-template-columns"), columns, selector);
+  }
+  assert.equal(decl(".mix .mix__item", "min-width"), "0", "a long name would widen its column");
+  // No "+" between tiles: the tile pseudo-element draws nothing and no sibling rule adds one.
+  assert.equal(decl(".mix .mix__item::before", "content"), "none");
+  assert.ok(
+    !styles.rules.some((entry) => /\.mix__item\s*\+/.test(entry.selector)),
+    "a sibling rule between mix tiles is back",
+  );
+  // Tiles share surface, radius and type roles; only primary buttons use the action colour.
+  for (const selector of [".mix .mix__item", ".recipe-ingredient-tile", ".recipe-step"]) {
+    assert.equal(decl(selector, "background"), "var(--surface-raised)", selector);
+    const body = rule(selector)
+      .decls.map((entry) => entry.value)
+      .join(";");
+    assert.doesNotMatch(body, /--action-primary/, selector);
+  }
+  assert.equal(decl(".mix .mix__item", "border-radius"), "var(--radius-control)");
+  for (const selector of [".mix__name", ".recipe-ingredient-tile__name", ".recipe-step__name"]) {
+    assert.equal(decl(selector, "font-weight"), "var(--weight-bold)", selector);
+  }
+  for (const selector of [".mix__step", ".recipe-step__number"]) {
+    assert.equal(decl(selector, "font-size"), "var(--type-caption-size)", selector);
+  }
 });
 
 // Selector specificity as [ids, classes/attributes/pseudo-classes, types]; :not/:is/:has take their
