@@ -263,15 +263,23 @@
   /* Theme switch ------------------------------------------------------- */
 
   /* The track padding is the ring width plus its offset, so a focus ring of a segment lies on the
-     switch surface and never on the scene (also with the 3 px ring of increased contrast). */
+     switch surface and never on the scene (also with the 3 px ring of increased contrast).
+     A segment is as wide as the longest label ("System", about 2.9 em at 600) plus its padding.
+     The basis asks for one row of three; when the band is narrower (large text at 320 px), the
+     segments wrap into rows of equal-width cells instead of running out of the track (D-10). */
   .theme-switch {
+    --theme-switch-segment: calc(3.25em + 2 * var(--space-3));
+    --theme-switch-inset: calc(var(--focus-ring-width) + var(--focus-ring-offset));
+
     display: grid;
-    padding: calc(var(--focus-ring-width) + var(--focus-ring-offset));
+    flex: 0 1
+      calc(3 * var(--theme-switch-segment) + 2 * var(--space-1) + 2 * var(--theme-switch-inset));
+    padding: var(--theme-switch-inset);
     border-radius: var(--radius-card);
     background: var(--header-switch-surface);
+    font-size: var(--type-subhead-size);
     gap: var(--space-1);
-    grid-auto-columns: 1fr;
-    grid-auto-flow: column;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--theme-switch-segment)), 1fr));
   }
 
   .theme-switch__option {
@@ -292,13 +300,13 @@
 
   .theme-switch .theme-switch__option:hover:not(:disabled, [aria-checked="true"]) {
     border-color: transparent;
-    background: color-mix(in srgb, var(--header-switch-selected) 14%, transparent);
+    background: color-mix(in srgb, var(--header-switch-selected) 6%, transparent);
     color: var(--header-switch-ink);
   }
 
   /* Pressed (not selected): a stronger tint of the selected surface, never the selected look. */
   .theme-switch .theme-switch__option:active:not(:disabled, [aria-checked="true"]) {
-    background: color-mix(in srgb, var(--header-switch-selected) 24%, transparent);
+    background: color-mix(in srgb, var(--header-switch-selected) 10%, transparent);
     color: var(--header-switch-ink);
   }
 
@@ -501,6 +509,13 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* Placeholders use text tertiary (DESIGN.md section 8, "text tertiary / field"), not the browser default grey; opacity 1 because Firefox dims it. */
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--text-tertiary);
+    opacity: 1;
+  }
+
   .select-control {
     position: relative;
     min-width: 0;
@@ -693,9 +708,10 @@
     color: var(--text-tertiary);
   }
 
-  select:hover:not(:disabled),
-  input[type="number"]:hover:not(:disabled),
-  input[type="search"]:hover:not(:disabled) {
+  /* An invalid field keeps its error border under the pointer (F-4-6). */
+  select:hover:not(:disabled, [aria-invalid="true"]),
+  input[type="number"]:hover:not(:disabled, [aria-invalid="true"]),
+  input[type="search"]:hover:not(:disabled, [aria-invalid="true"]) {
     border-color: var(--border-control-hover);
   }
 
