@@ -385,8 +385,7 @@ test("renders the catalog shelf and repeated clicks append readable duplicate st
   assert.equal(ui.activeElement(), cuke, "repeated shelf clicks retain focus");
   assert.deepEqual(ui.evaluations.at(-1).substances, ["cuke", "cuke"]);
   const firstRowText = textOf(ui.elements["recipe-steps"].children[0]);
-  assert.match(firstRowText, /Cuke/);
-  assert.doesNotMatch(firstRowText, /\$2\.00/);
+  assert.match(firstRowText, /1\nCuke\n\$2\.00/, "a step tile shows number, name and price");
   assert.match(ui.elements["recipe-announcement"].textContent, /Added Cuke as step 2/);
 });
 
@@ -452,7 +451,11 @@ test("rows expose only Delete and support focused Alt+Arrow keyboard reordering"
   let rows = ui.elements["recipe-steps"].children;
   assert.equal(rows[0].children.length, 2);
   assert.equal(rows[0].children[1].className, "recipe-step__remove");
-  assert.equal(rows[0].attributes["aria-label"], "Step 1: Motor Oil");
+  assert.deepEqual(
+    rows[0].children[0].children.map((child) => `${child.className}=${child.textContent}`),
+    ["recipe-step__number=1", "recipe-step__name=Motor Oil", "recipe-step__price=$1.00"],
+  );
+  assert.equal(rows[0].attributes["aria-label"], "Step 1: Motor Oil, $1.00");
   assert.equal(rows[0].attributes["aria-describedby"], "recipe-order-hint");
   rows[0].listeners.keydown(event({ altKey: true, key: "ArrowDown" }));
   assert.deepEqual(ui.evaluations.at(-1).substances, ["cuke", "motor_oil", "ingredient_3"]);
