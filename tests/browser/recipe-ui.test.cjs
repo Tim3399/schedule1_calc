@@ -398,10 +398,6 @@ test("manual recipe results use catalog effect colors including the unmixed base
   const descendants = (node) => [node, ...node.children.flatMap(descendants)];
   for (const withIngredient of [false, true]) {
     if (withIngredient) addIngredient(ui, "cuke");
-    if (!withIngredient) {
-      assert.equal(ui.elements["recipe-result"].children[0].className, "empty-state");
-      continue;
-    }
     const chips = descendants(ui.elements["recipe-result"]).filter(
       (node) => node.className === "effect-chip",
     );
@@ -769,7 +765,7 @@ test("switching to manual cancels search and ignores a stale winner", async () =
   });
   assert.doesNotMatch(textOf(ui.elements.result), /Best Modifier Combination/);
   assert.match(textOf(ui.elements.result), /Search cancelled when switching tabs/);
-  assert.match(textOf(ui.elements["recipe-result"]), /No recipe yet/);
+  assert.match(textOf(ui.elements["recipe-result"]), /Your Recipe Result/);
 });
 
 test("load failure exposes Retry and evaluation failure removes the stale result", async () => {
@@ -806,7 +802,7 @@ test("load failure exposes Retry and evaluation failure removes the stale result
     ui.fetchCalls.every(({ options }) => options.method === "GET"),
     true,
   );
-  assert.match(textOf(ui.elements["recipe-result"]), /No recipe yet/);
+  assert.match(textOf(ui.elements["recipe-result"]), /Your Recipe Result/);
 
   rejectEvaluation = true;
   ui.elements["recipe-product"].value = "sour_diesel";
@@ -912,26 +908,23 @@ test("recipe results show the base tile with step prices and never animate", asy
   assert.equal(frames.length, 0, "no animation frame is requested while editing a recipe");
 });
 
-test("an empty recipe shows the empty state instead of a result card", async () => {
+test("an empty recipe shows the base-only result card, not an empty state", async () => {
   const ui = loadUi();
   await openRecipe(ui);
+  const descendants = (node) => [node, ...node.children.flatMap(descendants)];
   for (const step of ["open", "clear"]) {
     if (step === "clear") {
       addIngredient(ui, "cuke");
       ui.elements["clear-recipe"].listeners.click();
     }
     const output = ui.elements["recipe-result"];
-    assert.equal(output.children.length, 1, step);
-    const [empty] = output.children;
-    assert.equal(empty.tagName, "div");
-    assert.equal(empty.className, "empty-state");
-    assert.deepEqual(
-      empty.children.map((node) => [node.tagName, node.textContent]),
-      [
-        ["h2", "No recipe yet"],
-        ["p", "Add an ingredient to see its price and effects."],
-      ],
+    const text = textOf(output);
+    assert.match(text, /Your Recipe Result/, step);
+    assert.match(text, /Mix\nNone/, step);
+    assert.equal(
+      descendants(output).filter((node) => node.className === "empty-state").length,
+      0,
+      step,
     );
-    assert.doesNotMatch(textOf(output), /Your Recipe Result|Base|Mix/);
   }
 });
