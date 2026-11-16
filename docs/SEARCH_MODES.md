@@ -39,10 +39,9 @@ aber keinen Web Worker; die Optimierungen benötigen weiterhin einen Worker.
 ## Gewünschte und ausgeschlossene Effekte
 
 **Match Effects** bietet zwei voneinander getrennte Entscheidungen: `match_mode` bestimmt die
-zulässigen Endeffekte, `search_mode` weiterhin die Genauigkeit der Suche. **Only these**
-(`match_mode: "exact"`, Standard) verlangt genau die gewünschten Effekte. **Allow extras**
-(`match_mode: "contains"`) verlangt alle gewünschten Effekte und verbietet alle ausgeschlossenen;
-weitere neutrale Effekte dürfen vorkommen. Die Reihenfolge der Zielauswahl ist bedeutungslos.
+zulässigen Endeffekte, `search_mode` weiterhin die Genauigkeit der Suche. **Allow extras**
+(`match_mode: "contains"`) ist in der Oberfläche vorausgewählt und verlangt alle gewünschten Effekte und verbietet alle ausgeschlossenen;
+weitere neutrale Effekte dürfen vorkommen. **Only these** (`match_mode: "exact"`) verlangt genau die gewünschten Effekte; es ist nicht die Voreinstellung der Oberfläche, sondern der Wert von `searchEffects`, wenn die Anfrage kein `match_mode` enthält. Die Reihenfolge der Zielauswahl ist bedeutungslos.
 Zwischenzustände und Mischschritte behalten jedoch ihre vollständige Reihenfolge. Vorübergehend
 sind auch ausgeschlossene Effekte erlaubt, weil spätere Zutaten sie entfernen oder umwandeln können.
 
@@ -57,7 +56,7 @@ Lookup-Reihenfolge. Die Garantie bezieht sich auf diese Einstellungen und das vo
 `Schedule1Search.searchEffects(catalog, request, options)` verwendet dieselben Übergangs- und
 Preisfunktionen wie die anderen Browser-Rechner. `request` enthält `product_name`, `level`,
 `combination_size` (0 bis 16), `search_mode` und `target_effects` als Array technischer IDs.
-Optional sind `match_mode` (Standard `exact`) und `excluded_effects` (Standard leeres Array).
+Optional sind `match_mode` (ohne Angabe `exact`; die Oberfläche sendet standardmäßig `contains`) und `excluded_effects` (Standard leeres Array).
 Unbekannte Modi, unbekannte/doppelte Effekte und überlappende Wunsch-/Ausschlusslisten werden
 abgelehnt. Die Worker-Nachricht trägt `type: "search_effects"`.
 
