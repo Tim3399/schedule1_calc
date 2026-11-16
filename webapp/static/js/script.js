@@ -277,7 +277,7 @@ document.addEventListener("DOMContentLoaded", function () {
   function appendMixRow(card, combination, catalog, baseProduct) {
     const row = document.createElement("div");
     row.className = "chips-row";
-    appendTextElement(row, "span", "Ingredients", "chips-label");
+    appendTextElement(row, "span", "Mix", "chips-label");
     if (combination.substances.length === 0) {
       appendTextElement(row, "span", "None", "chips__empty");
       card.appendChild(row);
@@ -356,12 +356,12 @@ document.addEventListener("DOMContentLoaded", function () {
     const profitValue = appendStat(stats, "Profit", formatMoney(profit), true);
     appendStat(stats, "Sell Price", formatMoney(combination.sell_price));
     appendStat(stats, "Ingredient Cost", formatMoney(combination.substance_cost));
-    appendStat(stats, "Modifier", combination.modifier.toFixed(2));
+    appendStat(stats, "Modifier", `×${combination.modifier.toFixed(2)}`);
     card.appendChild(stats);
     appendMixRow(card, combination, catalog, baseProduct);
     appendChipRow(
       card,
-      "Effects",
+      `Effects · ${combination.effects.length}`,
       combination.effects.map((name) => displayName(catalog, "effects", name)),
       false,
       combination.effects.map((name) => catalogItem(catalog, "effects", name)?.color),
@@ -481,7 +481,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const incomplete = result.search.status === "incomplete";
     const exact = requestedMode === "exact" && !incomplete;
     const status = incomplete
-      ? { tone: "approximate", label: "Search stopped — optimality not proven" }
+      ? { tone: "stopped", label: "Search stopped — optimality not proven" }
       : exact
         ? { tone: "proven", label: "Optimality proven" }
         : { tone: "approximate", label: "Approximate result — optimality not guaranteed" };
@@ -774,6 +774,12 @@ document.addEventListener("DOMContentLoaded", function () {
           product_name: product.value,
           substances: recipe,
         });
+        if (recipe.length === 0) {
+          const empty = appendTextElement(output, "div", "", "empty-state");
+          appendTextElement(empty, "h2", "No recipe yet");
+          appendTextElement(empty, "p", "Add an ingredient to see its price and effects.");
+          return;
+        }
         renderCombination("Your Recipe Result", result, catalog, output, null, {
           baseProduct: product.value,
         });
@@ -1631,7 +1637,7 @@ document.addEventListener("DOMContentLoaded", function () {
         catalog,
         output,
         incomplete
-          ? { label: "Search stopped — optimality not proven", tone: "approximate" }
+          ? { label: "Search stopped — optimality not proven", tone: "stopped" }
           : run.mode === "exact"
             ? { label: "Optimality proven", tone: "proven" }
             : { label: "Approximate search — optimality not guaranteed", tone: "approximate" },
