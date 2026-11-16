@@ -216,7 +216,7 @@ test("source order lets an explicit choice win over the system media block", () 
   );
 });
 
-test("head script and theme.js keep storage key schedule1-theme and values system, light, dark", () => {
+test("head script and theme.js keep storage key schedule1-theme, values light and dark, and a two-option control", () => {
   const headScript = /<head>[\s\S]*?<script>([\s\S]*?)<\/script>[\s\S]*?<\/head>/.exec(indexSource);
   assert.ok(headScript, "index.html has no inline script in <head>");
   assert.match(
@@ -232,7 +232,13 @@ test("head script and theme.js keep storage key schedule1-theme and values syste
     'index.html <html> lost data-theme="system"',
   );
   assert.match(themeSource, /STORAGE_KEY = "schedule1-theme"/, "theme.js storage key changed");
-  for (const value of ["system", "light", "dark"]) {
+  assert.match(themeSource, /prefers-color-scheme: dark/, "theme.js no longer follows the system");
+  assert.doesNotMatch(
+    indexSource,
+    /data-theme-value="system"/,
+    "index.html theme switch offers a System option again",
+  );
+  for (const value of ["light", "dark"]) {
     assert.match(
       themeSource,
       new RegExp(`"${value}"`),
