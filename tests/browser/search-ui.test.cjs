@@ -435,8 +435,8 @@ test("profit leads and the modifier result stays in a labelled native comparison
   assert.equal(textOf(comparison).match(/Optimality proven/g)?.length, 1);
 
   for (const [card, modifier] of [
-    [profitCard, "×0.42"],
-    [comparison.children[1], "×0.91"],
+    [profitCard, "0.42"],
+    [comparison.children[1], "0.91"],
   ]) {
     const labels = descendants(card)
       .filter((node) => node.tagName === "dt" || node.className === "chips-label")
@@ -765,6 +765,6 @@ test("money is formatted game-style for profit, sell price, and ingredient cost"
       .filter((node) => node.tagName === "dd")
       .map((node) => node.textContent);
     assert.deepEqual(values.slice(0, 3), [profit, sellText, costText]);
-    assert.equal(values[3], "×0.22", "modifier is a multiplier with two decimals");
+    assert.equal(values[3], "0.22", "modifier is an additive value with two decimals, no ×");
   }
 });

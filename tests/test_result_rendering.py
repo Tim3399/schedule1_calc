@@ -50,7 +50,7 @@ class ResultRenderingTests(unittest.TestCase):
         self.assertRegex(card, rf"<dt>Sell Price</dt>\s*<dd>\${sell_price}</dd>")
         self.assertRegex(card, rf"<dt>Ingredient Cost</dt>\s*<dd>\${cost}</dd>")
         self.assertRegex(card, rf"<dt>Profit</dt>\s*<dd>\${profit}</dd>")
-        self.assertRegex(card, r"<dt>Modifier</dt>\s*<dd>×\d+\.\d{2}</dd>")
+        self.assertRegex(card, r"<dt>Modifier</dt>\s*<dd>\d+\.\d{2}</dd>")
         self.assertRegex(card, r'<span class="chips-label">Effects · \d+</span>')
 
     def test_html_post_renders_distinct_modifier_and_profit_winners(self):

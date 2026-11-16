@@ -356,7 +356,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const profitValue = appendStat(stats, "Profit", formatMoney(profit), true);
     appendStat(stats, "Sell Price", formatMoney(combination.sell_price));
     appendStat(stats, "Ingredient Cost", formatMoney(combination.substance_cost));
-    appendStat(stats, "Modifier", `×${combination.modifier.toFixed(2)}`);
+    appendStat(stats, "Modifier", combination.modifier.toFixed(2));
     card.appendChild(stats);
     appendMixRow(card, combination, catalog, baseProduct);
     appendChipRow(
