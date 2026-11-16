@@ -318,7 +318,7 @@ Reasons: the rule is written for native apps that inherit the system setting; a 
 
 ## 8. Contrast
 
-**Method.** WCAG 2.x relative luminance and contrast ratio (`(L1 + 0.05) / (L2 + 0.05)`, sRGB linearisation with threshold 0.04045). Alpha colours are composited on the named background first; "mix(c n %, bg)" is colour c at n % opacity over bg. Scene layers are composited at their 70 % drawing opacity over the sky bottom, the worst case of the band. Ratios are truncated to two decimals, so no printed value overstates. **Computed on the real `tokens.css`** (branch `task/T-14-studio-look`, tokens @ f350ca6) on 2026-11-15 with `node schedule1calc-kb/dev/D-14-1/contrast-gate.mjs webapp/static/css/tokens.css` (the S0 gate of the T-14 plan, extended by the pairs it did not cover; no target lowered). Output: `schedule1calc-kb/dev/D-14-1/contrast.txt`. Targets: text ≥ 4.5:1 for all sizes and weights, non-text ≥ 3:1. [HIG Accessibility], [HIG Dark Mode], [WCAG 1.4.3], [WCAG 1.4.11], [QT README.md:67] (structure: test on the real roles), [Plan §4].
+**Method.** WCAG 2.x relative luminance and contrast ratio (`(L1 + 0.05) / (L2 + 0.05)`, sRGB linearisation with threshold 0.04045). Alpha colours are composited on the named background first, in floating point without rounding to 8 bit; "mix(c n %, bg)" is colour c at n % opacity over bg. Scene layers are composited at their 70 % drawing opacity over the sky bottom, the worst case of the band. Ratios are truncated to two decimals, so no printed value overstates. **Checked on the real CSS** by `tests/browser/contrast.test.cjs` (`node --test tests/browser/contrast.test.cjs`): the test reads `tokens.css` and, where a component composes a colour (`color-mix` of the selection chips and of `Delete` pressed, the opacity of the scene drawing), `styles.css`; it parses both tables below, checks every value in Dusk and Night against its target and fails when a printed value differs from the computed value truncated to two decimals or when a row names a colour it does not map. No target lowered. Targets: text ≥ 4.5:1 for all sizes and weights, non-text ≥ 3:1. [HIG Accessibility], [HIG Dark Mode], [WCAG 1.4.3], [WCAG 1.4.11], [QT README.md:67] (structure: test on the real roles), [Plan §4].
 
 **Text pairs (target 4.5:1)**
 
@@ -391,6 +391,7 @@ Reasons: the rule is written for native apps that inherit the system setting; a 
 | control border / field                                    | field and segment track boundary         | 4.19                   | 5.08                   |
 | control border / panel                                    | controls in cards                        | 3.54                   | 4.29                   |
 | control border / sunken                                   | controls on sunken, scrollbar thumb      | 3.06                   | 3.56                   |
+| control border / raised                                   | secondary buttons, ingredient tiles      | 3.94                   | 4.73                   |
 | control border / screen                                   | controls on the screen                   | 3.94                   | 4.73                   |
 | control border / canvas                                   | controls outside the screen              | 3.29                   | 5.24                   |
 | control border hover / panel, / field, / screen, / sunken | hover, increased contrast                | 5.50, 6.50, 6.12, 4.75 | 6.15, 7.28, 6.79, 5.10 |
@@ -429,7 +430,7 @@ The banknote boundary passes by either edge: in Dusk the dark border carries it 
 | scene band (sky and polygons)      | –           | –           | An `aria-hidden` drawing; only the switch on it carries text, covered above.                                  |
 | money guilloche on money surface   | –           | –           | A texture; the text pair over it is listed above.                                                             |
 
-Result: **204 pairs** (both themes, as listed in `contrast.txt`), **0 below target**; 12 decorative values printed for the record. Surface-on-surface steps (canvas, screen, panel, raised, sunken) carry no information on their own: every component boundary that identifies a control is the control border, the selected surface or the primary fill, all listed above. [WCAG 1.4.11].
+Result: **196 pairs** (both themes, as checked by `tests/browser/contrast.test.cjs`), **0 below target**; 12 decorative values printed for the record. Surface-on-surface steps (canvas, screen, panel, raised, sunken) carry no information on their own: every component boundary that identifies a control is the control border, the selected surface or the primary fill, all listed above. [WCAG 1.4.11].
 
 ## 9. Token plan
 
