@@ -1615,6 +1615,14 @@ document.addEventListener("DOMContentLoaded", function () {
               ? "No recipe has only the wanted effects within the selected base, rank, and ingredient limit. This is proven for these settings."
               : "The fast search found no recipe with only the wanted effects. This does not prove that no match exists.",
         );
+        if (run.matchMode === "exact") {
+          appendTextElement(
+            output,
+            "p",
+            "“Only these” may be the reason: it excludes every other effect. Try “Allow extras”.",
+            "status-line effect-match-suggestion",
+          );
+        }
         return;
       }
       renderCombination(

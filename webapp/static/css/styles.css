@@ -699,6 +699,41 @@
     outline-offset: var(--focus-ring-offset);
   }
 
+  /* Match Effects "Recipe match": soft tints (red: Only these, green: Allow extras). The selected
+     option has the stronger tint, a status-colour ring and the check mark. */
+  .mode-switch__option--strict span,
+  .mode-switch__option--loose span {
+    color: var(--text-primary);
+  }
+
+  .mode-switch__option--strict span {
+    background: var(--match-strict-soft);
+  }
+
+  .mode-switch__option--loose span {
+    background: var(--match-loose-soft);
+  }
+
+  .mode-switch__option--strict input:checked + span,
+  .mode-switch__option--strict:active input:not(:checked):not(:disabled) + span {
+    background: var(--match-strict-selected);
+    color: var(--text-primary);
+  }
+
+  .mode-switch__option--loose input:checked + span,
+  .mode-switch__option--loose:active input:not(:checked):not(:disabled) + span {
+    background: var(--match-loose-selected);
+    color: var(--text-primary);
+  }
+
+  .mode-switch__option--strict input:checked + span {
+    box-shadow: inset 0 0 0 2px var(--status-error);
+  }
+
+  .mode-switch__option--loose input:checked + span {
+    box-shadow: inset 0 0 0 2px var(--status-success);
+  }
+
   .mode-switch__option input:disabled + span {
     color: var(--text-tertiary);
   }

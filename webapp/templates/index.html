@@ -447,17 +447,18 @@
                   <fieldset class="field search-mode-field" aria-describedby="effect-match-hint">
                     <legend class="field-label">Recipe match</legend>
                     <div class="mode-switch">
-                      <label class="mode-switch__option">
-                        <input type="radio" name="effect_match_mode" value="exact" checked />
+                      <label class="mode-switch__option mode-switch__option--strict">
+                        <input type="radio" name="effect_match_mode" value="exact" />
                         <span>Only these</span>
                       </label>
-                      <label class="mode-switch__option">
-                        <input type="radio" name="effect_match_mode" value="contains" />
+                      <label class="mode-switch__option mode-switch__option--loose">
+                        <input type="radio" name="effect_match_mode" value="contains" checked />
                         <span>Allow extras</span>
                       </label>
                     </div>
                     <p class="field__hint" id="effect-match-hint">
-                      Only wanted effects. All other effects are excluded.
+                      Wanted effects must be present; avoided effects must be absent. Other effects
+                      are allowed.
                     </p>
                   </fieldset>
                   <fieldset class="effect-picker" aria-describedby="effect-match-hint">

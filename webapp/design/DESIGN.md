@@ -389,6 +389,8 @@ Reasons: the rule is written for native apps that inherit the system setting; a 
 | text primary / error soft over panel                                                           | error alert in the result surface              | 11.93               | 10.89               |
 | text primary / warning soft over screen                                                        | stop notice on the screen                      | 13.17               | 11.61               |
 | text primary / error soft over screen                                                          | error alert on the screen                      | 13.22               | 12.17               |
+| text primary / match strict soft over field, / match strict selected over field                | "Only these" option, rest and selected         | 14.01, 12.08        | 13.85, 11.26        |
+| text primary / match loose soft over field, / match loose selected over field                  | "Allow extras" option, rest and selected       | 13.98, 12.02        | 13.68, 11.03        |
 
 **Non-text pairs (target 3:1)**
 
@@ -436,7 +438,7 @@ The banknote boundary passes by either edge: in Dusk the dark border carries it 
 | scene band (sky and polygons)      | –           | –           | An `aria-hidden` drawing; only the switch on it carries text, covered above.                                  |
 | money guilloche on money surface   | –           | –           | A texture; the text pair over it is listed above.                                                             |
 
-Result: **216 pairs** (both themes, as checked by `tests/browser/contrast.test.cjs`), **0 below target**; 12 decorative values printed for the record. Surface-on-surface steps (canvas, screen, panel, raised, sunken) carry no information on their own: every component boundary that identifies a control is the control border, the selected surface or the primary fill, all listed above. [WCAG 1.4.11].
+Result: **224 pairs** (both themes, as checked by `tests/browser/contrast.test.cjs`), **0 below target**; 12 decorative values printed for the record. Surface-on-surface steps (canvas, screen, panel, raised, sunken) carry no information on their own: every component boundary that identifies a control is the control border, the selected surface or the primary fill, all listed above. [WCAG 1.4.11].
 
 ## 9. Token plan
 
@@ -534,6 +536,10 @@ The `/ -line / -weight` rows stand for three tokens each, e.g. `--type-body-size
 | `--status-warning-soft`    | `rgb(138 81 0 / 10%)`                                  | `rgb(255 179 64 / 14%)`       |
 | `--status-error`           | `#b3101c`                                              | `#ff8a82`                     |
 | `--status-error-soft`      | `rgb(179 16 28 / 8%)`                                  | `rgb(255 138 130 / 14%)`      |
+| `--match-strict-soft`      | `rgb(179 16 28 / 8%)`                                  | `rgb(255 138 130 / 12%)`      |
+| `--match-strict-selected`  | `rgb(179 16 28 / 16%)`                                 | `rgb(255 138 130 / 22%)`      |
+| `--match-loose-soft`       | `rgb(74 99 64 / 10%)`                                  | `rgb(159 181 143 / 12%)`      |
+| `--match-loose-selected`   | `rgb(74 99 64 / 20%)`                                  | `rgb(159 181 143 / 22%)`      |
 | `--scene-sky-top`          | `#c9c1dc`                                              | `#07080d`                     |
 | `--scene-sky-bottom`       | `#efcdb0`                                              | `#1b1730`                     |
 | `--scene-far`              | `#a59fbf`                                              | `#1a1a2a`                     |
@@ -701,7 +707,7 @@ Carried over from v2 §12, adapted to the Studio header. [User 2026-09-12], [D-1
 Carried over from v2 §13. Version 4 changes how the selection looks: the selected segment is neutral and inverted like every segmented control, and success is the muted green. [User 2026-09-12], [D-12], [D-14] (Q3).
 
 - **Match Effects** is the third equal tab. Each effect card shows the game colour dot, name, a short explanation and a compact three-way control **Want / Neutral / Avoid** on native radio groups. The selected segment is the **neutral inverted segment** (selected surface + selected ink) **plus** its glyph (✓ Want, ⊘ Avoid) and label; the card repeats the state with a quiet edge — muted-green success for Want, error for Avoid (section 5). Text, glyph and the marked segment make the state clear without colour. The card itself does not cycle state, so a click always makes one clear choice. [Plan §0] (own decision: neutral like Exact/Fast), [HIG Color].
-- **Recipe match** sits directly above the selection: **Only these** requires exactly the wanted effects, **Allow extras** allows further neutral effects. Avoided effects are absent in both. A text filter narrows the list without deleting hidden choices. Below the list, want/avoid counts and individually removable selection chips stay visible; wanted chips use the muted-green success, avoided chips the error colour. A mode change keeps the preferences but discards a stale result and stops a running search. With **Allow extras** an avoid-only list is valid.
+- **Recipe match** sits directly above the selection: **Only these** requires exactly the wanted effects, **Allow extras** allows further neutral effects. Avoided effects are absent in both. A text filter narrows the list without deleting hidden choices. Below the list, want/avoid counts and individually removable selection chips stay visible; wanted chips use the muted-green success, avoided chips the error colour. A mode change keeps the preferences but discards a stale result and stops a running search. With **Allow extras** an avoid-only list is valid. **Allow extras** is the default. The two options carry soft tints (`--match-strict-*` muted red for **Only these**, `--match-loose-*` muted green for **Allow extras**, never the action colour); the selected one has the stronger tint, a ring in the status colour and a ✓, so the state is not colour alone. When **Only these** finds nothing, the empty-result message adds that this setting may be the reason and suggests **Allow extras**.
 - Ranking sits with the recipe settings: fewest steps first, then lowest cost. **Exact / Fast** stays separate. A fast match always meets the effect conditions but does not guarantee the shortest or cheapest recipe. Results keep the same card structure (banknote, stats, mix with step prices, effect pills).
 - Below all result cards, descriptions are in a native `details` element "What these effects do": closed by default, reachable by click, touch and keyboard, not bound to hover. Unknown metadata produces no empty lines. Sources: [description review](../../docs/reviews/2026-09-12-effect-descriptions.md).
 - From 900 px the effect selection is left, settings and result right, at equal height (section 6); below 900 px the same order top to bottom. The filterable list has a bounded scroll height on the sunken surface with a thin themed native scrollbar. Focus, keyboard scrolling and scroll-into-view of focused controls stay. Selection text, chips and Clear stay outside the list. The three tabs stay in one row at 320 px with labels that may wrap.
