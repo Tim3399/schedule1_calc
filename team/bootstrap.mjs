@@ -16,59 +16,81 @@ import {
     loadRegistry,
     readRegistry,
     withRegistryLock,
-    workStatePath,
+    projectTitle,
+    titleKey,
+    entryKey,
     KB,
     REGISTRY,
 } from "./hooks/lib.mjs";
 import { mainCheckoutDir } from "./hooks/kb-root.mjs";
+import {
+    NUMBERED,
+    POOL_LIMITS,
+    ruleOfTitle,
+    slotName,
+    titlesOfChat,
+    workStateDir,
+} from "./hooks/pools.mjs";
+import { workStateFile } from "./hooks/work-state.mjs";
 
 const REPO = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const START_DIR = path.join(KB, "team", "start");
 const [command, ...rest] = process.argv.slice(2);
 const flags = new Set(rest.filter((a) => a.startsWith("--")));
-const names = rest.filter((a) => !a.startsWith("--")).map((a) => a.toLowerCase());
+const names = rest.filter((a) => !a.startsWith("--")).map((a) => titleKey(a));
 const WAIT_MINUTES = Number(rest.find((a) => a.startsWith("--minutes="))?.split("=")[1] ?? 15);
 
+// Registered titles as comparison keys (T-155: "Dev 3" and "Dev 3 - <project>" are one title)
 const registered = () =>
     new Set(
         Object.values(loadRegistry())
-            .map((e) => e.title?.toLowerCase())
-            .filter(Boolean),
+            .filter((e) => e.title)
+            .map((e) => entryKey(e)),
     );
 
-// All chats that should exist, in start order: Orchestrator, external, internal
+// All chats that should exist, in start order: Orchestrator, external (pooled roles first), internal, dev slots.
+// Every chat entry expands to its slot titles (pools.mjs); "entry" keeps the roles.json entry for the title rules.
 function allChats() {
     // Dev slots (title with {n}) come after every core role.
-    const order = (c) => (c.main ? 0 : c.external ? 1 : c.title.includes("{n}") ? 3 : 2);
+    // Inside the external block, roles with a pool setting (Critic) come before the others (Advisor).
+    const order = (c) =>
+        c.main
+            ? 0
+            : c.external
+              ? POOL_LIMITS[c.role]
+                  ? 1
+                  : 1.5
+              : ruleOfTitle(c.title) === NUMBERED
+                ? 3
+                : 2;
     return [...roles.chats]
         .sort((a, b) => order(a) - order(b))
         .flatMap((chat) =>
-            chat.title.includes("{n}")
-                ? Array.from({ length: roles.devPool }, (_, i) => ({
-                      ...chat,
-                      title: chat.title.replace("{n}", i + 1),
-                      slot: i + 1,
-                  }))
-                : [{ ...chat, slot: null }],
+            titlesOfChat(chat, roles).map(({ title, slot }) => ({
+                ...chat,
+                title,
+                slot,
+                entry: chat,
+            })),
         );
 }
 
 function missing({ intern = false, withMain = true } = {}) {
     const taken = registered();
     return allChats().filter((c) => {
-        if (taken.has(c.title.toLowerCase())) return false;
+        if (taken.has(titleKey(c.title))) return false;
         if (!withMain && c.main) return false;
         if (intern && (c.main || c.external)) return false;
-        if (names.length && !names.includes(c.title.toLowerCase()) && !names.includes(c.role))
+        if (names.length && !names.includes(titleKey(c.title)) && !names.includes(c.role))
             return false;
         return true;
     });
 }
 
-const byTitle = (title) => allChats().find((c) => c.title.toLowerCase() === title?.toLowerCase());
+const byTitle = (title) => allChats().find((c) => titleKey(c.title) === titleKey(title));
 const slug = (c) => c.title.toLowerCase().replace(/\s+/g, "-");
 const fwd = (p) => p.split(path.sep).join("/");
-const worktreeName = (c) => (c.slot ? `${c.role}-${c.slot}` : c.role);
+const worktreeName = (c) => slotName(c.entry, c.slot);
 // Folder of a role worktree: always below the main checkout, also when claim runs elsewhere (D-60).
 const worktreeDir = (c) =>
     path.join(mainCheckoutDir(REPO), ".claude", "worktrees", worktreeName(c));
@@ -109,9 +131,9 @@ function projectError() {
 }
 
 function startPrompt(c) {
-    const state = workStatePath({ role: c.role, slot: c.slot });
+    const state = workStateOf(c);
     const steps = [
-        `Name this chat: set_session_title with session_id "self" and title "${c.title}".`,
+        `Name this chat: set_session_title with session_id "self" and title "${projectTitle(c.title)}".`,
         `Never write styles, agents or settings outside this project, in particular not to ~/.claude or %APPDATA%. If set_session_output_style does not find the style, stop and tell the user.`,
         `Set your role style: set_session_output_style with session_id "self" and style "${c.style}".`,
     ];
@@ -128,7 +150,7 @@ function startPrompt(c) {
         );
     } else {
         steps.push(
-            `Report to the Orchestrator with the message "${c.title} ready". Its session ID is in ${fwd(KB)}/team/registry.json (entry with title "Orchestrator"). Send with SendMessage to this ID, with send_message if that fails. If no Orchestrator is registered yet, skip this step. The Orchestrator then finds you in the registry.`,
+            `Report to the Orchestrator with the message "${projectTitle(c.title)} ready". Its session ID is in ${fwd(KB)}/team/registry.json (entry with title "${projectTitle("Orchestrator")}" or "Orchestrator"). Send with SendMessage to this ID, with send_message if that fails. If no Orchestrator is registered yet, skip this step. The Orchestrator then finds you in the registry.`,
         );
     }
     return [
@@ -185,6 +207,11 @@ function ensureWorktree(c) {
         : null;
 }
 
+// Work state file of a slot: work-state.md, or an existing arbeitsstand.md (0.3.0 projects), in the slot folder
+// (critic/critic-2/, dev/dev-3/).
+const workStateOf = (c) =>
+    workStateFile(fwd(path.join(KB, workStateDir(c.entry, c.slot))), (file) => fs.existsSync(file));
+
 // On Windows a checkout with paths over MAX_PATH fails with "Filename too long" unless core.longpaths is set (T-135).
 // Sets it in the local config of the repo only (never --global or --system) and only if it is not already true.
 // Returns null or the error text.
@@ -204,30 +231,48 @@ const initialWorkState = (c) => `# Work state ${c.title}\n\nStatus: free\nAssign
 // Writes the initial work state of the claimed role if none exists yet. workStatePath keeps an existing
 // arbeitsstand.md (0.3.0 projects); a new file is work-state.md.
 function ensureWorkState(c) {
-    const file = workStatePath({ role: c.role, slot: c.slot });
+    const file = workStateOf(c);
     if (fs.existsSync(file)) return;
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, initialWorkState(c));
 }
 
-// Create the dev pool if it is missing (after that only the Implementer maintains it).
+// Create the dev pool if it is missing; if it exists, add the slots missing for the current dev pool (N-8).
+// Existing slots are never rewritten or reordered; without missing slots the file is not touched. After that only
+// the Implementer maintains it.
 // English values and keys (F-69-5, N-8): status free | busy | broken. Pools from before 0.4.0 have frei | belegt |
 // defekt and the keys auftrag, seit; policy.mjs reads both status forms, no code reads assignment or since.
 function ensurePool() {
     const file = path.join(KB, "implementer", "dev-pool.json");
-    if (fs.existsSync(file)) return;
-    const slots = allChats()
+    const fresh = (title) => ({
+        title,
+        status: "free",
+        assignment: null,
+        branch: null,
+        since: null,
+    });
+    const titles = allChats()
         .filter((c) => c.role === "dev")
-        .map((c) => ({
-            title: c.title,
-            status: "free",
-            assignment: null,
-            branch: null,
-            since: null,
-        }));
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, JSON.stringify({ slots }, null, 2) + "\n");
-    console.error(`Dev pool created: ${file}`);
+        .map((c) => c.title);
+    if (!fs.existsSync(file)) {
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        fs.writeFileSync(file, JSON.stringify({ slots: titles.map(fresh) }, null, 2) + "\n");
+        console.error(`Dev pool created: ${file}`);
+        return;
+    }
+    let pool;
+    try {
+        pool = JSON.parse(fs.readFileSync(file, "utf8"));
+    } catch {
+        return; // unreadable: the Implementer repairs it, claim does not touch it
+    }
+    if (!Array.isArray(pool?.slots)) return;
+    const have = new Set(pool.slots.map((s) => String(s?.title).toLowerCase()));
+    const add = titles.filter((t) => !have.has(t.toLowerCase())).map(fresh);
+    if (!add.length) return;
+    pool.slots.push(...add);
+    fs.writeFileSync(file, JSON.stringify(pool, null, 2) + "\n");
+    console.error(`Dev pool grown: ${add.map((s) => s.title).join(", ")} (${file})`);
 }
 
 // Selection for claim (D-73): runs entirely under the registry lock, so that two chats never remove the same expired
@@ -247,11 +292,11 @@ function selectRole(host) {
     const claimDir = path.join(KB, "team", "claims");
     const taken = new Set(
         Object.values(reg)
-            .map((e) => e.title?.toLowerCase())
-            .filter(Boolean),
+            .filter((e) => e.title)
+            .map((e) => entryKey(e)),
     );
     for (const c of allChats()) {
-        if (taken.has(c.title.toLowerCase())) continue;
+        if (taken.has(titleKey(c.title))) continue;
         // The style of the chosen role must be in the project (D-77), otherwise no claim file.
         const styleFile = path.join(REPO, ".claude", "output-styles", `${c.style}.md`);
         if (!fs.existsSync(styleFile))
@@ -322,7 +367,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function waitFor(title) {
     const until = Date.now() + WAIT_MINUTES * 60_000;
     while (Date.now() < until) {
-        if (registered().has(title.toLowerCase())) return true;
+        if (registered().has(titleKey(title))) return true;
         await sleep(3000);
     }
     return false;

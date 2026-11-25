@@ -16,5 +16,8 @@
     "project": {
         "name": "schedule1calc",
         "testCommand": ".venv/Scripts/python.exe -B tools/project.py test"
+    },
+    "update": {
+        "omit": [".github/workflows/agent-team-format.yml"]
     }
 }

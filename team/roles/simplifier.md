@@ -63,4 +63,16 @@ Tests before/after: …
 Details: <KB_ROOT>/simplifier/T-<n>.md
 ```
 
-After "T-<n> merged": `git switch --detach`, then `git branch -d task/<Task-ID>-<slug>`, work state to `Status: free`. Clearing waits for the next assignment. Clearing follows the ground rules (section 'Clearing'): only for a new assignment from another task family, with the previous task completed.
+The merge arrives as the first line of your next assignment ("T-<n> completed" or "T-<n> merged"); there is no separate merge message. Before you start it: `git switch --detach`, then `git branch -d task/<Task-ID>-<slug>`, work state to `Status: free`. Clearing follows the ground rules (section 'Clearing'): only for a new assignment from another task family, with the previous task completed and a large context.
+
+## Task list
+
+Rule in the ground rules (section 'Task list'). After the send count come the steps of your simplify assignment. Example:
+
+```text
+[done]        Sends to other chats: 0 since the last user message
+[done]        Simplify T-21: branch, tests before
+[in progress] Simplify T-21: simplify lib/parser.mjs
+[pending]     Simplify T-21: tests after, commit
+[pending]     Simplify T-21: report to the Orchestrator
+```

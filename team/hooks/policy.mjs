@@ -5,7 +5,9 @@
 //     every other management tool not handled below is denied for team chats.
 //   - Remote Control (T-138, D-138): every chat may turn it on for itself and for chats it may manage, never off.
 //   - Team chats do not manage routines (mcp__scheduled-tasks__*).
-//   - Clearing checks the work state (checkWorkState), archiving checks the dev pool (busy slots stay).
+//   - Clearing checks the work state (checkWorkState) and the context size (T-145: only a compaction since the last
+//     clear allows it, see context.mjs), archiving checks the dev pool (busy slots stay). This hook only checks:
+//     session-start.mjs writes the clear entry once the clear has happened (F-145-1), so a rejected clear can retry.
 // Branch names (D-60, D-57-1): Bash and PowerShell calls that create or rename a branch (branchTargets in
 // branch-name.mjs) are denied when a name breaks the branch convention (checkBranchName). Like the user config check
 // this runs before lib.mjs is loaded, so it works with a broken team config.
@@ -18,6 +20,8 @@ import path from "node:path";
 import { BRANCH_HINT, branchTargets, checkBranchName } from "./branch-name.mjs";
 import { WRITE_TOOLS, deny, fail, readHookInput, userConfigWrite } from "./user-config.mjs";
 import { idPart, normalizeStatus, readFieldValues, readWorkState } from "./work-state.mjs";
+import { POOL_LIMITS } from "./pools.mjs";
+import { contextState } from "./context.mjs";
 
 // Write calls are checked only by the user config guard. It needs neither team.config.json nor roles.json:
 // a broken team config must not block Bash/Edit/Write (otherwise no chat could repair it). lib.mjs (loads
@@ -26,6 +30,9 @@ import { idPart, normalizeStatus, readFieldValues, readWorkState } from "./work-
 // Dev pool status values: busy, free, broken. Pools written before 0.4.0 use belegt, frei, defekt (F-69-5).
 // Only a busy slot blocks archiving; free and broken slots may be archived.
 const POOL_BUSY = ["busy", "belegt"];
+// T-153: deny text for the Orchestrator's own clear_session
+const ORCHESTRATOR_NO_CLEAR =
+    "The Orchestrator never clears itself (T-153): enter the new assignment as `Assignment:` and keep working; compaction is the app's job.";
 
 let input, lib;
 try {
@@ -56,6 +63,8 @@ const {
     readRegistry,
     roleForTitle,
     holderOf,
+    titleKey,
+    entryKey,
     chatOf,
     roles,
     workStatePath,
@@ -160,7 +169,7 @@ function main() {
                     (targetChat.models_order ?? [targetChat.model]).includes(args.model)) ||
                     (action === "set_session_effort" && args.effort === targetChat.effort));
             if (!setup)
-                return `"${target.title}" is external. Only the user changes Critic and Advisor. Exception: model and effort from team/roles.json, set by the Orchestrator during team setup.`;
+                return `"${target.title}" is external. Only the user changes external chats (${externalTitles()}). Exception: model and effort from team/roles.json, set by the Orchestrator during team setup.`;
             return null;
         }
         if (callerRole === "orchestrator" && internal) return null;
@@ -171,14 +180,21 @@ function main() {
     switch (action) {
         case "clear_session":
             if (!self) deny('Chats clear only themselves (session_id "self").');
+            // T-153: the Orchestrator is the only chat with the whole course of the project; it never clears itself.
+            if (callerRole === "orchestrator") deny(ORCHESTRATOR_NO_CLEAR);
             // The rule applies to team chats. A chat without a role (no team chat) still clears itself freely.
-            if (callerRole) checkWorkState(caller);
+            if (callerRole) {
+                checkWorkState(caller);
+                checkContext(id);
+            }
             break;
 
         case "set_session_title": {
             if (!self) deny("Chats rename only themselves.");
             const wanted = roleForTitle(args.title);
-            if (callerRole && wanted?.title?.toLowerCase() !== caller.title?.toLowerCase()) {
+            // T-155: "Dev 3" and "Dev 3 - <project>" are the same role title (titleKey); a chat that kept its role
+            // under a former project's suffix compares with its role title (entryKey, F-155-4)
+            if (callerRole && (!wanted || titleKey(wanted.title) !== entryKey(caller))) {
                 deny(`This chat is "${caller.title}" and keeps its role title.`);
             }
             if (wanted) {
@@ -246,7 +262,7 @@ function main() {
                 deny("Only the Implementer archives, and only dev chats.");
             const pool = readPool();
             const slot = pool?.slots?.find(
-                (s) => s.title?.toLowerCase() === target.title?.toLowerCase(),
+                (s) => s.title && titleKey(s.title) === entryKey(target),
             );
             if (POOL_BUSY.includes(String(slot?.status ?? "").toLowerCase()))
                 deny(
@@ -303,6 +319,27 @@ function checkWorkState(entry) {
             `Clear blocked: the work state ${file} is missing "Completed: ${family}". Without the sender's completion notice the context of ${family} is kept.`,
         );
     }
+}
+
+// T-145: a chat with a small context (no compaction since its last clear) gains nothing from clearing and starts the
+// new assignment at once. Only a check: the clear entry is written by session-start.mjs when the clear has happened
+// (F-145-1), so a clear the app rejects or the user declines leaves the context large and the retry is allowed.
+function checkContext(id) {
+    const state = contextState(KB, id);
+    if (!state.large) {
+        fail(
+            `Clear blocked: Context is small (compaction ${state.compactedAt ?? "none"}, last clear ${state.clearedAt ?? "never"}). Do not clear: enter the new assignment as "Assignment:", set "Status: working", delete "New assignment:", "New assignment (verbatim):" and "Completed:", and start at once without READY/START.`,
+        );
+    }
+}
+
+// Base titles of the external chats for messages, "…" marks a role with a pool: "Critic…, Advisor".
+function externalTitles() {
+    return roles.chats
+        .filter((c) => c.external)
+        .sort((a, b) => Number(!POOL_LIMITS[a.role]) - Number(!POOL_LIMITS[b.role]))
+        .map((c) => (POOL_LIMITS[c.role] ? `${c.title}…` : c.title))
+        .join(", ");
 }
 
 function readPool() {

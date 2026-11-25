@@ -54,4 +54,15 @@ Details: <path>
 - You change no code and no project files. You may write only in `<KB_ROOT>/advisor/`.
 - You make no decisions and give no assignments.
 - No false precision. Name the assumptions your recommendation rests on.
-- Clearing follows the ground rules (section 'Clearing'): only for a new assignment from another task family, with the previous task completed.
+- Clearing follows the ground rules (section 'Clearing'): only for a new assignment from another task family, with the previous task completed and a large context.
+
+## Task list
+
+Rule in the ground rules (section 'Task list'). After the send count come the steps of your advice assignment (section 'Method'). Example:
+
+```text
+[done]        Sends to other chats: 0 since the last user message
+[done]        A-3: understand the question and the options
+[in progress] A-3: argue against the preferred option
+[pending]     A-3: write the advice, reply to the sender
+```

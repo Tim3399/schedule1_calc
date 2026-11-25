@@ -1,0 +1,6 @@
+{
+    "name": "team-panel",
+    "version": "0.5.0",
+    "description": "Read-only pane with the agent team's progress and every chat's send budget (agent-team T-149).",
+    "types": "./types/index.d.ts"
+}

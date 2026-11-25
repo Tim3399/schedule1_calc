@@ -25,8 +25,25 @@ import {
     MARKER,
     codexConfigErrors,
     hasMarker,
+    POOL_TEXTS,
+    hashOf,
+    poolPlaceholders,
+    renderPoolPlaceholders,
+    rewritePoolTexts,
     roleOverrideErrors,
+    TEAM_PANEL_MARKETPLACE,
+    TEAM_PANEL_PLUGIN,
+    teamPanelMarketplace,
 } from "./sync-rules.mjs";
+import {
+    poolErrors,
+    poolFromConfig,
+    poolOfChat,
+    ruleOfTitle,
+    POOL_LIMITS,
+} from "./hooks/pools.mjs";
+import { SEND_TOOLS } from "./hooks/sends.mjs";
+import { idleConfig } from "./hooks/idle.mjs";
 
 const TEAM_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.dirname(TEAM_DIR);
@@ -53,6 +70,20 @@ try {
     console.error("Nothing written.");
     process.exit(2);
 }
+
+// Pool sizes (devPool, criticPool): invalid values stop before anything is written.
+{
+    const errors = poolErrors(config);
+    if (errors.length) {
+        for (const e of errors) console.error(`team/team.config.json: ${e}`);
+        console.error("Nothing written. Fix the value, then run node team/sync.mjs.");
+        process.exit(2);
+    }
+}
+const POOLS = {
+    devPool: poolFromConfig(config, "dev"),
+    criticPool: poolFromConfig(config, "critic"),
+};
 
 // With "codex" in targets the Codex side needs a complete codex block (rules in sync-rules.mjs).
 // Stops with exit 2 before generating, without writing anything.
@@ -355,12 +386,10 @@ function filterBody(body, target, form) {
     }
     if (open) throw new Error("<!-- only --> block is not closed");
     return (
-        out
-            .join("\n")
+        renderPoolPlaceholders(out.join("\n"), poolPlaceholders(POOLS))
             // replacer functions, so that $$, $&, $` and $' in the values stay literal
             // config mode only; in placeholder mode the placeholder stays
             .replaceAll(KB_PLACEHOLDER, (m) => (configMode ? config.kbRoot : m))
-            .replace(/<DEV_POOL>/g, () => String(config.devPool))
             .replace(/\n{3,}/g, "\n\n")
             .trim() + "\n"
     );
@@ -434,6 +463,8 @@ function rolesJson(roles) {
             return {
                 role: r.head.name,
                 title: c.title,
+                pool: poolFromConfig(config, r.head.name),
+                rule: ruleOfTitle(c.title),
                 style: c.style,
                 external: c.external === "true",
                 main: c.main === "true",
@@ -449,7 +480,7 @@ function rolesJson(roles) {
         JSON.stringify(
             {
                 _hint: MARKER,
-                devPool: config.devPool,
+                devPool: POOLS.devPool,
                 kbRoot: configMode ? config.kbRoot : undefined, // JSON.stringify drops undefined
                 testCommand,
                 chats,
@@ -486,6 +517,9 @@ const SESSION_TOOLS_DENY_OLD = ["mcp__ccd_session_mgmt__set_remote_control"];
 function hookCommand(script) {
     return `node "$CLAUDE_PROJECT_DIR/team/hooks/${script}"`;
 }
+
+// Hook timeout of the idle watcher in seconds: watchSeconds of team.config.json "idle" plus 60 (T-108)
+const idleHookTimeout = (cfg) => idleConfig(cfg).watchSeconds + 60;
 
 function claudeSettings(existing) {
     const s = existing ?? {};
@@ -532,8 +566,31 @@ function claudeSettings(existing) {
     );
 
     // replace team hooks, keep foreign hooks
+    // Send counter (T-38): own groups for the send tools. PostToolUseFailure is left out: no code or comment of
+    // the team documents that event, so it is not registered (the hook handles it if it ever arrives).
+    const sendCounter = {
+        matcher: `^(${SEND_TOOLS.join("|")})$`,
+        hooks: [{ type: "command", command: hookCommand("send-counter.mjs") }],
+    };
+    // Idle monitor (T-108): the watcher runs in the background (async) and wakes its own chat (asyncRewake); the
+    // harness kills it at the timeout without a signal, so the watcher ends itself at watchSeconds (S-108).
+    const idleWatch = {
+        hooks: [
+            {
+                type: "command",
+                command: hookCommand("idle-watch.mjs"),
+                async: true,
+                asyncRewake: true,
+                timeout: idleHookTimeout(config),
+            },
+        ],
+    };
     const own = {
-        SessionStart: [{ hooks: [{ type: "command", command: hookCommand("session-start.mjs") }] }],
+        SessionStart: [
+            { hooks: [{ type: "command", command: hookCommand("session-start.mjs") }] },
+            idleWatch,
+        ],
+        Stop: [{ hooks: [{ type: "command", command: hookCommand("stop-guard.mjs") }] }, idleWatch],
         SubagentStart: [
             { hooks: [{ type: "command", command: hookCommand("subagent-start.mjs") }] },
         ],
@@ -543,12 +600,17 @@ function claudeSettings(existing) {
                     "^(mcp__ccd_session_mgmt__.*|mcp__scheduled-tasks__.*|Agent|Write|Edit|NotebookEdit|Bash|PowerShell)$",
                 hooks: [{ type: "command", command: hookCommand("policy.mjs") }],
             },
+            sendCounter,
         ],
         PostToolUse: [
             {
                 matcher: "mcp__ccd_session_mgmt__set_session_title",
                 hooks: [{ type: "command", command: hookCommand("registry-title.mjs") }],
             },
+            sendCounter,
+        ],
+        UserPromptSubmit: [
+            { hooks: [{ type: "command", command: hookCommand("send-counter.mjs") }] },
         ],
         PreCompact: [{ hooks: [{ type: "command", command: hookCommand("pre-compact.mjs") }] }],
     };
@@ -731,6 +793,74 @@ if (targets.includes("claude")) {
 }
 outputs.set("team/roles.json", rolesJson(roles));
 
+// Shrinking a pool is not supported (D-122). sync never reads the KB, so it compares with the roles.json it
+// replaces and warns; registered chats above the new pool keep their role (hooks, N-6).
+{
+    const old = (() => {
+        try {
+            return JSON.parse(fs.readFileSync(path.join(TEAM_DIR, "roles.json"), "utf8"));
+        } catch {
+            return null;
+        }
+    })();
+    for (const chat of JSON.parse(outputs.get("team/roles.json")).chats) {
+        const before = (old?.chats ?? []).find((c) => c.role === chat.role);
+        if (before && poolOfChat(before, old) > chat.pool)
+            console.warn(
+                `Warning: shrinking ${POOL_LIMITS[chat.role]?.key ?? `${chat.role} pool`} is not supported in this version; registered chats above the new pool keep their role.`,
+            );
+    }
+}
+
+// Pool texts of AGENTS.md and team/TEAM-BEITRETEN.txt (F-107-10): init and update render them from the
+// package; after a pool change sync brings exactly these texts up to date (rules in sync-rules.mjs).
+// The project block stays untouched. A file that was the package version (manifest hash) stays one:
+// its manifest hash follows, so update does not take it for locally changed. Never the KB.
+const MANIFEST_FILE = "team/.agent-team.json";
+{
+    const values = poolPlaceholders(POOLS);
+    let manifest = null;
+    try {
+        manifest = JSON.parse(fs.readFileSync(path.join(REPO, MANIFEST_FILE), "utf8"));
+    } catch {
+        manifest = null; // no manifest (project without agent-team): only the files themselves
+    }
+    let manifestChanged = false;
+    for (const rel of Object.keys(POOL_TEXTS)) {
+        const abs = path.join(REPO, rel);
+        if (!fs.existsSync(abs)) continue;
+        const before = fs.readFileSync(abs, "utf8").replace(/\r\n/g, "\n");
+        const { text, missing } = rewritePoolTexts(rel, before, values);
+        for (const name of missing)
+            console.warn(
+                `Warning: ${rel}: ${name} not found (changed by the project?), not updated. agent-team update --take ${rel} brings back the package text.`,
+            );
+        if (text === before) continue;
+        outputs.set(rel, text);
+        if (manifest?.files?.[rel] === hashOf(before)) {
+            manifest.files[rel] = hashOf(text);
+            manifestChanged = true;
+        }
+    }
+    if (manifestChanged) outputs.set(MANIFEST_FILE, JSON.stringify(manifest, null, 2) + "\n");
+}
+
+// Team panel mod (T-149): folder marketplace beside the plugin folder that agent-team update brings.
+// Without the plugin folder (project without it, or a project that removed it) nothing is written.
+{
+    const pluginPath = path.join(REPO, TEAM_PANEL_PLUGIN);
+    const text = fs.existsSync(pluginPath) ? fs.readFileSync(pluginPath, "utf8") : null;
+    let marketplace = null;
+    try {
+        marketplace = teamPanelMarketplace(config.project?.name, text);
+    } catch (e) {
+        console.warn(
+            `Warning: ${TEAM_PANEL_PLUGIN} is not valid JSON (${e.message}), marketplace not written.`,
+        );
+    }
+    if (marketplace) outputs.set(TEAM_PANEL_MARKETPLACE, marketplace);
+}
+
 // Codex: one file per role, regardless of its targets (those apply to Claude only).
 // The Codex folders are always checked for stale files, even without "codex" in targets.
 generatedDirs.push(".codex/agents", ".codex/profiles");
@@ -767,8 +897,15 @@ if (fs.existsSync(path.join(REPO, ".codex/config.toml")) && isStale(".codex/conf
 // as "<!-- <MARKER> -->" in the first line after the head (--- … ---). The old German marker counts too,
 // so those files are overwritten with the new marker.
 // Excluded: .claude/settings.json is merged (foreign entries stay, a marker has no place in JSON),
-// team/roles.json is a file of the generator itself, not a project file.
-const NO_MARKER_CHECK = new Set([".claude/settings.json", "team/roles.json"]);
+// team/roles.json is a file of the generator itself, not a project file. The pool texts are package-owned
+// files (manifest) whose pool lines sync rewrites; the rest of them stays as it is.
+const NO_MARKER_CHECK = new Set([
+    ".claude/settings.json",
+    "team/roles.json",
+    MANIFEST_FILE,
+    TEAM_PANEL_MARKETPLACE, // JSON has no place for a marker; team/mod/ belongs to the package
+    ...Object.keys(POOL_TEXTS),
+]);
 const conflicts = [...outputs.keys()].filter((rel) => {
     const abs = path.join(REPO, rel);
     return (

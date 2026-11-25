@@ -7,6 +7,8 @@
     {
       "role": "advisor",
       "title": "Advisor",
+      "pool": 1,
+      "rule": "firstPlain",
       "style": "Advisor",
       "external": true,
       "main": false,
@@ -28,6 +30,8 @@
     {
       "role": "critic",
       "title": "Critic",
+      "pool": 1,
+      "rule": "firstPlain",
       "style": "Critic",
       "external": true,
       "main": false,
@@ -50,6 +54,8 @@
     {
       "role": "dev",
       "title": "Dev {n}",
+      "pool": 6,
+      "rule": "numbered",
       "style": "Dev",
       "external": false,
       "main": false,
@@ -70,6 +76,8 @@
     {
       "role": "implementer",
       "title": "Implementer",
+      "pool": 1,
+      "rule": "firstPlain",
       "style": "Implementer",
       "external": false,
       "main": false,
@@ -90,6 +98,8 @@
     {
       "role": "orchestrator",
       "title": "Orchestrator",
+      "pool": 1,
+      "rule": "firstPlain",
       "style": "Orchestrator",
       "external": false,
       "main": true,
@@ -109,6 +119,8 @@
     {
       "role": "researcher",
       "title": "Researcher",
+      "pool": 1,
+      "rule": "firstPlain",
       "style": "Researcher",
       "external": false,
       "main": false,
@@ -130,6 +142,8 @@
     {
       "role": "simplifier",
       "title": "Simplifier",
+      "pool": 1,
+      "rule": "firstPlain",
       "style": "Simplifier",
       "external": false,
       "main": false,

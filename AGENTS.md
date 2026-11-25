@@ -4,7 +4,7 @@ All chats and subagents of the team read this file. The role prompts live in `te
 
 ## Roles
 
-Every main role is its **own, visible chat**. Its title determines the role, the role determines the style.
+Every main role is its **own, visible chat**. Its title determines the role, the role determines the style. The chat carries the title from the table plus the project, `<chat title> - schedule1calc` (e.g. `Orchestrator - schedule1calc`); the plain chat title of older chats counts the same.
 
 | Chat title    | Task                                                                            | Workplace                | May use subagents                             |
 | ------------- | ------------------------------------------------------------------------------- | ------------------------ | --------------------------------------------- |
@@ -23,24 +23,24 @@ Every main role is its **own, visible chat**. Its title determines the role, the
 **Communication:**
 
 - Chats talk to each other by message (`SendMessage`). Anything lasting belongs in the knowledge base.
-- Assignments follow the roles: the Orchestrator gives tasks to the Implementer, Researcher, Simplifier, Critic and Advisor. The Implementer gives part assignments to the devs.
+- Assignments follow the roles: the Orchestrator gives tasks to the Implementer, Researcher, Simplifier, the critics and Advisor. The Implementer gives part assignments to the devs.
 
 ## Chat permissions
 
 A hook (`team/hooks/policy.mjs`) enforces the app's chat management. It recognizes chats by their title (registry in `C:/Users/timra/git/agent-team/schedule1calc-project/schedule1calc-kb/team/registry.json`).
 
-| Action                                                                                                                  | Orchestrator                                  | Implementer                           | Devs                              | Researcher, Simplifier            | Critic, Advisor                   |
-| ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------- | --------------------------------- | --------------------------------- | --------------------------------- |
-| Send messages                                                                                                           | to everyone                                   | to everyone                           | to Implementer, Orchestrator      | to Orchestrator, Implementer      | to sender, Orchestrator           |
-| Set role (style), model, effort; stop a turn                                                                            | for Implementer, devs, Researcher, Simplifier | for devs only                         | –                                 | –                                 | –                                 |
-| Archive a chat                                                                                                          | –                                             | `broken` devs only, never `busy` ones | –                                 | –                                 | –                                 |
-| Clear itself                                                                                                            | yes, only under the clearing rule             | yes, only under the clearing rule     | yes, only under the clearing rule | yes, only under the clearing rule | yes, only under the clearing rule |
-| Turn Remote Control on                                                                                                  | yes, for itself and the chats above           | yes, for itself and devs              | yes, for itself                   | yes, for itself                   | yes, for itself                   |
-| Turn Remote Control off (only the user does), delete, permission mode, fast mode, cloud, and all other management tools | never                                         | never                                 | never                             | never                             | never                             |
+| Action                                                                                                                  | Orchestrator                                  | Implementer                           | Devs                         | Researcher, Simplifier       | Critic, Advisor              |
+| ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------- | ---------------------------- | ---------------------------- | ---------------------------- |
+| Send messages                                                                                                           | to everyone                                   | to everyone                           | to Implementer, Orchestrator | to Orchestrator, Implementer | to sender, Orchestrator      |
+| Set role (style), model, effort; stop a turn                                                                            | for Implementer, devs, Researcher, Simplifier | for devs only                         | –                            | –                            | –                            |
+| Archive a chat                                                                                                          | –                                             | `broken` devs only, never `busy` ones | –                            | –                            | –                            |
+| Clear itself                                                                                                            | never (T-153)                                 | yes, only with large context          | yes, only with large context | yes, only with large context | yes, only with large context |
+| Turn Remote Control on                                                                                                  | yes, for itself and the chats above           | yes, for itself and devs              | yes, for itself              | yes, for itself              | yes, for itself              |
+| Turn Remote Control off (only the user does), delete, permission mode, fast mode, cloud, and all other management tools | never                                         | never                                 | never                        | never                        | never                        |
 
-The clearing rule is in the ground rules for team chats (section 'Clearing'). Commit before archiving a chat: archiving can discard uncommitted work in its worktree.
+The clearing rule is in the ground rules for team chats (section 'Clearing'): a chat clears itself only for a new assignment of another task family, with its previous task completed and a large context (a compaction since its last clear). The Orchestrator never clears itself (T-153): it is the only chat with the whole course of the project, and the policy hook denies its clear. Commit before archiving a chat: archiving can discard uncommitted work in its worktree.
 
-**Critic and Advisor are external:** No agent changes these chats. The only exception: during team setup the Orchestrator sets model and effort as `team/roles.json` says. They accept only review and advice assignments. The user creates new chats as empty chats and sends the prompt from `team/TEAM-BEITRETEN.txt`. Each chat claims the next free role with `node team/bootstrap.mjs claim`.
+**The critic chats (Critic) and Advisor are external:** No agent changes these chats. The only exception: during team setup the Orchestrator sets model and effort as `team/roles.json` says. They accept only review and advice assignments. A task or version stays with one critic from its first review to its acceptance. The user creates new chats as empty chats and sends the prompt from `team/TEAM-BEITRETEN.txt`. Each chat claims the next free role with `node team/bootstrap.mjs claim`.
 
 ## Knowledge base
 
@@ -49,8 +49,8 @@ The clearing rule is in the ground rules for team chats (section 'Clearing'). Co
 - Worktrees get the path through the main checkout: source (4) is read from the `team/team.config.local.json` of the main checkout. That file is not tracked by git, so in placeholder mode tracked files keep the generic KB marker instead of the path.
 - **Always use the absolute path.** Worktrees live in other places, where relative paths point nowhere.
 - Each role writes only to `C:/Users/timra/git/agent-team/schedule1calc-project/schedule1calc-kb/<role>/`, devs to `C:/Users/timra/git/agent-team/schedule1calc-project/schedule1calc-kb/dev/`. Exception: the Orchestrator writes briefs to `C:/Users/timra/git/agent-team/schedule1calc-project/schedule1calc-kb/orchestrator/briefs/`, and Implementers may create part briefs there.
-- Every role chat keeps its **work state** (`C:/Users/timra/git/agent-team/schedule1calc-project/schedule1calc-kb/<role>/work-state.md`, devs `C:/Users/timra/git/agent-team/schedule1calc-project/schedule1calc-kb/dev/dev-<n>/work-state.md`). After a clear or compaction it is the memory of the chat. The file name `arbeitsstand.md` of older projects is still read.
-- When clearing, the chat records the incoming assignment in its work state. The protocol (`READY`, `START`, `New assignment:`) is in the ground rules for team chats (section 'Clearing').
+- Every role chat keeps its **work state** (`C:/Users/timra/git/agent-team/schedule1calc-project/schedule1calc-kb/<role>/work-state.md`, devs `C:/Users/timra/git/agent-team/schedule1calc-project/schedule1calc-kb/dev/dev-<n>/work-state.md`, critic number k ≥ 2 `C:/Users/timra/git/agent-team/schedule1calc-project/schedule1calc-kb/critic/critic-<k>/work-state.md`). After a clear or compaction it is the memory of the chat. The file name `arbeitsstand.md` of older projects is still read.
+- Normally a chat starts a new assignment at once, without clearing. Only with a large context it clears itself and first records the incoming assignment in its work state. That large-context protocol (`READY`, `START`, `New assignment:`) is in the ground rules for team chats (section 'Clearing').
 - Only the hooks write `C:/Users/timra/git/agent-team/schedule1calc-project/schedule1calc-kb/team/registry.json` (chats and roles).
 - Only the Orchestrator writes `roadmap.md`, `taskboard.md`, `taskboard-archive.md` and `decisions.md`.
 - File names contain the task or assignment ID (for example `T-12`, `D-12-2`), so nothing collides.
