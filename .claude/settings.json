@@ -42,6 +42,17 @@
             "command": "node \"$CLAUDE_PROJECT_DIR/team/hooks/session-start.mjs\""
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/team/hooks/idle-watch.mjs\"",
+            "async": true,
+            "asyncRewake": true,
+            "timeout": 3360
+          }
+        ]
       }
     ],
     "SubagentStart": [
@@ -63,6 +74,15 @@
             "command": "node \"$CLAUDE_PROJECT_DIR/team/hooks/policy.mjs\""
           }
         ]
+      },
+      {
+        "matcher": "^(SendMessage|mcp__ccd_session_mgmt__send_message|mcp__ccd_session__start_session)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/team/hooks/send-counter.mjs\""
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -74,6 +94,15 @@
             "command": "node \"$CLAUDE_PROJECT_DIR/team/hooks/registry-title.mjs\""
           }
         ]
+      },
+      {
+        "matcher": "^(SendMessage|mcp__ccd_session_mgmt__send_message|mcp__ccd_session__start_session)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/team/hooks/send-counter.mjs\""
+          }
+        ]
       }
     ],
     "PreCompact": [
@@ -82,6 +111,37 @@
           {
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/team/hooks/pre-compact.mjs\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/team/hooks/stop-guard.mjs\""
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/team/hooks/idle-watch.mjs\"",
+            "async": true,
+            "asyncRewake": true,
+            "timeout": 3360
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/team/hooks/send-counter.mjs\""
           }
         ]
       }

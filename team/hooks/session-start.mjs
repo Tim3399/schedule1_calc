@@ -1,6 +1,8 @@
 // SessionStart hook (startup, resume, clear, compact, fork):
 // registers the chat in the registry and tells it which role it has and where its work state is.
 // After clear and compact this is the anchor that restores the role.
+// After a clear it also writes the clear entry in compact-log.jsonl (T-145, F-145-1; see context.mjs).
+// It refreshes <KB>/team/status.json (T-149, status-file.mjs), silently.
 
 import {
     readInput,
@@ -9,6 +11,9 @@ import {
     readRegistry,
     backupBrokenRegistry,
     holderOf,
+    foreignProject,
+    PROJECT,
+    abovePool,
     workStatePath,
     chatOf,
     kbLine,
@@ -16,6 +21,9 @@ import {
     KB_SOURCE,
     REGISTRY,
 } from "./lib.mjs";
+import { readSends } from "./sends.mjs";
+import { clearedBeforeStart, recordClear } from "./context.mjs";
+import { refreshStatus } from "./status-file.mjs";
 import { LANGUAGE_RULE } from "../sync-rules.mjs";
 
 const input = readInput();
@@ -32,6 +40,9 @@ if (broken) {
     backupBrokenRegistry();
 } else if (id) {
     const known = reg[id];
+    // T-145, F-145-1: the clear entry for the large-context rule, written here once the clear has happened (before
+    // registerTitle stores the new session_id). Never blocks: recordClear reports write errors on stderr only.
+    if (clearedBeforeStart(known, input)) recordClear(KB, id, known.title ?? null);
     entry = registerTitle(id, input.session_title ?? known?.title ?? null, {
         sessionId: input.session_id ?? null,
         cwd: input.cwd ?? null,
@@ -53,6 +64,17 @@ if (broken) {
     lines.push(
         `Team: this chat is "${entry.title}" (role ${entry.role}). Your work state: ${state}`,
     );
+    // Shrunk pool (What 10, N-10): the chat keeps its role, but the setup no longer plans its slot.
+    const above = abovePool(entry);
+    if (above)
+        lines.push(
+            `Attention: "${entry.title}" lies above the pool (${above.key} is ${above.pool}). Shrinking a pool is not supported in this version: the chat keeps its role. Set ${above.key} back in team/team.config.json or rename the chat. Tell the user at the start of your next answer.`,
+        );
+    const foreign = foreignProject(entry);
+    if (foreign)
+        lines.push(
+            `Attention: the title names project "${foreign.old}", the current project name is "${PROJECT}". The chat keeps its role; rename it to "${foreign.base} - ${PROJECT}" (set_session_title). Tell the user at the start of your next answer.`,
+        );
     const dup = holderOf(entry.title, id);
     if (dup)
         lines.push(
@@ -89,9 +111,10 @@ if (broken) {
     lines.push(
         `Addressing: reach chats by session ID from ${KB}/team/registry.json (SendMessage to the local_… ID, send_message as fallback).`,
     );
-    // The two rules broken most often right after a clear (R-8a X-2, X-6; D-66 point 3)
+    // The language rule, broken often right after a clear (R-8a X-2; D-66 point 3)
+    lines.push(`Language: ${LANGUAGE_RULE}`);
     lines.push(
-        `Language: ${LANGUAGE_RULE} Send limit (observed in practice): the app blocks after 10 sends without user input.`,
+        `Sends since user input: ${id ? readSends(KB, id) : 0} (counted by the send-counter hook).`,
     );
 
     if (
@@ -104,6 +127,9 @@ if (broken) {
         );
     }
 }
+
+// T-149: refresh <KB>/team/status.json (registry and work state may have changed); silent, never changes the output
+if (!broken) refreshStatus(KB);
 
 process.stdout.write(
     JSON.stringify({

@@ -10,6 +10,17 @@ import { taskFamily } from "./ids-shared.mjs";
 import { workStateFile } from "./work-state.mjs";
 import { deny, fail, userConfigRoots } from "./user-config.mjs";
 import { resolveKbRoot, kbLine } from "./kb-root.mjs";
+import {
+    POOL_LIMITS,
+    TITLE_SEPARATOR,
+    foreignBase,
+    fullTitle,
+    matchTitle,
+    poolOfChat,
+    projectName,
+    titleKey as poolsTitleKey,
+    workStateDir,
+} from "./pools.mjs";
 
 const TEAM_DIR = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -64,6 +75,13 @@ try {
 export const KB_SOURCE = resolvedKb.source;
 export const KB = resolvedKb.path;
 export const REGISTRY = path.join(KB, "team", "registry.json");
+// Project name for chat titles "<role title> - <project>" (T-155): config.project.name, default the folder name
+// of the main checkout
+export const PROJECT = projectName(config, path.dirname(TEAM_DIR));
+// Comparison key of a title in this project ("Orchestrator" and "Orchestrator - <project>" are equal)
+export const titleKey = (title) => poolsTitleKey(title, PROJECT);
+// Title a role chat of this project carries: "<role title> - <project>"
+export const projectTitle = (base) => fullTitle(base, PROJECT);
 
 // strict: unreadable or empty input and anything but a JSON object blocks (fail).
 // Without strict it becomes {} (for hooks that decide nothing).
@@ -85,29 +103,36 @@ export { userLevelTeamStyles, userLevelTeamStylesWarning } from "./user-styles.m
 
 export const hostId = () => process.env.CLAUDE_CODE_HOST_SESSION_ID || null;
 
-// title -> { role, title, slot, chat } or null. "Dev {n}" matches Dev 1 … Dev <devPool>.
+// title -> { role, title, slot, chat } or null, only titles inside the pool (pools.mjs): "Dev {n}" matches
+// Dev 1 … Dev <pool>; "Critic" is slot 1, "Critic <k>" slot k up to the pool, "Critic 1" never.
+// T-155: "Dev 3 - <project>" matches too, another project's suffix gives null; the returned title is the base.
 export function roleForTitle(title) {
-    if (!title) return null;
-    const t = title.trim();
-    for (const chat of roles.chats) {
-        if (chat.title.includes("{n}")) {
-            const re = new RegExp(
-                "^" +
-                    chat.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace("\\{n\\}", "(\\d+)") +
-                    "$",
-                "i",
-            );
-            const m = t.match(re);
-            if (m) {
-                const slot = Number(m[1]);
-                if (slot >= 1 && slot <= roles.devPool)
-                    return { role: chat.role, title: chat.title.replace("{n}", slot), slot, chat };
-            }
-        } else if (t.toLowerCase() === chat.title.toLowerCase()) {
-            return { role: chat.role, title: chat.title, slot: null, chat };
-        }
-    }
-    return null;
+    const m = matchTitle(roles, title, { inPoolOnly: true, project: PROJECT });
+    return m && { role: m.role, title: m.title, slot: m.slot, chat: m.chat };
+}
+
+// Registered chat with a role whose title suffix names another project (project.name changed or folder renamed):
+// { base, old } for the hint, else null.
+export function foreignProject(entry) {
+    if (!entry?.role || matchTitle(roles, entry.title, { project: PROJECT })) return null;
+    const base = foreignBase(entry.title);
+    if (!base) return null;
+    return {
+        base,
+        old: entry.title
+            .trim()
+            .slice(base.length + TITLE_SEPARATOR.length)
+            .trim(),
+    };
+}
+
+// Registered chat whose title lies above its pool (shrunk pool, What 10): { key, pool } of the pool
+// setting, else null. Such a chat has its role only through the keep rule of registerTitle.
+export function abovePool(entry) {
+    if (!entry?.role) return null;
+    const m = matchTitle(roles, entry.title, { project: PROJECT });
+    if (!m || m.inPool || m.role !== entry.role) return null;
+    return { key: POOL_LIMITS[m.role]?.key ?? null, pool: poolOfChat(m.chat, roles) };
 }
 
 export const chatOf = (roleName) => roles.chats.find((c) => c.role === roleName) ?? null;
@@ -299,7 +324,16 @@ function registerTitleLocked(id, title, extra) {
         backupBrokenRegistry();
         return null;
     }
-    const r = roleForTitle(title);
+    // Keep rule (N-6, N-9, N-10): a title inside the pool gets its role. A title above the pool keeps the
+    // role only if this chat already had it (shrunk pool); a new chat or one renamed to it gets none.
+    const m = matchTitle(roles, title, { project: PROJECT });
+    let r = m && (m.inPool || reg[id]?.role === m.role) ? m : null;
+    // F-155-2: after a change of project.name the suffix names the old project; the chat keeps the role it had
+    // while the base still matches it (the session-start hint asks to rename the chat).
+    if (!m && reg[id]?.role) {
+        const k = matchTitle(roles, title, { project: PROJECT, keepForeign: true });
+        if (k && k.role === reg[id].role) r = k;
+    }
     reg[id] = {
         ...(reg[id] ?? {}),
         ...extra,
@@ -312,26 +346,34 @@ function registerTitleLocked(id, title, extra) {
     return reg[id];
 }
 
-// Who holds a role title right now (except id)?
+// Comparison key of a registered chat: a chat that kept its role under a former project's suffix (F-155-2) counts
+// with its role title, so a new claim never gets that role a second time.
+export function entryKey(entry) {
+    if (entry?.role) {
+        const k = matchTitle(roles, entry.title, { project: PROJECT, keepForeign: true });
+        if (k && k.role === entry.role) return k.title.toLowerCase();
+    }
+    return titleKey(entry?.title);
+}
+
+// Who holds a role title right now (except id)? "Orchestrator" and "Orchestrator - <project>" are the same title.
 export function holderOf(title, exceptId) {
     const reg = loadRegistry();
     return (
         Object.entries(reg).find(
-            ([id, e]) =>
-                id !== exceptId && e.title && e.title.toLowerCase() === title.toLowerCase(),
+            ([id, e]) => id !== exceptId && e.title && entryKey(e) === titleKey(title),
         )?.[0] ?? null
     );
 }
 
 // Path of a role's work state: work-state.md if it exists, else arbeitsstand.md if that exists,
-// else work-state.md (new files are English, T-61). Forward slashes.
+// else work-state.md (new files are English, T-61). Forward slashes. Folder per slot from pools.mjs
+// (critic slot 1 critic/, slot k critic/critic-<k>/, dev dev/dev-<n>/); without a slot the role folder.
 export function workStatePath(entry) {
     if (!entry?.role) return null;
-    const dir =
-        entry.role === "dev" && entry.slot
-            ? path.join(KB, "dev", `dev-${entry.slot}`)
-            : path.join(KB, entry.role);
-    return workStateFile(dir, (file) => fs.existsSync(file));
+    const chat = chatOf(entry.role);
+    const dir = chat && entry.slot ? workStateDir(chat, entry.slot) : entry.role;
+    return workStateFile(path.join(KB, dir), (file) => fs.existsSync(file));
 }
 
 // Task family of an assignment ID: the shared ID grammar lives in ids-shared.mjs (T-61).

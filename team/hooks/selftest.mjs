@@ -7,7 +7,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { userLevelTeamStylesWarning } from "./lib.mjs";
+import { chatOf, userLevelTeamStylesWarning } from "./lib.mjs";
+import { workStateDir } from "./pools.mjs";
+import { SEND_TOOLS } from "./sends.mjs";
+import { COMPACT_LOG } from "./context.mjs";
+import { idleConfig } from "./idle.mjs";
 
 const HOOKS = path.dirname(fileURLToPath(import.meta.url));
 const kb = fs.mkdtempSync(path.join(os.tmpdir(), "team-kb-"));
@@ -16,9 +20,12 @@ const home = fs.mkdtempSync(path.join(os.tmpdir(), "team-home-"));
 const appdata = path.join(home, "AppData", "Roaming");
 let failed = 0;
 
+// Hooks that run: this folder, for the pool cases a copy with its own roles.json (see below).
+let hooksDir = HOOKS;
+
 // block: exit 2 (hook blocks with a message on stderr) is an expected result and comes back as { blocked }
 function run(script, host, input, { block = false } = {}) {
-    const r = spawnSync(process.execPath, [path.join(HOOKS, script)], {
+    const r = spawnSync(process.execPath, [path.join(hooksDir, script)], {
         input: JSON.stringify(input),
         encoding: "utf8",
         env: {
@@ -87,9 +94,10 @@ expect(
 );
 expect("Startup: model warning on Haiku", hint.includes("Attention") ? "allow" : "deny", "allow");
 expect(
-    "Startup: language rule and send limit",
+    "Startup: language rule and plain send count",
     hint.includes("Language: Talk to the user in the user's language") &&
-        hint.includes("after 10 sends without user input")
+        !hint.includes("Send limit") &&
+        /^Sends since user input: \d+ \(counted by the send-counter hook\)\.$/m.test(hint)
         ? "allow"
         : "deny: " + hint,
     "allow",
@@ -383,14 +391,62 @@ workState("dev/dev-3/arbeitsstand.md", FREE);
 workState("implementer/arbeitsstand.md", FREE_DE);
 workState("critic/arbeitsstand.md", FREE);
 workState("orchestrator/arbeitsstand.md", FREE.replace(/\n/g, "\r\n"));
+// Context size (T-145): a team chat clears only after a compaction since its last clear (compact-log.jsonl).
+const compacted = (host, time = new Date().toISOString()) => {
+    fs.mkdirSync(path.join(kb, "team"), { recursive: true });
+    fs.appendFileSync(
+        path.join(kb, COMPACT_LOG),
+        JSON.stringify({ time, sessionId: host, title: null }) + "\n",
+    );
+};
+const small = (r) => (r.includes("Context is small") ? r : `unexpected: ${r}`);
+expect("Dev 3 clears (no compaction entry, context small)", small(clearSelf("local_new")), "block");
+compacted("local_new");
+expect(
+    "Dev 3 clears (compaction since its last clear, context large)",
+    clearSelf("local_new"),
+    "allow",
+);
+// The allowed clear writes nothing (F-145-1): a clear the app rejects leaves the context large for the retry.
+expect(
+    "Dev 3 clears again (retry after a rejected clear is allowed)",
+    clearSelf("local_new"),
+    "allow",
+);
+// The clear happens: SessionStart brings a new session id and session-start.mjs logs the clear.
+run("session-start.mjs", "local_new", {
+    source: "startup",
+    session_title: "Dev 3",
+    session_id: "cli-local_new-after-clear",
+});
+expect(
+    "Dev 3 clears again (no compaction since the logged clear)",
+    small(clearSelf("local_new")),
+    "block",
+);
+// The work state cases below run with a large context: a compaction entry newer than every clear.
+const TEAM_HOSTS = [
+    "local_new",
+    "local_impl",
+    "local_crit",
+    "local_orch",
+    "local_res",
+    "local_boot",
+];
+for (const host of [...TEAM_HOSTS, "local_crit2"]) compacted(host, "2999-01-01T00:00:00.000Z");
 expect("Dev 3 clears (free, new assignment)", clearSelf("local_new"), "allow");
 expect("Impl clears (German work state: frei, Neuer Auftrag)", clearSelf("local_impl"), "allow");
 expect("Critic clears (free, new assignment)", clearSelf("local_crit"), "allow");
-expect("Orch clears (work state with CRLF)", clearSelf("local_orch"), "allow");
+// T-153: the Orchestrator never clears itself, even with a free work state, a new assignment and a large context
 expect(
-    "Orch clears with its own ID",
+    "Orch clears itself (never, T-153)",
+    clearSelf("local_orch"),
+    "deny: The Orchestrator never clears itself (T-153)",
+);
+expect(
+    "Orch clears with its own ID (never, T-153)",
     mgmt("local_orch", "clear_session", { session_id: "local_orch" }),
-    "allow",
+    "deny: The Orchestrator never clears itself (T-153)",
 );
 workState("dev/dev-3/arbeitsstand.md", "Status: free, no assignment\n");
 expect("Dev 3 clears (free, without a new assignment)", clearSelf("local_new"), "block");
@@ -574,12 +630,10 @@ if (claimed) start("local_boot", claimed);
 const bootEntry = JSON.parse(
     fs.readFileSync(path.join(kb, "team", "registry.json"), "utf8"),
 ).local_boot;
-const bootState = bootEntry?.role
-    ? path.join(
-          kb,
-          bootEntry.role === "dev" ? `dev/dev-${bootEntry.slot}` : bootEntry.role,
-          "work-state.md",
-      )
+// Same slot folder rule as lib.mjs workStatePath (critic slot k >= 2 is critic/critic-<k>/, T-162).
+const bootChat = bootEntry?.role ? chatOf(bootEntry.role) : null;
+const bootState = bootChat
+    ? path.join(kb, workStateDir(bootChat, bootEntry.slot), "work-state.md")
     : null;
 const bootText = bootState && fs.existsSync(bootState) ? fs.readFileSync(bootState, "utf8") : "";
 expect(
@@ -631,16 +685,21 @@ if (bootState) {
     );
 }
 
-// PreCompact: logs and always exits with 0
-run("pre-compact.mjs", "local_orch", { session_id: "cli-local_orch", trigger: "auto" });
+// PreCompact: logs and always exits with 0. The log already holds the entries of the clear cases above (T-145),
+// so only the lines this run appends count.
 const compactLog = path.join(kb, "team", "compact-log.jsonl");
-const logged = fs.existsSync(compactLog)
-    ? fs
-          .readFileSync(compactLog, "utf8")
-          .trim()
-          .split("\n")
-          .map((l) => JSON.parse(l))
-    : [];
+const logLines = () =>
+    fs.existsSync(compactLog)
+        ? fs
+              .readFileSync(compactLog, "utf8")
+              .trim()
+              .split("\n")
+              .filter(Boolean)
+              .map((l) => JSON.parse(l))
+        : [];
+const loggedBefore = logLines().length;
+run("pre-compact.mjs", "local_orch", { session_id: "cli-local_orch", trigger: "auto" });
+const logged = logLines().slice(loggedBefore);
 expect(
     "PreCompact: entry in compact-log.jsonl",
     logged.length === 1 &&
@@ -870,6 +929,194 @@ expect(
     "chat without a role: Write to ~/.claude blocked",
     tool("local_misc", "Write", { file_path: "~/.claude/output-styles/X.md", content: "x" }),
     "deny",
+);
+
+// Critic pool 2 (T-107): a copy of the hooks with a roles.json whose critic entry has pool 2. The project's
+// own roles.json stays unchanged.
+const poolTeam = fs.mkdtempSync(path.join(os.tmpdir(), "team-pool-"));
+fs.cpSync(HOOKS, path.join(poolTeam, "hooks"), { recursive: true });
+for (const name of ["sync-rules.mjs", "team.config.json"])
+    fs.copyFileSync(path.join(HOOKS, "..", name), path.join(poolTeam, name));
+const poolRoles = JSON.parse(fs.readFileSync(path.join(HOOKS, "..", "roles.json"), "utf8"));
+const criticChat = poolRoles.chats.find((c) => c.role === "critic");
+criticChat.pool = 2;
+fs.writeFileSync(path.join(poolTeam, "roles.json"), JSON.stringify(poolRoles, null, 2));
+hooksDir = path.join(poolTeam, "hooks");
+// The broken-registry cases above leave "{ broken": start again with an empty registry.
+fs.writeFileSync(registry, "{}\n");
+start("local_orch", "Orchestrator");
+start("local_adv", "Advisor");
+
+const crit2Hint = start("local_crit2", "Critic 2", criticChat.model).hookSpecificOutput
+    .additionalContext;
+expect(
+    "Startup: Critic 2 has role critic and its own work state",
+    crit2Hint.includes("role critic") &&
+        crit2Hint.includes(`${kb.replace(/\\/g, "/")}/critic/critic-2/work-state.md`)
+        ? "allow"
+        : "deny: " + crit2Hint,
+    "allow",
+);
+expect(
+    "Orch sets Critic 2 to the planned model",
+    mgmt("local_orch", "set_session_model", { session_id: "local_crit2", model: criticChat.model }),
+    "allow",
+);
+expect(
+    "Orch sets Critic 2 to another model",
+    mgmt("local_orch", "set_session_model", {
+        session_id: "local_crit2",
+        model: "claude-sonnet-5-5",
+    }),
+    "deny",
+);
+expect(
+    "Orch sets Critic 2 to the planned effort",
+    mgmt("local_orch", "set_session_effort", {
+        session_id: "local_crit2",
+        effort: criticChat.effort,
+    }),
+    "allow",
+);
+expect(
+    "Orch stops Critic 2 (external)",
+    mgmt("local_orch", "stop_session", { session_id: "local_crit2" }),
+    "deny: " + '"Critic 2" is external. Only the user changes external chats (Critic…, Advisor).',
+);
+workState("critic/critic-2/work-state.md", EN("T-12", "Review T-16 round 1"));
+expect(
+    "Critic 2 clears without completion note (Assignment: T-12)",
+    clearSelf("local_crit2"),
+    "block",
+);
+workState("critic/critic-2/work-state.md", EN("T-12", "Review T-16 round 1", "T-12"));
+expect("Critic 2 clears with completion note (Completed: T-12)", clearSelf("local_crit2"), "allow");
+hooksDir = HOOKS;
+fs.rmSync(poolTeam, { recursive: true, force: true });
+
+// Send counter (T-38): sync registers send-counter.mjs for PreToolUse and PostToolUse of the send tools and for
+// UserPromptSubmit in the project's .claude/settings.json.
+const sendGroups = (() => {
+    try {
+        const { hooks } = JSON.parse(
+            fs.readFileSync(path.join(HOOKS, "..", "..", ".claude", "settings.json"), "utf8"),
+        );
+        const has = (event, matcher) =>
+            (hooks?.[event] ?? []).some(
+                (g) =>
+                    g.matcher === matcher &&
+                    g.hooks?.some((h) => h.command?.includes("team/hooks/send-counter.mjs")),
+            );
+        const sends = `^(${SEND_TOOLS.join("|")})$`;
+        const missing = [
+            ["PreToolUse", sends],
+            ["PostToolUse", sends],
+            ["UserPromptSubmit", undefined],
+        ].filter(([event, matcher]) => !has(event, matcher));
+        return missing.length ? `deny: missing ${missing.map(([e]) => e).join(", ")}` : "allow";
+    } catch (e) {
+        return `deny: ${e.message}`;
+    }
+})();
+expect("settings.json registers send-counter.mjs (3 groups)", sendGroups, "allow");
+
+// Idle monitor (T-108): sync registers idle-watch.mjs on SessionStart and Stop (async, asyncRewake, timeout
+// watchSeconds + 60 from team.config.json "idle") and stop-guard.mjs on Stop (sync). A wrong timeout is drift
+// after a config change: run node team/sync.mjs.
+const idleHooks = (() => {
+    try {
+        const { hooks } = JSON.parse(
+            fs.readFileSync(path.join(HOOKS, "..", "..", ".claude", "settings.json"), "utf8"),
+        );
+        const cfg = JSON.parse(fs.readFileSync(path.join(HOOKS, "..", "team.config.json"), "utf8"));
+        const timeout = idleConfig(cfg).watchSeconds + 60;
+        const entries = (event, script) =>
+            (hooks?.[event] ?? []).flatMap((g) =>
+                (g.hooks ?? []).filter((h) => h.command?.includes(`team/hooks/${script}`)),
+            );
+        const problems = [];
+        for (const event of ["SessionStart", "Stop"]) {
+            const found = entries(event, "idle-watch.mjs");
+            if (found.length !== 1)
+                problems.push(`${event}: ${found.length} idle-watch.mjs entries`);
+            else if (!(found[0].async === true && found[0].asyncRewake === true))
+                problems.push(`${event}: idle-watch.mjs not async + asyncRewake`);
+            else if (found[0].timeout !== timeout)
+                problems.push(
+                    `${event}: idle-watch.mjs timeout ${found[0].timeout}, config wants ${timeout} (run node team/sync.mjs)`,
+                );
+        }
+        const guard = entries("Stop", "stop-guard.mjs");
+        if (guard.length !== 1 || guard[0].async)
+            problems.push("Stop: stop-guard.mjs not one sync entry");
+        return problems.length ? `deny: ${problems.join("; ")}` : "allow";
+    } catch (e) {
+        return `deny: ${e.message}`;
+    }
+})();
+expect("settings.json registers idle-watch.mjs and stop-guard.mjs (T-108)", idleHooks, "allow");
+
+// stop-guard.mjs: blocks once while the Implementer's work state says working and background tasks run, only with
+// the idle monitor on in this project's team.config.json (T-156, D-186); with it off the guard always allows
+const guardOn = (() => {
+    try {
+        return idleConfig(
+            JSON.parse(fs.readFileSync(path.join(HOOKS, "..", "team.config.json"), "utf8")),
+        ).enabled;
+    } catch {
+        return false;
+    }
+})();
+const guard = (host, input) => {
+    const out = run("stop-guard.mjs", host, input);
+    return out?.decision === "block" ? `block: ${out.reason}` : "allow";
+};
+const TASKS = [{ id: "b1", type: "shell", status: "running", description: "sleep 90" }];
+start("local_impl", "Implementer"); // the registry cases above replaced the registry
+workState("implementer/work-state.md", "# Work state Implementer\nStatus: working\n");
+expect(
+    guardOn
+        ? "stop-guard: working + background task → block"
+        : "stop-guard: idle monitor off, working + background task → allow",
+    guard("local_impl", { stop_hook_active: false, background_tasks: TASKS }),
+    guardOn ? "block" : "allow",
+);
+expect(
+    "stop-guard: stop_hook_active → allow",
+    guard("local_impl", { stop_hook_active: true, background_tasks: TASKS }),
+    "allow",
+);
+expect(
+    "stop-guard: no background tasks → allow",
+    guard("local_impl", { stop_hook_active: false, background_tasks: [] }),
+    "allow",
+);
+workState("implementer/work-state.md", "# Work state Implementer\nStatus: free\n");
+expect(
+    "stop-guard: not working → allow",
+    guard("local_impl", { stop_hook_active: false, background_tasks: TASKS }),
+    "allow",
+);
+
+// idle-watch.mjs: a chat that is not Orchestrator or Implementer exits 0 at once and writes nothing
+const idleRun = spawnSync(process.execPath, [path.join(hooksDir, "idle-watch.mjs")], {
+    input: "{}",
+    encoding: "utf8",
+    timeout: 20000,
+    env: {
+        ...process.env,
+        TEAM_KB_OVERRIDE: kb,
+        CLAUDE_CODE_HOST_SESSION_ID: "local_res",
+        HOME: home,
+        USERPROFILE: home,
+    },
+});
+expect(
+    "idle-watch: Researcher exits 0 without a lock",
+    idleRun.status === 0 && !fs.existsSync(path.join(kb, "team", "idle"))
+        ? "allow"
+        : `deny: exit ${idleRun.status}`,
+    "allow",
 );
 
 // team styles in the user home are only reported; the exit code stays the same

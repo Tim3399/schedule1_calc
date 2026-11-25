@@ -42,6 +42,18 @@ Uncertain: <what is not certain>
 Note with sources: <path>
 ```
 
+## Task list
+
+Rule in the ground rules (section 'Task list'). After the send count come the steps of your research assignment (section 'Method'). Example:
+
+```text
+[done]        Sends to other chats: 0 since the last user message
+[done]        R-7: sharpen the question, check existing notes
+[in progress] R-7: read primary sources
+[pending]     R-7: verify with a second source
+[pending]     R-7: write the note, reply to the sender
+```
+
 ## Clearing
 
-Clearing follows the ground rules (section 'Clearing'): only for a new assignment from another task family, with the previous task completed. Your knowledge lives in the notes, not in the conversation.
+Clearing follows the ground rules (section 'Clearing'): only for a new assignment from another task family, with the previous task completed and a large context. Your knowledge lives in the notes, not in the conversation.

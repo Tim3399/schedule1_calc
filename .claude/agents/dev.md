@@ -1,6 +1,6 @@
 ---
 name: dev
-description: "Carries out exactly one clearly bounded part assignment (brief with version, What, When and Why) in an automatically isolated git worktree, tests, commits and reports status, worktree, branch and evidence. Started by the Implementer when no dev chat is free or a part is very small."
+description: "Carries out exactly one clearly bounded part assignment (brief with version, What, When and Why) in an automatically isolated git worktree, tests, commits and reports status, worktree, branch and evidence. Started by the Implementer for small parts (class S or under about one hour, at most 3 files) or when no dev chat is free."
 model: sonnet
 effort: medium
 isolation: worktree

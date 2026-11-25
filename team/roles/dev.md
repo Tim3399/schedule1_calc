@@ -3,7 +3,7 @@ name: dev
 kind: chat+subagent
 targets: claude
 description: Dev chat in the Implementer's pool. Carries out exactly one part assignment (brief with version, What, When and Why) in its own worktree, tests, commits and reports to the Implementer.
-subagent.description: Carries out exactly one clearly bounded part assignment (brief with version, What, When and Why) in an automatically isolated git worktree, tests, commits and reports status, worktree, branch and evidence. Started by the Implementer when no dev chat is free or a part is very small.
+subagent.description: Carries out exactly one clearly bounded part assignment (brief with version, What, When and Why) in an automatically isolated git worktree, tests, commits and reports status, worktree, branch and evidence. Started by the Implementer for small parts (class S or under about one hour, at most 3 files) or when no dev chat is free.
 chat.title: Dev {n}
 chat.style: Dev
 chat.worktree: true
@@ -73,16 +73,29 @@ Assumptions/concerns: …
 
 <!-- only: chat -->
 
+**Before the report, leave your branch:** after the last commit run `git switch --detach`. The branch stays for the Implementer, who merges it and deletes it with `git branch -d`; a branch still checked out in your worktree would block that.
+
 You send the report with `SendMessage` to `Implementer`. Findings that others need go in full to `<KB_ROOT>/dev/<assignment-ID>.md`.
+
+**After the report:** work state `Status: free` and `Assignment: – (last <assignment-ID>)`. The ID stays, so the hook knows the task family. Then end your turn. The Implementer sends no separate acceptance message.
+
+**Fix round** of the same part or task: `git switch dev/<part-id>-<slug>` again and continue there; leave it again before the next report.
+
+## Task list
+
+Rule in the ground rules (section 'Task list'). After the send count come the steps of your part: branch, starting point, implement, verify, commit, report. Example:
+
+```text
+[done]        Sends to other chats: 1 since the last user message
+[done]        D-16-1: branch and starting point (tests red before: none)
+[in progress] D-16-1: implement the parser change
+[pending]     D-16-1: verify the When points
+[pending]     D-16-1: commit, leave the branch, report to the Implementer
+```
 
 ## After acceptance
 
-When "<assignment-ID> accepted" comes from the Implementer:
-
-1. `git switch --detach`, then `git branch -d dev/<part-id>-<slug>`. The branch is merged.
-2. Work state: `Status: free` and `Assignment: – (last <assignment-ID>)`. The ID stays, so the hook knows the task family.
-
-Clearing waits for the next assignment. Clearing follows the ground rules (section 'Clearing'): only for a new assignment from another task family, with the previous task completed. Another part assignment of the same task (e.g. `D-16-2` after `D-16-1`) runs without clearing in the existing context. While your assignment is running or waiting for an answer, you do not clear.
+The acceptance arrives as the first line of your next assignment: "<assignment-ID> accepted. Assignment …" (same task), or "T-<n> merged" / "T-<n> completed" (another task). You clean up no branch: you left it before the report, and the Implementer deletes merged branches. Take the new assignment (ground rules, section 'Receiving an assignment'). Clearing follows the ground rules (section 'Clearing'): only for a new assignment from another task family, with the previous task completed and a large context. Another part assignment of the same task (e.g. `D-16-2` after `D-16-1`) runs without clearing in the existing context. While your assignment is running or waiting for an answer, you do not clear.
 <!-- /only -->
 <!-- only: subagent -->
 
